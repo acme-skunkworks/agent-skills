@@ -1,0 +1,39 @@
+name: Validate
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changeset-status:
+    name: 📝 Changeset status
+    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 📝 Changeset status
+        # Informational: chore-only PRs can legitimately have no changeset.
+        # Manifest-lint for skills/<name>/SKILL.md joins this job with the first skill.
+        run: pnpm changeset status --since=origin/${{ github.base_ref }}
+        continue-on-error: true

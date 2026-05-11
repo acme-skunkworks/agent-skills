@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false # Queue releases instead of cancelling
+
+jobs:
+  release:
+    name: 🚀 Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # Create version PR + git tags + GitHub releases
+      pull-requests: write # Open the Version Packages PR
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          # RELEASE_PAT lets the version commit bypass branch protection.
+          # Required scopes: repo, workflow. Falls back to GITHUB_TOKEN if unset.
+          token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🚀 Version or Publish
+        id: changesets
+        # Pinned to v1.8.0 commit SHA so a moved tag can't change publish behaviour under us.
+        uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b # v1.8.0
+        with:
+          publish: pnpm changeset publish
+          commit: "release: version packages"
+          title: "release: version packages"
+          createGithubReleases: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
