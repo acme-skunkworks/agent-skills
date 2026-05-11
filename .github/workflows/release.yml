@@ -45,6 +45,11 @@ jobs:
         # Pinned to v1.8.0 commit SHA so a moved tag can't change publish behaviour under us.
         uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b # v1.8.0
         with:
+          # `publish` is a no-op while package.json has `private: true`. Before
+          # flipping `private: false`, wire up npm auth — either NPM_TOKEN as a
+          # repo secret or (preferred) Trusted Publishing via OIDC. See CLAUDE.md
+          # "Release" for the bootstrap sequence; without auth, publishes fail
+          # silently here.
           publish: pnpm changeset publish
           commit: "release: version packages"
           title: "release: version packages"

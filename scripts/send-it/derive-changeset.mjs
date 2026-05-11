@@ -79,11 +79,19 @@ function readGitBranch() {
 function selfTest() {
   const cases = [
     {
-      name: "slug truncates at word boundary",
-      run: () =>
-        deriveSlug("asw-49-fold-in-send-it-claude-slash-command") ===
-        "asw-49-fold-in-send-it-claude-slash-command".slice(0, 60).replace(/-[^-]*$/, "") ||
-        deriveSlug("asw-49-fold-in-send-it-claude-slash-command").length <= SLUG_MAX,
+      name: "slug truncates at word boundary (>60 char input)",
+      run: () => {
+        // Input normalises to 77 chars; truncate window is 60, last hyphen at
+        // 56 → expected result is 56 chars ending on "going".
+        const input =
+          "feature/very-long-branch-name-that-keeps-going-and-going-and-eventually-stops";
+        const result = deriveSlug(input);
+        return (
+          result === "feature-very-long-branch-name-that-keeps-going-and-going" &&
+          result.length <= SLUG_MAX &&
+          !result.endsWith("-")
+        );
+      },
     },
     {
       name: "slug normalises and trims",
@@ -166,6 +174,11 @@ function main() {
     return;
   }
   const branch = readGitBranch();
+  if (!branch) {
+    throw new Error(
+      "Cannot derive slug: detached HEAD (no branch name). Check out a named branch first.",
+    );
+  }
   const commits = readGitCommits();
   const out = {
     slug: deriveSlug(branch),
