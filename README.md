@@ -17,10 +17,13 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill <name> --
 ```
 .
 ├── .changeset/              # pending changesets + config
+├── .claude/commands/
+│   └── send-it.md           # all-in-one finisher (stopgap until the send-it skill ships)
 ├── .github/workflows/
 │   ├── release.yml          # changesets/action — "Version Packages" PR + release tags
 │   └── validate.yml         # PR gate: pnpm changeset status (manifest lint joins later)
 ├── architecture/            # ADRs (sequentially numbered, immutable)
+├── scripts/send-it/         # deterministic helpers for /send-it
 ├── skills/                  # one folder per skill
 ├── CLAUDE.md
 ├── LICENSE

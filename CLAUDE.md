@@ -28,6 +28,22 @@ Node 22 required (`.nvmrc`, `engines.node: ">=22"`, `engine-strict=true` in `.np
 - **Changesets per behavioural change.** Every PR that ships a skill change or a new skill includes a `.changeset/<slug>.md`. Tooling-only PRs (CI tweaks, dependency bumps that don't affect consumers) can skip.
 - **Branch naming.** `<linear-id>-<slug>` lower-cased, matching Linear's `gitBranchName` (e.g. `asw-132-set-up-the-agent-skills-repo`).
 
+## Shipping changes (`/send-it`)
+
+`/send-it` (`.claude/commands/send-it.md` plus `scripts/send-it/`) is the all-in-one finisher: it commits uncommitted work as atomic Conventional Commits, writes or updates a `.changeset/<slug>.md`, pushes the branch, opens or updates a draft PR, and transitions linked Linear issues to **In Review**. Prefer it over hand-rolled `git commit` + `git push` + `gh pr create` flows.
+
+Common invocations:
+
+```bash
+/send-it                              # commit + changeset + push + draft PR
+/send-it --issue=ASW-132              # same, plus prefix the auto-branch with asw-132-
+/send-it --ready                      # open the PR as ready-for-review (not draft)
+/send-it --merge-when-ready           # enable gh pr merge --auto --squash after creation
+/send-it --worktree=<branch-or-path>  # cd into a worktree first, then run
+```
+
+**`/send-it` here is a stopgap.** It was cloned from `@acme-skunkworks/eslint-config`'s `/send-it` and lightly adapted. The whole point of the Agent Skills project is to extract `/send-it` into a single reusable skill so the per-repo copies disappear. When that skill ships, this slash command and `scripts/send-it/` get deleted and replaced by `npx skills add … --skill send-it`. Tracked in the Agent Skills Linear project.
+
 ## Release
 
 `.github/workflows/release.yml` runs on every push to `main`. It uses `changesets/action` to either open a "release: version packages" PR (when pending changesets exist) or — once that PR merges — bump versions, tag, and call `pnpm changeset publish`. Publishing is a no-op while `package.json` is `private: true`; if the root or any extracted package becomes publishable, configure npm Trusted Publishing and flip `private` to `false`.
@@ -44,4 +60,3 @@ The `validate.yml` PR gate runs `pnpm changeset status` against the base branch.
 
 - **Husky / lint-staged / commitlint.** Lands with the first skill, not the bootstrap — the lint-config sibling repos have the setup to crib from.
 - **Manifest lint for `skills/<name>/SKILL.md`.** Joins `validate.yml` with skill #1.
-- **`/send-it` slash command.** Octavo's `/send-it` is tied to that repo's changelog infrastructure; a slimmer flavour for this repo is a future refinement, not bootstrap work.
