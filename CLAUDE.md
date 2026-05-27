@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Writing style
+
+Use **British English** spelling and grammar in all prose you author for this repo: code comments, documentation (this file, ADRs, READMEs, `.changeset/*.md`), commit messages, PR titles and bodies, and user-facing strings.
+
+- **Spelling.** Prefer British forms: *colour*, *behaviour*, *organisation*, *centre*, *catalogue*, *recognise*, *analyse*, *licence* (noun) / *license* (verb), *-ise*/*-yse* over *-ize*/*-yze*.
+- **Grammar and punctuation.** British conventions where they differ from American: single quotes are acceptable when quoting; place full stops outside closing quotation marks when the quoted phrase is partial; *whilst* and *amongst* are fine; collective nouns may take a plural verb ('the team are' / 'the team is' are both fine — pick whichever reads better).
+- **Scope: prose, not code.** This rule applies to text written for humans. It does **not** apply to identifiers, dependency names, third-party API field names, or quoted upstream text that already uses US spelling. Examples of things to leave alone: CSS `color`, `background-color`; package names like `serialize-javascript`; API fields like `analyze_url`; quoted error messages from upstream tools.
+- **When in doubt, follow upstream.** If you're touching code that mirrors an external API or library, match the upstream spelling exactly — even in surrounding comments where that name appears. Consistency with the thing being wrapped beats consistency with this rule.
+
 ## Repo
 
 Container for shared agent skills, distributed via [skills.sh](https://skills.sh). Each skill lives under `skills/<name>/` as a skills.sh-compatible bundle (with a `SKILL.md` manifest at its root); consumers install via `npx skills add` against this repo's URL.
