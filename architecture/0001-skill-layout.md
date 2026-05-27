@@ -10,9 +10,9 @@
 
 This repo is a container for shared agent skills distributed as [skills.sh](https://skills.sh)-compatible bundles, following the open [Agent Skills specification](https://agentskills.io/specification) originated by Anthropic. Consumers install with `npx skills add <git-url> --skill <name>`, which fetches directly from this Git repo — there is no npm registry or centralized skills.sh registry in the path. The bootstrap (ASW-132) deliberately deferred the foundational structural questions to this ADR:
 
-1. **Versioning** — single root version vs. independent per-skill versions, and the semver semantics of each bump.
-2. **Bundle layout** — what files a `skills/<name>/` directory must contain, and the `SKILL.md` manifest schema.
-3. **Distribution conventions** — how consumers pin (branch, tag, SHA), Git tag naming, release cadence, deprecation.
+1. **Versioning** — single root version vs. independent per-skill versions, and the semver semantics of each bump. (Addressed across Decisions 1 and 2 below.)
+2. **Bundle layout** — what files a `skills/<name>/` directory must contain, and the `SKILL.md` manifest schema. (Decision 3.)
+3. **Distribution conventions** — how consumers pin (branch, tag, SHA), Git tag naming, release cadence, deprecation. (Decision 4.)
 
 This ADR resolves all three. Findings are verified against the canonical Agent Skills specification and the [vercel-labs/skills](https://github.com/vercel-labs/skills) CLI source as of 2026-05-27; a later ADR should supersede this one if either spec moves.
 
@@ -45,7 +45,7 @@ The Changesets workflow asks for `major` / `minor` / `patch` per change. For ski
 
 ### Initial version and the 1.0 graduation rule
 
-- Each skill starts at `0.1.0` (not `0.0.1`). The leading `0.` signals "released, but pre-1.0 — minor bumps may include breaking changes, per [SemVer 4.0](https://semver.org/#spec-item-4)."
+- Each skill starts at `0.1.0` (not `0.0.1`). The leading `0.` signals "released, but pre-1.0 — minor bumps may include breaking changes, per [SemVer §4](https://semver.org/#spec-item-4)."
 - A skill graduates to `1.0.0` when both are true: (a) it has at least one external consumer, and (b) its trigger contract — the `description` field plus the body's stated when-to-use rules — is stable enough to commit to backwards-compatibility.
 - Below `1.0.0`, treat the **minor** bump as the de-facto compatibility break: an `0.x → 0.(x+1)` move may include breaking changes; patch bumps within an `0.x` are still strictly compatible.
 
@@ -57,7 +57,7 @@ The Agent Skills spec has no top-level `version` field but allows arbitrary `met
 
 A skill bundle conforms to the canonical Agent Skills spec, plus our workflow additions for versioning:
 
-```
+```text
 skills/<name>/
 ├── SKILL.md         # Required by spec — manifest + instructions
 ├── package.json     # Required by this ADR — Changesets workspace package
@@ -92,13 +92,13 @@ Keep `SKILL.md` body under 500 lines (~5000 tokens) per spec guidance. Move long
 
 ### Validation
 
-The reference validator `skills-ref` (from `agentskills/agentskills`) is the canonical lint:
+The reference validator `skills-ref` (from `agentskills/agentskills`, published to npm as [`skills-ref`](https://www.npmjs.com/package/skills-ref)) is the canonical lint:
 
 ```bash
 npx skills-ref validate ./skills/<name>
 ```
 
-This becomes the manifest-lint step in `validate.yml` when ASW-134 lands, per CLAUDE.md's deferred plan.
+Confirmed installable via `npx` as of 2026-05-27 (v0.1.5). This becomes the manifest-lint step in `validate.yml` when ASW-134 lands, per CLAUDE.md's deferred plan.
 
 ## Decision 4 — Distribution conventions
 
