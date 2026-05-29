@@ -24,9 +24,37 @@ set -euo pipefail
 NAME=$(node -p "require('./package.json').name")
 VERSION=$(node -p "require('./package.json').version")
 
-if "$PNPM_HOME/npm" view "$NAME@$VERSION" version >/dev/null 2>&1; then
+# Dormant-by-design guard. The old release.yml published via
+# `pnpm changeset publish`, which is private-aware and skips private packages
+# cleanly (exit 0). This raw-npm wrapper is NOT — raw `npm publish` errors on a
+# private package and would turn the release job red. While package.json is
+# `private: true` there is nothing publishable, so exit 0 here: publish nothing,
+# job stays green. Drops out the moment `private` is flipped to false. See
+# CLAUDE.md "Release" for the flip-to-public sequence.
+IS_PRIVATE=$(node -p "Boolean(require('./package.json').private)")
+if [ "$IS_PRIVATE" = "true" ]; then
+  echo "Package is private ($NAME@$VERSION) — skipping npm publish (dormant)."
+  exit 0
+fi
+
+# Distinguish "not published yet" (a 404 — safe to publish) from a transient or
+# auth failure. Treating every non-zero `npm view` as "not published" would turn
+# a registry blip or a bad token into a spurious publish attempt rather than a
+# clear, actionable error. Mirrors publish-to-github-packages.sh.
+set +e
+view_output=$("$PNPM_HOME/npm" view "$NAME@$VERSION" version 2>&1)
+view_status=$?
+set -e
+
+if [ "$view_status" -eq 0 ]; then
   echo "Already published: $NAME@$VERSION — skipping."
   exit 0
+fi
+
+if ! printf '%s' "$view_output" | grep -qiE 'E404|404|not found'; then
+  echo "npm view failed for $NAME@$VERSION (exit $view_status) and the error is not a 404 — aborting:" >&2
+  printf '%s\n' "$view_output" >&2
+  exit 1
 fi
 
 echo "Publishing $NAME@$VERSION via $PNPM_HOME/npm..."

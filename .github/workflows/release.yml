@@ -74,10 +74,11 @@ jobs:
           # Bypass `pnpm changeset publish` — its OIDC TP path fails even when
           # the upgraded npm is correctly on PATH (proven in eslint-config). The
           # wrapper calls `npm publish` directly via $PNPM_HOME/npm and is
-          # idempotent. While package.json is `private: true` this publishes
-          # nothing — npm refuses — so the whole machinery runs green as a
-          # no-op. See CLAUDE.md "Release" for the flip-to-public sequence.
-          # ASW-174.
+          # idempotent. It also guards on `private: true`: unlike
+          # `pnpm changeset publish`, raw `npm publish` errors on a private
+          # package, so the wrapper short-circuits (exit 0) while the root is
+          # private — publishing nothing, job stays green. See CLAUDE.md
+          # "Release" for the flip-to-public sequence. ASW-174.
           publish: bash scripts/publish-via-raw-npm.sh
           commit: "release: version packages"
           title: "release: version packages"
@@ -94,6 +95,11 @@ jobs:
       # ASW-307). Instead the publish script below is idempotent, and a failed
       # npm step aborts the job before we reach here — so this leg still only
       # ships a version npm accepted, and self-heals on retries.
+      # Rewrites .npmrc for GitHub Packages (scoped registry + token auth). The
+      # publish script below still calls plain `npm`, which resolves to the
+      # upgraded $PNPM_HOME/npm (11.14.1) prepended to GITHUB_PATH above — fine,
+      # since this leg uses token auth (NODE_AUTH_TOKEN), not OIDC, so the npm
+      # version is immaterial here.
       - name: 🟢 Setup Node.js (GitHub Packages)
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:

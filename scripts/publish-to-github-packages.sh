@@ -36,6 +36,16 @@ set -euo pipefail
 NAME=$(node -p "require('./package.json').name")
 VERSION=$(node -p "require('./package.json').version")
 
+# Dormant-by-design guard — same as the npm leg (publish-via-raw-npm.sh). Raw
+# `npm publish` errors on a private package; while `private: true` there is
+# nothing publishable, so skip cleanly and keep the release job green. Drops out
+# when `private` is flipped to false. See CLAUDE.md "Release".
+IS_PRIVATE=$(node -p "Boolean(require('./package.json').private)")
+if [ "$IS_PRIVATE" = "true" ]; then
+  echo "Package is private ($NAME@$VERSION) — skipping GitHub Packages publish (dormant)."
+  exit 0
+fi
+
 # Pin the registry explicitly rather than leaning on setup-node's scoped
 # .npmrc: a misconfigured scope would silently send `npm view` to public npm —
 # where the version exists — so the skip path would fire forever and GitHub
