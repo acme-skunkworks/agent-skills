@@ -23,6 +23,7 @@ jobs:
     # changeset-status check kept informational. Build/lint and SKILL.md
     # manifest-lint steps join this job with the first skill.
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       HUSKY: 0
     steps:
@@ -55,6 +56,7 @@ jobs:
     name: 📝 YAML & Workflows
     if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       # Single source of truth for the actionlint version (ASW-349): the cache
       # key below and the `ensure-actionlint.sh` step both read this, so a bump
@@ -106,6 +108,7 @@ jobs:
     name: 🧪 Infrastructure scripts
     if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       HUSKY: 0
     steps:
@@ -165,6 +168,7 @@ jobs:
     # validate there. Still a hard gate on feature PRs that add/change a skill.
     if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
