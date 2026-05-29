@@ -147,8 +147,13 @@ It prints `{ "emptyDirs": [...], "orphanNodeModules": [...] }`:
   needed if the parent was not actually meant to be gone — which is why these are
   surfaced **separately**.
 
-This detection is the single source of truth: the preview below and the removal
-in Step 9 both come from it, so the dry-run lists exactly what a real run removes.
+This detection is read-only and feeds the Step 6 preview. One subtlety: Step 9
+removes worktrees **before** re-running the detection with `--apply`, so the apply
+pass can additionally sweep a parent that becomes empty only once its worktrees are
+gone (e.g. `.claude/worktrees/`). Such a directory won't appear in this pre-removal
+detect output — predict it from the worktree-removal list and label it as a
+post-removal sweep in the preview, so the user isn't surprised when `--apply`
+removes it.
 
 ### Step 6 — Display everything to be deleted
 
@@ -178,7 +183,7 @@ eyeball them:
 - ASW-9 "Button styling" — currently In Review (branch: ASW-9-button-styling)
 
 ## Empty Directories to Remove (1)
-- /path/.claude/worktrees   (recursively empty after worktree removal)
+- /path/.claude/worktrees   (predicted: empty once the worktrees above are removed)
 
 ## Orphan node_modules to Remove (1)
 - /path/old-package/node_modules   (no sibling package.json)

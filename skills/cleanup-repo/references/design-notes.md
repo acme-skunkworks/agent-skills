@@ -30,10 +30,17 @@ Per-repo slash-command names are a consumer choice. A consumer can expose this a
   in a future minor bump if a real consumer case demands it.
 - **No workspace-membership inference** for orphan `node_modules/` — strict
   parent-`package.json` check only.
-- **Single-snapshot removal.** The removal set is the snapshot the preview shows.
-  Removing an orphan `node_modules/` can leave its parent empty; that parent is
-  left for a follow-up run rather than swept mid-run, so the preview never diverges
-  from what is actually removed.
+- **Single-snapshot removal within `apply()`.** `apply()` detects once and removes
+  that snapshot; removing an orphan `node_modules/` can leave its parent empty, but
+  that parent is left for a follow-up run rather than swept in the same snapshot.
+  Note the skill runs the filesystem detection twice — a read-only pass for the
+  preview, then `apply()` **after** worktree removal — so the apply pass may sweep a
+  worktree parent (e.g. `.claude/worktrees/`) that the pre-removal preview could not
+  yet see. The skill predicts these in the preview from the worktree-removal list.
+- **Merge-detection base branch is hardcoded to `origin/main`.** Both passes (git
+  ancestry and merged-PR lookup) assume `main`; a consumer defaulting to `master` or
+  `develop` must edit the skill. A future minor bump should add a `mainBranch` config
+  key alongside `protectedBranches`.
 
 ## Future extensions (out of scope, enabled by the name)
 
