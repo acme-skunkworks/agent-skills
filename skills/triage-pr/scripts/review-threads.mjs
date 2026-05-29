@@ -39,15 +39,18 @@ const DEFAULT_BOTS = ["claude", "cursor", "coderabbitai", "github-actions"];
 
 // ---- pure transform (no network) ----------------------------------------
 
+/** Strip a trailing `[bot]` suffix so a login compares equal in either form. */
 function normaliseBot(login) {
   return String(login ?? "").replace(/\[bot\]$/, "");
 }
 
+/** Build a suffix-insensitive predicate matching a login against the bot list. */
 function makeBotMatcher(bots) {
   const set = new Set(bots.map(normaliseBot));
   return (login) => set.has(normaliseBot(login));
 }
 
+/** Reduce raw GraphQL comment nodes to the minimal `{ author, body }`. */
 function trimComments(commentNodes) {
   return (commentNodes ?? []).map((c) => ({
     author: c.author?.login ?? "unknown",
@@ -55,6 +58,7 @@ function trimComments(commentNodes) {
   }));
 }
 
+/** Reduce a raw review-thread node to its minimal shape for the report. */
 function shapeThread(node) {
   const comments = trimComments(node.comments?.nodes);
   return {
@@ -67,9 +71,11 @@ function shapeThread(node) {
   };
 }
 
-// Build the minimal result from raw GraphQL nodes. Splitting bot threads from
-// human threads honours the skill's "AI bots only" contract while still
-// surfacing human threads for the report.
+/**
+ * Build the minimal result from raw GraphQL nodes. Splitting bot threads from
+ * human threads honours the skill's "AI bots only" contract while still
+ * surfacing human threads for the report.
+ */
 export function buildResult({
   number,
   isDraft,
@@ -108,6 +114,7 @@ export function buildResult({
 
 // ---- argument parsing ----------------------------------------------------
 
+/** Parse argv into `{ pr, bots, repo, includeResolved }`; throws on a flag missing its value. */
 export function parseArgs(argv) {
   const opts = { bots: DEFAULT_BOTS, repo: null, includeResolved: false, pr: null };
   for (let i = 0; i < argv.length; i += 1) {
@@ -136,7 +143,7 @@ export function parseArgs(argv) {
   return opts;
 }
 
-// Accepts a bare number or a full PR URL; returns { number, repo }.
+/** Accept a bare number or a full PR URL; return `{ number, repo }`. */
 export function resolvePr(prArg, repoArg) {
   if (prArg == null) throw new Error("no PR number or URL given");
   const urlMatch = String(prArg).match(
@@ -154,6 +161,7 @@ export function resolvePr(prArg, repoArg) {
 
 // ---- network layer (gh) --------------------------------------------------
 
+/** Run a `gh` command and return stdout; 30s timeout so a stalled call can't hang. */
 function gh(args) {
   return execFileSync("gh", args, {
     encoding: "utf8",
@@ -162,6 +170,7 @@ function gh(args) {
   });
 }
 
+/** Run a GraphQL query via `gh api graphql`, typing each variable as -f/-F. */
 function ghGraphQL(query, variables) {
   const args = ["api", "graphql", "-f", `query=${query}`];
   for (const [key, value] of Object.entries(variables)) {
@@ -175,6 +184,7 @@ function ghGraphQL(query, variables) {
   return JSON.parse(gh(args));
 }
 
+/** Return the current repository as `owner/name`. */
 function detectRepo() {
   return gh(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"]).trim();
 }
@@ -205,6 +215,11 @@ const COMMENTS_QUERY = `query($owner:String!,$name:String!,$number:Int!,$cursor:
   }
 }`;
 
+/**
+ * Page through a PR sub-connection, collecting every node. Also returns
+ * `isDraft`, which is meaningful only for queries that select it (the threads
+ * query) and `undefined` otherwise — callers read it from the threads call alone.
+ */
 function fetchAll(query, owner, name, number, pick) {
   const nodes = [];
   let cursor = null;
@@ -220,6 +235,7 @@ function fetchAll(query, owner, name, number, pick) {
   return { nodes, isDraft };
 }
 
+/** Fetch a PR's review threads and issue comments from GitHub. */
 function fetchFromGitHub(number, repo) {
   const nameWithOwner = repo ?? detectRepo();
   const [owner, name] = nameWithOwner.split("/");
@@ -231,6 +247,7 @@ function fetchFromGitHub(number, repo) {
 
 // ---- self-test -----------------------------------------------------------
 
+/** Run the built-in fixtures (no network) and exit non-zero on any failure. */
 function selfTest() {
   // GraphQL returns bot logins WITHOUT the `[bot]` suffix (e.g. `cursor`,
   // `claude`, `coderabbitai`), so the fixtures use the bare form.
@@ -434,6 +451,7 @@ function selfTest() {
 
 // ---- main ----------------------------------------------------------------
 
+/** CLI entry: parse args, fetch from GitHub, and print the minimal JSON. */
 function main() {
   const argv = process.argv.slice(2);
   if (argv.includes("--self-test")) {
