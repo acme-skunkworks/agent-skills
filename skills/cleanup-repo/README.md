@@ -17,7 +17,10 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill cleanup-r
 
 ## Configure
 
-Edit [`config.json`](config.json) in your installed copy:
+Edit [`config.json`](config.json) in your installed copy. A neutral
+[`config.example.json`](config.example.json) ships alongside it as a template —
+copy it over `config.json` and fill in your values, or edit `config.json`
+directly.
 
 | Key | Meaning | Default |
 | --- | --- | --- |
@@ -25,10 +28,16 @@ Edit [`config.json`](config.json) in your installed copy:
 | `issueKeys` | Team-key prefixes that may appear in branch names; the issue-ID regex is built from these. Keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW"]` |
 | `protectedBranches` | Branches never deleted, locally or remotely. | `["main"]` |
 
+> **Base branch.** v1 assumes the trunk is `origin/main` — merge detection
+> (`git branch --merged origin/main`) is hard-coded to it. Repositories on
+> `master` / `develop` aren't supported yet; a `mainBranch` config key is noted
+> in [`references/design-notes.md`](references/design-notes.md) as a future
+> extension.
+
 ## Requirements
 
 - `git` and `gh` CLIs (`gh` authenticated for the squash-merge detection pass).
-- Node.js with ES-module support, for the bundled filesystem-hygiene script.
+- Node.js ≥22 (per the package's `engines`), for the bundled filesystem-hygiene script.
 - The Linear MCP server is **optional**: the issue-status check and the `Done`
   writeback are skipped silently when it is unavailable.
 
