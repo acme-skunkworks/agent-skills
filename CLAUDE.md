@@ -55,7 +55,19 @@ Common invocations:
 
 ## Release
 
-`.github/workflows/release.yml` runs on every push to `main`. It uses `changesets/action` to either open a "release: version packages" PR (when pending changesets exist) or — once that PR merges — bump versions, tag, and call `pnpm changeset publish`. Publishing is a no-op while `package.json` is `private: true`; if the root or any extracted package becomes publishable, configure npm Trusted Publishing and flip `private` to `false`.
+`.github/workflows/release.yml` runs on every push to `main`. It uses `changesets/action` to either open a "release: version packages" PR (when pending changesets exist) or — once that PR merges — bump versions, tag, and publish. Publishing is dual-registry (public npm + GitHub Packages) and **dormant by design**: both publish scripts guard on `private: true` and `exit 0` while the root package is private, so the full machinery runs green and publishes nothing. (The guard matters because these scripts call raw `npm publish`, which — unlike `pnpm changeset publish` — *errors* on a private package rather than skipping it; without the guard the release job would go red.) The setup mirrors `@acme-skunkworks/eslint-config` (OIDC Trusted Publishing + the [ASW-307](https://linear.app/acme-skunkworks/issue/ASW-307) corrected GitHub Packages pattern):
+
+- **npm leg.** `changesets/action`'s `publish:` input is `scripts/publish-via-raw-npm.sh`, not `pnpm changeset publish` — pnpm's OIDC path fails from inside the action even with an upgraded npm on `PATH` (eslint-config ASW-174). The wrapper calls `npm publish --access public --provenance` directly via the upgraded npm and is idempotent (skips if `name@version` already exists, and `exit 0`s early while `private: true`). Auth is OIDC Trusted Publishing — **no `NPM_TOKEN`**. Needs npm ≥ 11.5.1, hence the "Upgrade npm" step (the runner ships npm 10.9.x, which is both too old and broken on self-upgrade).
+- **GitHub Packages leg.** `scripts/publish-to-github-packages.sh`, run **ungated** (not behind `steps.changesets.outputs.published`, which the raw-npm wrapper can never set to `true` — eslint-config ASW-307). It's idempotent against `npm.pkg.github.com`, uses token auth via `GITHUB_TOKEN` (no OIDC, no provenance), carries the same `private: true` `exit 0` guard, and only its own success/failure gates it.
+
+### Flip-to-public checklist (the deferred first live publish)
+
+When the root — or an extracted package — becomes publishable, the release machinery is already in place; flipping it on is mechanical:
+
+1. **Configure the npm Trusted Publishing allowlist** on [npmjs.com](https://npmjs.com) for the package. The workflow filename (`release.yml`) and the `acme-skunkworks/agent-skills` repo must match the allowlist entry exactly, or OIDC publish 404s (eslint-config ASW-174).
+2. **Set `private: false`** in `package.json`. `publishConfig` (`access: public`, `provenance: true`, registry) is already present.
+3. **Land a changeset** so `changesets/action` cuts a version and the publish steps fire on the next push to `main`.
+4. The GitHub Packages leg needs no extra config — `packages: write` and the `GITHUB_TOKEN` auth are already wired.
 
 The `validate.yml` PR gate runs `pnpm changeset status` against the base branch. It's `continue-on-error` because chore-only PRs legitimately have no changeset; a missing changeset is a soft signal, not a hard fail. Manifest-lint for `skills/<name>/SKILL.md` joins this job with the first skill.
 
