@@ -1,0 +1,4 @@
+{
+  "reviewBots": ["claude", "cursor", "coderabbitai", "github-actions"],
+  "maxCiRounds": 5
+}

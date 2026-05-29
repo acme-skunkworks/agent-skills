@@ -1,0 +1,56 @@
+# triage-pr
+
+Take a pull request from **draft + failing CI** to **merge-ready**: fix in-scope
+CI failures while the PR is a draft, then — once a human marks it ready — fetch
+the unresolved AI review feedback, validate each finding, fix the valid ones and
+decline the invalid ones with reasoning, and re-watch CI until green.
+
+## Install
+
+From any consumer repo:
+
+```bash
+npx skills add https://github.com/acme-skunkworks/agent-skills --skill triage-pr --agent claude-code --agent cursor --copy
+```
+
+`--copy` writes real files so the bundle is portable. Don't use `-g` / `--global`
+— the install should live in the consumer repo.
+
+## Configure
+
+Edit [`config.json`](config.json) in your installed copy:
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback (matched on `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match). Edit to match your install — review-bot logins vary per repo. | `["claude", "cursor", "coderabbitai", "github-actions"]` |
+| `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers — bounds the fix-and-watch loop. | `5` |
+
+## Requirements
+
+- `gh` CLI, authenticated (`gh auth status` must pass) — used for checks, logs,
+  review threads, and thread resolution.
+- `git`.
+- Node.js with ES-module support, for the bundled review-thread fetcher.
+
+## What it does
+
+Two phases, chosen from the PR's draft state:
+
+1. **Phase A — while the PR is a draft.** Inspect failing checks with `gh`, pull
+   the failing GitHub Actions logs, and fix failures **in PR scope only** — never
+   weakening CI config to greenwash. Rebase/merge the base branch when failures
+   are upstream drift. Loop until CI is green (then stop) or report blockers.
+2. **Phase B — after the PR is ready-for-review.** AI review is gated on
+   `draft == false`, so it only runs after a human flips the PR. Fetch the
+   **unresolved** review threads (bundled `scripts/review-threads.mjs` returns
+   minimal JSON), validate each finding against the codebase before changing
+   anything, fix the valid ones, decline the invalid ones with technical
+   reasoning, then loop back through Phase A.
+
+The skill **never flips the PR from draft to ready** — that is the human's call,
+and the gate that turns AI review on. It actions only the configured `reviewBots`;
+human review comments are surfaced in the report but left for the human.
+
+The review-discipline rules folded into Phase B (verify before implementing, no
+sycophancy, evidence before claims) live in
+[`references/review-discipline.md`](references/review-discipline.md).
