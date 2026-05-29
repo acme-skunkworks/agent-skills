@@ -15,8 +15,10 @@
 // containing directory as non-empty (so a nested working tree is never swept).
 // `node_modules/` is never traversed (huge, and handled by the orphan check).
 //
-// The SAME detection feeds both the preview and the removal, so a `--dry-run`
-// in the skill lists exactly what `--apply` would remove.
+// For a given filesystem state the SAME detection drives both the report and
+// the removal, so `--apply` removes exactly what a plain run lists. (The skill
+// runs detection twice — before and after worktree removal — so its end-to-end
+// preview can still pick up parents emptied by that removal; see SKILL.md.)
 //
 // Usage:
 //   node filesystem-hygiene.mjs [root]            # print detection JSON (default cwd)
@@ -27,13 +29,15 @@
 import {
   readdirSync,
   existsSync,
+  statSync,
   rmSync,
   mkdtempSync,
   mkdirSync,
   writeFileSync,
 } from "node:fs";
-import { join, dirname, sep } from "node:path";
+import { join, dirname, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 
 const PLACEHOLDER_FILES = new Set([".gitkeep", ".gitignore"]);
 
@@ -101,6 +105,9 @@ function scan(dir, emptyDirs, nodeModulesDirs) {
 export function detect(root) {
   if (!existsSync(root)) {
     throw new Error(`Root path does not exist: ${root}`);
+  }
+  if (!statSync(root).isDirectory()) {
+    throw new Error(`Root path is not a directory: ${root}`);
   }
   const emptyDirs = [];
   const nodeModulesDirs = [];
@@ -248,6 +255,22 @@ function selfTest() {
       after.orphanNodeModules.length === 0,
   });
 
+  // detect() fails fast on a root that exists but is not a directory, rather
+  // than silently reporting nothing (readdirSync would throw ENOTDIR in scan).
+  const fileRoot = join(tmpdir(), `cleanup-repo-fs-not-a-dir-${process.pid}`);
+  writeFileSync(fileRoot, "");
+  let threwOnFileRoot = false;
+  try {
+    detect(fileRoot);
+  } catch {
+    threwOnFileRoot = true;
+  }
+  rmSync(fileRoot, { force: true });
+  cases.push({
+    name: "detect throws on a non-directory root",
+    ok: threwOnFileRoot,
+  });
+
   rmSync(root, { recursive: true, force: true });
 
   let failed = 0;
@@ -274,6 +297,6 @@ function main() {
   console.log(JSON.stringify(result, null, 2));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   main();
 }
