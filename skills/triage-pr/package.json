@@ -25,5 +25,8 @@
   "author": {
     "name": "Rob Easthope",
     "url": "https://github.com/RobEasthope"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
