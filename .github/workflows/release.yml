@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,9 +18,11 @@ jobs:
     permissions:
       contents: write # Create version PR + git tags + GitHub releases
       pull-requests: write # Open the Version Packages PR
+      packages: write # Publish to GitHub Packages
+      id-token: write # OIDC for npm Trusted Publishing + provenance attestation
     steps:
       - name: ⬇️ Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           # RELEASE_PAT lets the version commit bypass branch protection.
@@ -27,32 +30,79 @@ jobs:
           token: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
 
       - name: 📦 Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v4.4.0
         with:
           run_install: false
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
+      - name: 🟢 Setup Node.js (npm registry)
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: ⬆️ Upgrade npm for Trusted Publishing
+        # npm Trusted Publishing requires npm CLI v11.5.1+. Latest Node 22
+        # still ships npm 10.9.x — well below the threshold — so this step is
+        # required. Pinned to a specific version rather than `@latest` so CI is
+        # reproducible (matches eslint-config's pin; ASW-165).
+        #
+        # The bundled npm 10.9.x in the ubuntu-latest runner image is broken
+        # on self-upgrade (`Cannot find module 'promise-retry'`), so install
+        # via pnpm. PNPM_HOME is exported but actions/setup-node prepends its
+        # tool-cache bin AFTER pnpm/action-setup runs, so the bundled npm
+        # wins on PATH unless we explicitly add PNPM_HOME to GITHUB_PATH for
+        # subsequent steps. Caught silently in eslint-config (ASW-173): TP fell
+        # back to setup-node's placeholder `_authToken` in `.npmrc` and the
+        # registry returned E404. See ASW-174.
+        run: |
+          pnpm add -g npm@11.14.1
+          echo "$PNPM_HOME" >> "$GITHUB_PATH"
+          echo "Upgraded npm at $PNPM_HOME/npm: $("$PNPM_HOME/npm" --version)"
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: 🚀 Version or Publish
+      # No build step: agent-skills ships skills.sh bundles, not a compiled
+      # package. Add one here if/when a publishable package needs to build.
+
+      - name: 🚀 Version or Publish (npm)
         id: changesets
         # Pinned to v1.8.0 commit SHA so a moved tag can't change publish behaviour under us.
         uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b # v1.8.0
         with:
-          # `publish` is a no-op while package.json has `private: true`. Before
-          # flipping `private: false`, wire up npm auth — either NPM_TOKEN as a
-          # repo secret or (preferred) Trusted Publishing via OIDC. See CLAUDE.md
-          # "Release" for the bootstrap sequence; without auth, publishes fail
-          # silently here.
-          publish: pnpm changeset publish
+          # Bypass `pnpm changeset publish` — its OIDC TP path fails even when
+          # the upgraded npm is correctly on PATH (proven in eslint-config). The
+          # wrapper calls `npm publish` directly via $PNPM_HOME/npm and is
+          # idempotent. While package.json is `private: true` this publishes
+          # nothing — npm refuses — so the whole machinery runs green as a
+          # no-op. See CLAUDE.md "Release" for the flip-to-public sequence.
+          # ASW-174.
+          publish: bash scripts/publish-via-raw-npm.sh
           commit: "release: version packages"
           title: "release: version packages"
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # No NPM_TOKEN — Trusted Publishing via OIDC.
+          # Provenance is enabled in package.json's publishConfig.
+
+      # Deliberately ungated. The old `if: steps.changesets.outputs.published`
+      # gate never fired: the npm leg publishes via the raw-npm wrapper, whose
+      # stdout doesn't match the changesets "🦋  info Published" pattern, so
+      # changesets/action always reports published=false (eslint-config
+      # ASW-307). Instead the publish script below is idempotent, and a failed
+      # npm step aborts the job before we reach here — so this leg still only
+      # ships a version npm accepted, and self-heals on retries.
+      - name: 🟢 Setup Node.js (GitHub Packages)
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://npm.pkg.github.com
+          scope: "@acme-skunkworks"
+
+      - name: 📦 Publish to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PACKAGES_REGISTRY_URL: https://npm.pkg.github.com
+        run: bash scripts/publish-to-github-packages.sh
