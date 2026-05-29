@@ -20,7 +20,7 @@ compatibility: >-
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
   version: 0.1.0
-allowed-tools: Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
+allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
 ---
 
 # triage-pr
@@ -171,8 +171,13 @@ gh pr checks <pr> --watch
 
 ### Step 7 — Phase B: fetch unresolved review feedback
 
+Run the bundled fetcher. Its path is **relative to this skill's own directory**
+(the one holding this `SKILL.md` and `config.json`) — resolve it from there, not
+from the consuming repo's root, or the run fails with `ENOENT`. The `--bots`
+value is `config.reviewBots` joined by commas:
+
 ```bash
-node scripts/review-threads.mjs <pr> --bots "<comma-list from config.reviewBots>"
+node scripts/review-threads.mjs <pr> --bots "claude,cursor,coderabbitai,github-actions"
 ```
 
 It prints minimal JSON with three groups:

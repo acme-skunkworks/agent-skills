@@ -28,6 +28,8 @@
 //   node review-threads.mjs --self-test                        # run built-in fixtures
 
 import { execFileSync } from "node:child_process";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 // Common AI review-bot logins. GitHub's GraphQL API returns bot logins WITHOUT
 // the `[bot]` suffix (e.g. `claude`, `coderabbitai`), whereas the REST API and
@@ -112,12 +114,24 @@ export function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--include-resolved") opts.includeResolved = true;
     else if (arg === "--bots") {
-      opts.bots = (argv[++i] ?? "")
+      const value = argv[++i];
+      if (!value || value.startsWith("--")) {
+        throw new Error("--bots requires a comma-separated list of bot logins");
+      }
+      opts.bots = value
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-    } else if (arg === "--repo") opts.repo = argv[++i] ?? null;
-    else if (!arg.startsWith("--") && opts.pr === null) opts.pr = arg;
+      if (opts.bots.length === 0) {
+        throw new Error("--bots requires at least one non-empty bot login");
+      }
+    } else if (arg === "--repo") {
+      const value = argv[++i];
+      if (!value || value.startsWith("--")) {
+        throw new Error("--repo requires an owner/name value");
+      }
+      opts.repo = value;
+    } else if (!arg.startsWith("--") && opts.pr === null) opts.pr = arg;
   }
   return opts;
 }
@@ -144,6 +158,7 @@ function gh(args) {
   return execFileSync("gh", args, {
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
+    timeout: 30_000, // don't hang forever if a gh call stalls
   });
 }
 
@@ -370,6 +385,39 @@ function selfTest() {
     name: "resolvePr accepts a bare number with --repo",
     ok: fromNumber.number === 12 && fromNumber.repo === "acme/widgets",
   });
+  cases.push({
+    name: "resolvePr throws on a non-number, non-URL string",
+    ok: (() => {
+      try {
+        resolvePr("abc", null);
+        return false;
+      } catch {
+        return true;
+      }
+    })(),
+  });
+  cases.push({
+    name: "parseArgs throws when --bots has no value",
+    ok: (() => {
+      try {
+        parseArgs(["123", "--bots"]);
+        return false;
+      } catch {
+        return true;
+      }
+    })(),
+  });
+  cases.push({
+    name: "parseArgs throws when --repo has no value",
+    ok: (() => {
+      try {
+        parseArgs(["123", "--repo"]);
+        return false;
+      } catch {
+        return true;
+      }
+    })(),
+  });
 
   let failed = 0;
   for (const { name, ok } of cases) {
@@ -392,9 +440,10 @@ function main() {
     selfTest();
     return;
   }
-  const opts = parseArgs(argv);
+  let opts;
   let pr;
   try {
+    opts = parseArgs(argv);
     pr = resolvePr(opts.pr, opts.repo);
   } catch (e) {
     console.error(`review-threads: ${e.message}`);
@@ -418,6 +467,24 @@ function main() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Detect "run directly as a CLI" vs "imported as a module". A raw
+// `import.meta.url === file://${argv[1]}` string compare breaks two ways:
+// `import.meta.url` percent-encodes characters such as spaces, and the ESM
+// loader symlink-resolves it whereas `process.argv[1]` is left untouched (e.g.
+// macOS /var → /private/var, pnpm's symlinked store). Normalise both sides
+// through realpath before comparing.
+function isCliEntry() {
+  if (!process.argv[1]) return false;
+  try {
+    return (
+      realpathSync(fileURLToPath(import.meta.url)) ===
+      realpathSync(process.argv[1])
+    );
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
   main();
 }
