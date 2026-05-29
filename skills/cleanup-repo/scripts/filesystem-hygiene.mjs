@@ -39,8 +39,6 @@ import { join, dirname, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-const PLACEHOLDER_FILES = new Set([".gitkeep", ".gitignore"]);
-
 // Recurse a directory. Returns true when the directory is recursively empty
 // (its subtree contains no files). Side effects: pushes top-most empty
 // directories into `emptyDirs` and every node_modules path into `nodeModulesDirs`.
@@ -126,10 +124,19 @@ export function detect(root) {
 
 export function apply(root) {
   const result = detect(root);
+  const removed = [];
+  const failed = [];
+  // Isolate per-path failures: one un-removable entry (permissions, a race)
+  // must not abort the rest. Report what was removed and what wasn't.
   for (const path of [...result.orphanNodeModules, ...result.emptyDirs]) {
-    rmSync(path, { recursive: true, force: true });
+    try {
+      rmSync(path, { recursive: true, force: true });
+      removed.push(path);
+    } catch (err) {
+      failed.push({ path, error: err.message });
+    }
   }
-  return result;
+  return { ...result, removed, failed };
 }
 
 function parseArgs(argv) {
@@ -234,13 +241,20 @@ function selfTest() {
 
   // apply() removes exactly the detected snapshot and nothing else.
   const before = detect(root);
-  apply(root);
+  const applied = apply(root);
   const after = detect(root);
   cases.push({
     name: "apply removed the originally detected paths",
     ok:
       before.emptyDirs.every((p) => !existsSync(p)) &&
       before.orphanNodeModules.every((p) => !existsSync(p)),
+  });
+  cases.push({
+    name: "apply reports every removed path and no failures on a clean run",
+    ok:
+      applied.failed.length === 0 &&
+      applied.removed.length ===
+        before.emptyDirs.length + before.orphanNodeModules.length,
   });
   cases.push({
     name: "apply preserves placeholder-only and file-bearing directories",
