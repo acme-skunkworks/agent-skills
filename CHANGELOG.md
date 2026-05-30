@@ -1,5 +1,11 @@
 # @acme-skunkworks/agent-skills
 
+## 0.0.2
+
+### Patch Changes
+
+- d2354bd: Document the repo's British English writing-style rule in `CLAUDE.md` so Claude consistently uses British spelling and grammar in prose (comments, docs, commit messages, PR bodies). Identifiers, dependency names, and third-party API surfaces are explicitly out of scope.
+
 ## 0.0.1
 
 ### Patch Changes
