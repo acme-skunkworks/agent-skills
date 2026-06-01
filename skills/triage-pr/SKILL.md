@@ -15,8 +15,8 @@ description: >-
 license: MIT
 compatibility: >-
   Requires the `gh` CLI (authenticated — `gh auth status` must pass) and `git`.
-  The bundled review-thread fetcher needs Node.js (any version supporting ES
-  modules). Designed for repositories whose AI review runs only on
+  The bundled review-thread fetcher needs Node.js >=22 (ES modules).
+  Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
   version: 0.1.0

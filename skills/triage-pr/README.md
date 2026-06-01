@@ -30,7 +30,7 @@ Edit [`config.json`](config.json) in your installed copy:
 - `gh` CLI, authenticated (`gh auth status` must pass) — used for checks, logs,
   review threads, and thread resolution.
 - `git`.
-- Node.js with ES-module support, for the bundled review-thread fetcher.
+- Node.js >=22 (ES-module support), for the bundled review-thread fetcher.
 
 ## What it does
 
