@@ -28,22 +28,23 @@ EOF
 }
 
 write_fake_npm() {
-  # write_fake_npm <view-exit-code> [publish-exit-code] [view-output]
-  # `npm view` prints <view-output> (default: a 404 marker) to stderr and exits
+  # write_fake_npm <view-exit-code> [publish-exit-code] [view-stderr]
+  # `npm view` prints <view-stderr> (default: a 404 marker) to stderr and exits
   # <view-exit-code>; `npm publish` exits <publish-exit-code> (default 0). Both
   # record their full argv to $CALLS_LOG. The probe classifies 404 vs real
   # errors via the captured output, so the default exercises the 404 path.
+  # (Param name mirrors publish-to-github-packages.bats.)
   local view_exit_code=$1
   local publish_exit_code=${2:-0}
   # `${3-default}` (not `${3:-default}`) so an explicit empty arg stays empty —
   # the empty-success test needs `npm view` to print nothing.
-  local view_output=${3-'npm error code E404
+  local view_stderr=${3-'npm error code E404
 npm error 404 Not Found - GET https://registry.npmjs.org/@test%2fpkg'}
   cat > "$FAKE_PNPM_HOME/npm" <<EOF
 #!/usr/bin/env bash
 echo "npm \$*" >> "$CALLS_LOG"
 case "\$1" in
-  view) printf '%s\n' "${view_output}" >&2; exit ${view_exit_code} ;;
+  view) printf '%s\n' "${view_stderr}" >&2; exit ${view_exit_code} ;;
   publish) exit ${publish_exit_code} ;;
   *) exit 0 ;;
 esac
@@ -65,7 +66,8 @@ EOF
 }
 
 @test "already-published: npm view succeeds, script exits 0 without publishing" {
-  # Realistic hit: exit 0 with a version string on stdout.
+  # Realistic hit: exit 0 with a version string. The fake npm prints it to
+  # stderr; the script captures it via `2>&1`, so the probe still sees it.
   write_fake_npm 0 0 '1.0.0'
 
   run bash "$SCRIPT_DIR/publish-via-raw-npm.sh"

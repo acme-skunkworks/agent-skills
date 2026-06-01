@@ -55,6 +55,12 @@ jobs:
     name: 📝 YAML & Workflows
     if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     runs-on: ubuntu-latest
+    env:
+      # Single source of truth for the actionlint version (ASW-349): the cache
+      # key below and the `ensure-actionlint.sh` step both read this, so a bump
+      # touches one line instead of two. Job-level env is exported to every
+      # step, so the script picks it up via its `${ACTIONLINT_VERSION:-…}` default.
+      ACTIONLINT_VERSION: "1.7.5"
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -83,8 +89,8 @@ jobs:
           # prefix fallback, which could restore an older actionlint under a
           # bumped version key. ensure-actionlint.sh also version-gates the
           # binary (re-downloads a stale hit), so this is belt-and-braces.
-          # Bump in lockstep with ACTIONLINT_VERSION in ensure-actionlint.sh.
-          key: ${{ runner.os }}-actionlint-1.7.5
+          # Version comes from the job-level ACTIONLINT_VERSION env (ASW-349).
+          key: ${{ runner.os }}-actionlint-${{ env.ACTIONLINT_VERSION }}
 
       - name: 📝 Run yamllint
         # Logic lives in infrastructure/scripts/ensure-yamllint.sh — install
@@ -129,9 +135,12 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.local
+          # Exact-key-or-cold, matching the yamllint + actionlint caches above —
+          # no restore-keys prefix fallback (ASW-349). A prefix hit would restore
+          # an old ~/.local with bats already present; ensure-bats.sh's
+          # needs_install() version-gate would catch and re-download it, but only
+          # after a wasted restore + re-install. Keeping the policy consistent.
           key: ${{ runner.os }}-bats-1.13.0
-          restore-keys: |
-            ${{ runner.os }}-bats-
 
       - name: 🐚 Install shellcheck (apt)
         run: |

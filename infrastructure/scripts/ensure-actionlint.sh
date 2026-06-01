@@ -22,8 +22,11 @@
 # the npm/GitHub Packages identity.
 #
 # Env:
-#   ACTIONLINT_VERSION             — pinned version (default 1.7.5). Match the
-#                                    cache key in .github/workflows/validate.yml.
+#   ACTIONLINT_VERSION             — pinned version (default 1.7.5). In CI this
+#                                    is driven by the job-level ACTIONLINT_VERSION
+#                                    env in .github/workflows/validate.yml, which
+#                                    also keys the cache — one source of truth.
+#                                    The default here is the local-run fallback.
 #   ACTIONLINT_BOOTSTRAP_REF       — immutable git ref of download-actionlint.bash
 #                                    (default: the v1.7.5 tag's commit SHA).
 #   ACTIONLINT_SHA256_LINUX_AMD64  — pinned sha256 of the linux/amd64 binary.
