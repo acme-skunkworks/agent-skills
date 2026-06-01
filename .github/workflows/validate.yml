@@ -23,6 +23,7 @@ jobs:
     # changeset-status check kept informational. Build/lint and SKILL.md
     # manifest-lint steps join this job with the first skill.
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       HUSKY: 0
     steps:
@@ -55,6 +56,7 @@ jobs:
     name: 📝 YAML & Workflows
     if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       # Single source of truth for the actionlint version (ASW-349): the cache
       # key below and the `ensure-actionlint.sh` step both read this, so a bump
@@ -106,6 +108,7 @@ jobs:
     name: 🧪 Infrastructure scripts
     if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       HUSKY: 0
     steps:
@@ -157,3 +160,38 @@ jobs:
 
       - name: 🧪 Bats
         run: pnpm test:sh
+
+  skill-manifests:
+    name: 🧪 Validate skill manifests
+    # Skipped on changeset-release/* for consistency with yaml-lint/infra: the
+    # orchestrator's version PRs don't touch skills/, so there's nothing new to
+    # validate there. Still a hard gate on feature PRs that add/change a skill.
+    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: 🧪 Validate SKILL.md manifests
+        # Hard gate: every skills/<name>/ with a SKILL.md must pass the canonical
+        # Agent Skills validator. A malformed manifest fails the PR.
+        run: |
+          shopt -s nullglob
+          found=0
+          for dir in skills/*/; do
+            [ -f "${dir}SKILL.md" ] || continue
+            found=1
+            echo "Validating ${dir%/}"
+            npx --yes skills-ref@0.1.5 validate "./${dir%/}"
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "No skills with a SKILL.md found — nothing to validate."
+          fi
