@@ -61,12 +61,16 @@ view_output=$(npm view "$NAME@$VERSION" version --registry "$GITHUB_PACKAGES_REG
 view_status=$?
 set -e
 
-if [ "$view_status" -eq 0 ]; then
+# Skip only on a genuine hit: exit 0 *with* output. npm can exit 0 with empty
+# output for unresolved descriptors (a dist-tag quirk), so a bare exit-0 isn't
+# proof the version exists — treat empty exit-0 as "not published" and publish.
+if [ "$view_status" -eq 0 ] && [ -n "$view_output" ]; then
   echo "Already published to GitHub Packages: $NAME@$VERSION — skipping."
   exit 0
 fi
 
-if ! printf '%s' "$view_output" | grep -qiE 'E404|404|not found'; then
+# Only a non-zero exit whose error isn't a 404 is a real failure to abort on.
+if [ "$view_status" -ne 0 ] && ! printf '%s' "$view_output" | grep -qiE 'E404|404|not found'; then
   echo "npm view failed for $NAME@$VERSION (exit $view_status) and the error is not a 404 — aborting:" >&2
   printf '%s\n' "$view_output" >&2
   exit 1
