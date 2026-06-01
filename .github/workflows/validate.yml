@@ -18,10 +18,9 @@ jobs:
     # Deliberately NOT skipped on changeset-release/* — this job is the required
     # status check that gates the version PR (ASW-311). The road-runner-bot
     # orchestrator reopens the version PR to trigger this run, then merges once
-    # it's green. agent-skills has no compile/lint step yet (it ships skills.sh
-    # bundles); the hard gate today is the frozen-lockfile install, with the
-    # changeset-status check kept informational. Build/lint and SKILL.md
-    # manifest-lint steps join this job with the first skill.
+    # it's green. Hard gates: frozen-lockfile install, the vitest unit tests for
+    # the changelog/send-it helpers, and changelog-entry validation. The
+    # changeset-status check stays informational (chore-only PRs need no entry).
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -33,6 +32,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: ⚙️ Load repo config
+        id: repo
+        uses: ./.github/actions/load-repo-config
+
       - name: 📦 Install pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v4.4.0
         with:
@@ -41,11 +44,17 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version-file: .nvmrc
+          node-version-file: ${{ steps.repo.outputs.node_version_file }}
           cache: pnpm
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: 🧪 Unit tests (changelog + send-it helpers)
+        run: pnpm test
+
+      - name: 📒 Validate changelog entries
+        run: pnpm validate:changelog
 
       - name: 📝 Changeset status
         # Informational: chore-only PRs can legitimately have no changeset.
