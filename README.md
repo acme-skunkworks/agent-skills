@@ -19,11 +19,21 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill <name> --
 ├── .changeset/              # pending changesets + config
 ├── .claude/commands/
 │   └── send-it.md           # all-in-one finisher (stopgap until the send-it skill ships)
-├── .github/workflows/
-│   ├── release.yml          # changesets/action — "Version Packages" PR + release tags
-│   └── validate.yml         # PR gate: pnpm changeset status (manifest lint joins later)
+├── .github/
+│   ├── actions/
+│   │   └── load-repo-config/ # infrastructure/repo-config.yaml → step outputs
+│   └── workflows/
+│       ├── release.yml       # publish-only: build → npm (OIDC) → GitHub Packages (dormant)
+│       └── validate.yml      # PR gate: build & lint, changelog validation, infra tests
+├── .husky/                  # git hooks (block main pushes; lint-staged; strip Claude trailer)
 ├── architecture/            # ADRs (sequentially numbered, immutable)
-├── scripts/send-it/         # deterministic helpers for /send-it
+├── changelog/               # dated per-change release-note entries (companion to CHANGELOG.md)
+├── infrastructure/
+│   ├── repo-config.yaml      # non-secret CI/release knobs
+│   ├── scripts/              # changelog .ts helpers + ensure-*.sh tool bootstraps
+│   ├── send-it/              # deterministic helpers for /send-it
+│   └── tests/                # bats (publish scripts) + vitest (changelog)
+├── scripts/                 # publish wrappers (npm OIDC + GitHub Packages)
 ├── skills/                  # one folder per skill
 ├── CLAUDE.md
 ├── LICENSE
