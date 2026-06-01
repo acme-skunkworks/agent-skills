@@ -123,7 +123,7 @@ Versioning lives in [Changesets](https://github.com/changesets/changesets). `/se
    pnpm tsx infrastructure/send-it/derive-changeset.ts
    ```
 
-   It prints JSON to stdout: `{ "slug": "...", "bump": "...", "body": "..." }`. The slash command then writes the file.
+   It prints JSON to stdout: `{ "pkg": "...", "slug": "...", "bump": "...", "body": "..." }`. The `pkg` field is always the root package `@acme-skunkworks/agent-skills` (the single Changesets-managed package — see Notes); use it verbatim in the frontmatter. The slash command then writes the file.
 
 4. **Skip the changeset step entirely** when the only commits on the branch are non-shippable (changes to `.changeset/`, `.claude/`, `infrastructure/`, `changelog/`, top-level `README.md`, or a single `chore: update lockfile` commit). For those branches the PR body should note "no changeset (developer-tooling only change)".
 
@@ -271,7 +271,7 @@ $ARGUMENTS
 - **Trunk-based:** PRs target `main`.
 - **Idempotent:** running `/send-it` again updates the existing changeset and PR.
 - **`/send-it` does not bump versions or write `CHANGELOG.md`.** The `changesets/action` workflow on `main` handles version bumps, CHANGELOG generation, npm publish (no-op while the root is `private: true`), and release tagging.
-- **Single-package repo (for now).** Changeset frontmatter names `@acme-skunkworks/agent-skills`. The root is the only package today; if individual skills ever become npm packages (workspace setup under `skills/<name>/package.json`), the derive script needs an updated affected-package detector to pick the right scopes.
+- **Changesets always name the root package** `@acme-skunkworks/agent-skills` — this is the settled model (ADR-0002), not a stopgap. npm versioning is repo-level: the root is the single published, Changesets-managed package. A changeset that names a per-skill package (`@acme-skunkworks/skill-<name>`) points at something Changesets can't see and silently no-ops, so the `validate:changesets` CI guard rejects it. Skills carry their own **non-npm** version in `SKILL.md` `metadata.version` (mirrored in the skill's private `package.json`), bumped by hand per ADR-0001 Decision 2's semver semantics — never via a changeset.
 - **Linear `In Review` writeback** runs after PR creation/update. Linked issues in Triage/Backlog/Todo/In Progress are transitioned; already-In-Review and Done/Canceled/Duplicate are skipped. Re-runs are idempotent.
 
 ## Steps Summary
