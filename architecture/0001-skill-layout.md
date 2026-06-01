@@ -4,7 +4,7 @@
 - **Date:** 2026-05-27
 - **Tracking:** [ASW-133](https://linear.app/goose-and-hobbes/issue/ASW-133)
 - **Supersedes:** —
-- **Superseded by:** —
+- **Superseded by:** [ADR-0002](0002-repo-level-npm-versioning.md) supersedes **Decision 1** (per-skill versioning via pnpm workspaces). Decisions 2–4 stand; ADR-0002 amends how Decision 2's semver semantics apply (to the out-of-band `metadata.version` label) and withdraws Decision 4's per-skill Git-tag scheme.
 
 ## Context
 
