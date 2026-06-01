@@ -17,10 +17,12 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill cleanup-r
 
 ## Configure
 
-Edit [`config.json`](config.json) in your installed copy. A neutral
-[`config.example.json`](config.example.json) ships alongside it as a template —
-copy it over `config.json` and fill in your values, or edit `config.json`
-directly.
+The shipped [`config.json`](config.json) carries **ACME Skunkworks defaults**
+(`linearTeamName` and `issueKeys`) — update them for your organisation on install,
+or the Linear lookups will target the wrong team and branch issue-IDs won't match.
+A neutral [`config.example.json`](config.example.json) ships alongside it as a
+template — copy it over `config.json` and fill in your values, or edit
+`config.json` directly.
 
 | Key | Meaning | Default |
 | --- | --- | --- |
