@@ -96,7 +96,7 @@ When the root — or an extracted package — becomes publishable, the release m
 
 1. **Set `private: false`** in `package.json`. `publishConfig` (`access: public`, `provenance: true`, registry) is already present. Note the publish scripts stop short-circuiting the moment this flips — they will publish on the next version-PR merge.
 2. **Land a changeset** so the orchestrator cuts a version (the bootstrap publish ships at that version).
-3. **Manual publish #1** — follow the **Bootstrap publish** runbook below: a hand-driven `npm publish` (recovery-code OTP) reserves the name on npm. This step is unavoidable; bypass-2FA tokens don't work for a brand-new package's first publish.
+3. **Manual publish #1** — follow the **Bootstrap publish** runbook below: a hand-driven `npm publish` reserves the name on npm. With the default `auth-type=web`, npm opens a browser and your passkey approves the first-publish 2FA (a recovery-code `--otp` is the headless fallback). This step is unavoidable; bypass-2FA tokens don't work for a brand-new package's first publish.
 4. **Configure the npm Trusted Publishing allowlist** at `npmjs.com/package/@acme-skunkworks/agent-skills/access` → GitHub Actions. The workflow filename (`release.yml`) and the `acme-skunkworks/agent-skills` repo must match the allowlist entry exactly, or OIDC publish 404s (eslint-config ASW-174). This is only reachable *after* step 3.
 5. **CI takes over from publish #2.** The next version-PR merge publishes via OIDC (npm) + GitHub Packages + provenance, with no standing `NPM_TOKEN`. The GitHub Packages leg needs no extra config — `packages: write` and `GITHUB_TOKEN` auth are already wired.
 
@@ -114,7 +114,9 @@ The deeper eslint-config hardening that was deferred during the bootstrap — th
 > - **Shortest viable lifetime + a documented rotation cadence**; rotate immediately if a laptop is lost or the token is exposed.
 > - It never touches CI (this file forbids `NPM_TOKEN` as a CI secret), and manual publishes are distinguishable from CI ones (no provenance badge), so a manual release can't masquerade as a verified CI one. The only way this token leaks is full local-machine compromise.
 
-For when CI is down. Auth setup (one-time, or after rotating your token):
+For when CI is down. **If you're at an interactive machine, the simplest break-glass is no token at all** — run `pnpm run release:manual` and approve the 2FA in the browser with your passkey (same flow as a bootstrap publish). The `.env` `NPM_TOKEN` path below is for *unattended/headless* break-glass, where there's no browser to complete the passkey challenge.
+
+Token auth setup (one-time, or after rotating your token):
 
 ```bash
 NPM_TOKEN=$(grep '^NPM_TOKEN=' .env | cut -d'=' -f2-)
@@ -146,39 +148,37 @@ So bootstrap is always: manual first publish → configure Trusted Publisher →
 
 - You belong to the target npm org with publish rights.
 - npm CLI ≥ 11.5.1 (`npm install -g npm@latest`).
-- Account has 2FA enabled with **recovery codes generated and saved** (you'll need one).
+- Account has 2FA enabled with a **passkey registered** (preferred — it satisfies the first-publish 2FA in the browser). Have **recovery codes generated and saved** too, as the headless fallback.
+- An interactive browser is available and `auth-type=web` is in effect (the npm default — check with `npm config get auth-type`). That's what lets npm hand off the publish 2FA to your passkey.
 - `package.json` is at the version you want to ship (`pnpm changeset:version` consumes pending changesets, bumps `package.json`, and version-stamps the dated `changelog/` entries).
 
 **Sequence:**
 
 1. `pnpm changeset:version` — consume pending changesets, bump `package.json`, write the changeset-native `CHANGELOG.md`, and finalise the dated `changelog/<ts>-<slug>.md` entries (the custom system runs alongside `CHANGELOG.md`, not instead of it).
-2. `pnpm run release:manual:dry` — verify tarball + auth. **Note:** dry-run does NOT trigger 2FA enforcement, so a successful dry-run does not predict a successful real publish. It only proves the tarball is valid and your token authenticates.
-3. `pnpm run release:manual` — first real attempt. **This will fail with `EOTP`.** That's expected.
-4. Use a **recovery code as the `--otp` value**:
+2. `pnpm run release:manual:dry` — verify tarball + auth. **Note:** dry-run does NOT trigger 2FA enforcement, so a successful dry-run does not predict a successful real publish. It only proves the tarball is valid and your credentials authenticate.
+3. `pnpm run release:manual` — the real publish. With `auth-type=web` (the npm default) npm **opens a browser and prompts for 2FA; approve it with your passkey** (Touch ID / Face ID / security key). That satisfies the first-publish 2FA and the package publishes — no `--otp`, no recovery code. This is the normal path on current npm.
+4. **Fallback — only if the browser flow isn't available** (headless host, no passkey registered, or an npm too old for web auth): the publish stops at `EOTP`. Pass a **recovery code as the `--otp` value**:
 
    ```bash
    npm publish --access public --provenance=false --otp=<recovery-code>
    ```
 
-   Generate codes at npmjs.com → Profile → Two-Factor Authentication → Manage Recovery Codes. Each is single-use. The format is a long hex string (not a 6-digit TOTP) — npm accepts it as `--otp` anyway.
+   Generate codes at npmjs.com → Profile → Two-Factor Authentication → Manage Recovery Codes. Each is single-use. The format is a long hex string (not a 6-digit TOTP) — npm accepts it as `--otp` anyway. **If you use one, immediately regenerate recovery codes** — the one you used is burnt; if you transmitted it anywhere (chat, paste buffer with cloud sync, screen share), treat the rest of the set as compromised. (The passkey path in step 3 burns nothing, so there's nothing to regenerate.)
 
-5. After publish succeeds, **immediately regenerate recovery codes**. The one you used is burnt; if you transmitted it anywhere (chat, paste buffer with cloud sync, screen share), treat the rest of the set as compromised.
-6. Configure Trusted Publisher: `https://www.npmjs.com/package/@acme-skunkworks/agent-skills/access` → GitHub Actions → org, repo, workflow filename (`release.yml`), environment blank.
-7. From here on, releases go through CI cleanly.
+5. Configure Trusted Publisher: `https://www.npmjs.com/package/@acme-skunkworks/agent-skills/access` → GitHub Actions → org, repo, workflow filename (`release.yml`), environment blank.
+6. From here on, releases go through CI cleanly.
 
-#### Things that look like solutions but aren't
+#### Fallback troubleshooting — things that look like solutions but aren't
 
-Saving these to spare the next bootstrap from rediscovering them:
+These only matter when you're on a headless host (or have no passkey) and stuck on `EOTP` — on an interactive machine the passkey browser flow (step 3) just works and you skip all of this. When you *are* stuck, a recovery-code `--otp` (step 4) is the answer; these are **not**:
 
-- `npm publish --auth-type=web` — flag is for `npm login`, ignored by `publish`.
 - Toggling "Require 2FA for write actions" off in account settings.
 - Disabling org-level 2FA enforcement.
 - Generating a Granular token with bypass-2FA enabled — works for publish #2+, NOT publish #1.
-- `npm login --auth-type=web` to refresh the session token. Auth swaps successfully but the publish endpoint still demands OTP.
 - `oathtool` for generating TOTP — only works if you have a TOTP secret, and **npm has phased TOTP out of new accounts** (only passkeys + recovery codes are offered now).
 - Disabling 2FA entirely — npm's policy _requires_ either 2FA or a bypass-2FA token; you can't disable both. And the bypass token doesn't help for publish #1 anyway.
 
-Recovery codes are the answer because they're the only OTP-shaped value an npm account can produce when its only 2FA factor is a passkey.
+> **Don't disable `auth-type=web` reaching for a recovery code.** `auth-type=web` is the npm default and is precisely what lets a passkey satisfy the publish 2FA in the browser — it is the *primary* path (step 3), not a dead-end. Recovery codes only become "the answer" when no browser/passkey is in play.
 
 ## Linear
 
