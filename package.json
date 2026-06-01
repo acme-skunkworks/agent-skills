@@ -1,7 +1,7 @@
 {
   "name": "@acme-skunkworks/agent-skills",
-  "version": "0.0.1",
-  "private": true,
+  "version": "1.0.0",
+  "private": false,
   "description": "Shared agent skills (Claude Code, Cursor) distributed as skills.sh-compatible bundles.",
   "keywords": [
     "agent-skills",
@@ -23,18 +23,51 @@
     "name": "Rob Easthope",
     "url": "https://github.com/RobEasthope"
   },
+  "files": [
+    "skills/"
+  ],
   "scripts": {
+    "changelog:finalise": "tsx infrastructure/scripts/finalise-changelog.ts",
     "changeset": "changeset",
-    "changeset:version": "changeset version",
-    "lint:sh": "bash -c 'if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh infrastructure/scripts/*.sh; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  shellcheck not installed — skipping. Install: brew install shellcheck\"; else echo \"⚠️  shellcheck not installed — skipping. Install: apt-get install shellcheck\"; fi'",
+    "changeset:version": "changeset version && pnpm changelog:finalise",
+    "lint:sh": "bash -c 'if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh infrastructure/scripts/*.sh .husky/pre-commit .husky/pre-push .husky/commit-msg; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  shellcheck not installed — skipping. Install: brew install shellcheck\"; else echo \"⚠️  shellcheck not installed — skipping. Install: apt-get install shellcheck\"; fi'",
     "lint:workflows": "actionlint",
     "lint:yaml": "yamllint .",
+    "prepare": "husky",
     "release": "changeset publish",
+    "release:manual": "npm publish --access public --provenance=false",
+    "release:manual:dry": "npm publish --access public --provenance=false --dry-run",
+    "test": "vitest run",
     "test:sh": "bash -c 'if command -v bats >/dev/null 2>&1; then bats infrastructure/tests/*.bats; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  bats not installed — skipping. Install: brew install bats-core\"; else echo \"⚠️  bats not installed — skipping. Install: apt-get install bats\"; fi'",
+    "test:watch": "vitest",
+    "validate:changelog": "tsx infrastructure/scripts/validate-changelog.ts",
+    "validate:changesets": "tsx infrastructure/scripts/validate-changesets.ts",
+    "validate:skills": "tsx infrastructure/scripts/validate-skills.ts",
     "version": "changeset version"
   },
+  "lint-staged": {
+    "**/*.sh": [
+      "bash -c 'if command -v shellcheck >/dev/null 2>&1; then shellcheck \"$@\"; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  shellcheck not installed — skipping. Install: brew install shellcheck\"; else echo \"⚠️  shellcheck not installed — skipping. Install: apt-get install shellcheck\"; fi' --"
+    ],
+    "**/*.{yml,yaml}": [
+      "bash -c 'if command -v yamllint >/dev/null 2>&1; then yamllint \"$@\"; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  yamllint not installed — skipping. Install: brew install yamllint\"; else echo \"⚠️  yamllint not installed — skipping. Install: pip install --user yamllint==1.37.1\"; fi' --"
+    ],
+    ".github/workflows/*.{yml,yaml}": [
+      "bash -c 'if command -v actionlint >/dev/null 2>&1; then actionlint \"$@\"; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  actionlint not installed — skipping. Install: brew install actionlint\"; else echo \"⚠️  actionlint not installed — skipping. Install via the pinned bootstrap in infrastructure/scripts/ensure-actionlint.sh\"; fi' --"
+    ],
+    "changelog/*.md": [
+      "bash -c 'pnpm validate:changelog' --"
+    ]
+  },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0"
+    "@changesets/cli": "^2.31.0",
+    "@types/node": "^25.6.0",
+    "gray-matter": "^4.0.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2",
+    "tsx": "^4.21.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.6"
   },
   "packageManager": "pnpm@10.33.0",
   "engines": {

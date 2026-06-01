@@ -18,3 +18,8 @@ coverage/
 .vscode/
 *.swp
 *.swo
+
+# Claude Code local/runtime artifacts
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+.claude/settings.local.json

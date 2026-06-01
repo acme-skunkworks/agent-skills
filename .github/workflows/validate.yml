@@ -18,11 +18,13 @@ jobs:
     # Deliberately NOT skipped on changeset-release/* — this job is the required
     # status check that gates the version PR (ASW-311). The road-runner-bot
     # orchestrator reopens the version PR to trigger this run, then merges once
-    # it's green. agent-skills has no compile/lint step yet (it ships skills.sh
-    # bundles); the hard gate today is the frozen-lockfile install, with the
-    # changeset-status check kept informational. Build/lint and SKILL.md
-    # manifest-lint steps join this job with the first skill.
+    # it's green. Hard gates: frozen-lockfile install, the vitest unit tests for
+    # the changelog/send-it helpers, changelog-entry validation, and the
+    # changeset package-name guard (ASW-364 — fails loudly on a changeset that
+    # names anything but the root package). The changeset-status check stays
+    # informational (chore-only PRs need no entry).
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       HUSKY: 0
     steps:
@@ -32,6 +34,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: ⚙️ Load repo config
+        id: repo
+        uses: ./.github/actions/load-repo-config
+
       - name: 📦 Install pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v4.4.0
         with:
@@ -40,11 +46,30 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version-file: .nvmrc
+          node-version-file: ${{ steps.repo.outputs.node_version_file }}
           cache: pnpm
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: 🧪 Unit tests (changelog + send-it helpers)
+        run: pnpm test
+
+      - name: 📒 Validate changelog entries
+        run: pnpm validate:changelog
+
+      - name: 🏷️ Validate changeset package names
+        # Hard gate (ASW-364): every .changeset/*.md must name only the root
+        # package. A skill-named changeset can't reach a package Changesets
+        # discovers, so it would silently no-op — fail the build instead.
+        run: pnpm validate:changesets
+
+      - name: 🧩 Validate skill bundle metadata
+        # Hard gate (ASW-364): every skills/*/ must have a package.json named
+        # @acme-skunkworks/skill-<dir>, private: true, a semver version, and a
+        # SKILL.md whose metadata.version matches. Stops per-skill version
+        # metadata drifting silently (skills version out-of-band — ADR-0002).
+        run: pnpm validate:skills
 
       - name: 📝 Changeset status
         # Informational: chore-only PRs can legitimately have no changeset.
@@ -55,6 +80,7 @@ jobs:
     name: 📝 YAML & Workflows
     if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       # Single source of truth for the actionlint version (ASW-349): the cache
       # key below and the `ensure-actionlint.sh` step both read this, so a bump
@@ -106,6 +132,7 @@ jobs:
     name: 🧪 Infrastructure scripts
     if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       HUSKY: 0
     steps:
@@ -157,3 +184,38 @@ jobs:
 
       - name: 🧪 Bats
         run: pnpm test:sh
+
+  skill-manifests:
+    name: 🧪 Validate skill manifests
+    # Skipped on changeset-release/* for consistency with yaml-lint/infra: the
+    # orchestrator's version PRs don't touch skills/, so there's nothing new to
+    # validate there. Still a hard gate on feature PRs that add/change a skill.
+    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: 🧪 Validate SKILL.md manifests
+        # Hard gate: every skills/<name>/ with a SKILL.md must pass the canonical
+        # Agent Skills validator. A malformed manifest fails the PR.
+        run: |
+          shopt -s nullglob
+          found=0
+          for dir in skills/*/; do
+            [ -f "${dir}SKILL.md" ] || continue
+            found=1
+            echo "Validating ${dir%/}"
+            npx --yes skills-ref@0.1.5 validate "./${dir%/}"
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "No skills with a SKILL.md found — nothing to validate."
+          fi

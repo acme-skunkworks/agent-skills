@@ -5,7 +5,7 @@ allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm
 
 Bundle uncommitted work into atomic commits, author or update a `.changeset/<slug>.md` file, push the branch, and open (or update) a pull request against `main`. Transition any linked Linear issues to **In Review**.
 
-> **Stopgap copy.** This command was cloned from `@acme-skunkworks/eslint-config`'s `/send-it` to give this repo a working finisher before the canonical "send-it" agent skill exists. When that skill ships (tracked in the Agent Skills Linear project), delete this file, delete `scripts/send-it/`, and install the skill via `npx skills add`. Until then, this copy is the source of truth for this repo.
+> **Stopgap copy.** This command was cloned from `@acme-skunkworks/eslint-config`'s `/send-it` to give this repo a working finisher before the canonical "send-it" agent skill exists. When that skill ships (tracked in the Agent Skills Linear project), delete this file, delete `infrastructure/send-it/`, and install the skill via `npx skills add`. Until then, this copy is the source of truth for this repo.
 
 ## Your Task
 
@@ -13,9 +13,9 @@ Bundle uncommitted work into atomic commits, author or update a `.changeset/<slu
 2. Refresh the lockfile if `package.json` drifted.
 3. Commit any uncommitted changes into logical atomic commits.
 4. Fetch `origin/main` and analyse the full branch diff.
-5. Author or update the changeset entry (`.changeset/<slug>.md`).
-6. Validate via `pnpm changeset status`.
-7. Commit the changeset, push the branch, open or update a PR.
+5. Author or update the changeset entry (`.changeset/<slug>.md`) and the dated changelog companion (`changelog/<ts>-<slug>.md`).
+6. Validate via `pnpm changeset status` (and `pnpm validate:changelog` when a changelog entry was written).
+7. Commit the changeset + changelog entry, push the branch, open or update a PR.
 8. Transition linked Linear issues to **In Review**.
 
 This command intentionally does NOT run lint, typecheck, tests, or format checks. CI handles those.
@@ -117,15 +117,15 @@ Versioning lives in [Changesets](https://github.com/changesets/changesets). `/se
    - First commit's subject starts with `feat:` or `feat(<scope>):` → **minor**.
    - Otherwise → **patch**.
 
-   The deterministic bits live in `scripts/send-it/derive-changeset.mjs` — invoke it to get the slug, bump level, and a draft body:
+   The deterministic bits live in `infrastructure/send-it/derive-changeset.ts` — invoke it to get the slug, bump level, and a draft body:
 
    ```bash
-   node scripts/send-it/derive-changeset.mjs
+   pnpm tsx infrastructure/send-it/derive-changeset.ts
    ```
 
-   It prints JSON to stdout: `{ "slug": "...", "bump": "...", "body": "..." }`. The slash command then writes the file.
+   It prints JSON to stdout: `{ "pkg": "...", "slug": "...", "bump": "...", "body": "..." }`. The `pkg` field is always the root package `@acme-skunkworks/agent-skills` (the single Changesets-managed package — see Notes); use it verbatim in the frontmatter. The slash command then writes the file.
 
-4. **Skip the changeset step entirely** when the only commits on the branch are non-shippable (changes to `.changeset/`, `.claude/`, `scripts/send-it/`, top-level `README.md`, or a single `chore: update lockfile` commit). For those branches the PR body should note "no changeset (developer-tooling only change)".
+4. **Skip the changeset step entirely** when the only commits on the branch are non-shippable (changes to `.changeset/`, `.claude/`, `infrastructure/`, `changelog/`, top-level `README.md`, or a single `chore: update lockfile` commit). For those branches the PR body should note "no changeset (developer-tooling only change)".
 
 5. **Frontmatter format** (Changesets standard):
 
@@ -145,20 +145,70 @@ Versioning lives in [Changesets](https://github.com/changesets/changesets). `/se
 
 6. **On update**, preserve the bump level (don't downgrade a `major` to `patch` because a later commit was a docs tweak), rewrite only the body.
 
+### Step 5b: Author or update the dated changelog entry
+
+> **Same gate as the changeset.** Write a `changelog/` entry **only when Step 5 wrote a changeset** (the branch touches a shippable path per Step 5.4). Skip it whenever the changeset was skipped — the dated changelog mirrors the published-change surface, not every PR, so each entry stays tied to a version bump. If Step 5 was skipped, skip this step too.
+
+The `changelog/` directory holds one dated Markdown file per shippable change — a browsable, per-change companion to the root `CHANGELOG.md`. Full schema in `changelog/README.md`. `/send-it` writes the PR-time fields; the release-orchestrator's version PR finalises the entry at release — enriching `merged_at`/`commit`/`pr`/`merge_strategy`/`stats` from the merged PR and stamping `version` (via `changeset:version` → `finalise-changelog.ts`). No separate workflow or push to `main` is involved.
+
+1. **Filename + timestamps.** `changelog/<YYYYMMDD-HHMMSS>-<slug>.md`, where `<slug>` is the same slug from Step 5.1 and the timestamp is UTC now:
+
+   ```bash
+   TS=$(date -u +"%Y%m%d-%H%M%S")          # filename prefix
+   CREATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")  # created_at frontmatter
+   ```
+
+   **On update** — find an existing entry by matching the `branch` frontmatter field (not the filename; the timestamp won't match). If found, preserve its filename and `created_at`; rewrite only `title`/`release_note`/`category`/`breaking`/`issues` and the body.
+
+2. **Frontmatter** — PR-time fields populated, enrichment fields left as empty placeholders:
+
+   ```yaml
+   ---
+   title: "<concise summary>"
+   release_note: "<one-line user-facing summary>"
+   version:
+   created_at: "<CREATED_AT>"
+   merged_at:
+   branch: "<current branch>"
+   pr:
+   commit:
+   merge_strategy:
+   author: "<git config user.email>"
+   co_authors: []
+   category: <feature|fix|chore|docs|refactor|perf>
+   breaking: <true|false>
+   issues: [<Linear IDs from Step 10>]
+   stats:
+     files_changed:
+     loc_added:
+     loc_removed:
+   ---
+   ```
+
+   - `category`: derive from the changeset bump / conventional-commit types (`feat`→`feature`, `fix`→`fix`, `perf`→`perf`, `refactor`→`refactor`, `docs`→`docs`, else `chore`). `breaking: true` iff the bump is `major`.
+   - `co_authors`: emails from any `Co-authored-by:` trailers on the branch commits, else `[]`.
+   - Wrap all ISO timestamps in quotes (YAML would otherwise parse them into Date objects — see `changelog/README.md`).
+
+3. **Body** — `## Added` / `## Changed` / `## Fixed` sections (only those with content), mirroring the changeset body. If `breaking: true`, a `## Breaking` section MUST come first.
+
+4. **Validate** — run `pnpm validate:changelog`; it must pass before committing.
+
 ### Step 6: Validate locally
 
 > **Skipped if Step 5 was skipped** by the developer-tooling skip rule in Step 5.4.
 
-Run `pnpm changeset status`. If it fails (no changesets when one is expected, or the file is malformed), surface the error and abort. Don't auto-fix; the user resolves.
+Run `pnpm changeset status`. If it fails (no changesets when one is expected, or the file is malformed), surface the error and abort. Don't auto-fix; the user resolves. When a changelog entry was written, also run `pnpm validate:changelog` and abort on failure.
 
 If Step 5 was skipped specifically because the branch is developer-tooling-only (Step 5.4), `pnpm changeset status` may report "no changesets" — that's expected. The release-pipeline policy on whether unchangesetted PRs are allowed is governed by CI's `changesets/action` config, not by `/send-it`.
 
-### Step 7: Commit the changeset
+### Step 7: Commit the changeset and changelog entry
 
 ```bash
-git add .changeset/<slug>.md
+git add .changeset/<slug>.md changelog/<YYYYMMDD-HHMMSS>-<slug>.md
 git commit -m "docs(changeset): <one-line summary>"
 ```
+
+If Steps 5 and 5b were both skipped (developer-tooling branch), there's nothing to commit here — continue. Stage only the files that were actually written.
 
 ### Step 8: Push the branch
 
@@ -221,7 +271,7 @@ $ARGUMENTS
 - **Trunk-based:** PRs target `main`.
 - **Idempotent:** running `/send-it` again updates the existing changeset and PR.
 - **`/send-it` does not bump versions or write `CHANGELOG.md`.** The `changesets/action` workflow on `main` handles version bumps, CHANGELOG generation, npm publish (no-op while the root is `private: true`), and release tagging.
-- **Single-package repo (for now).** Changeset frontmatter names `@acme-skunkworks/agent-skills`. The root is the only package today; if individual skills ever become npm packages (workspace setup under `skills/<name>/package.json`), the derive script needs an updated affected-package detector to pick the right scopes.
+- **Changesets always name the root package** `@acme-skunkworks/agent-skills` — this is the settled model (ADR-0002), not a stopgap. npm versioning is repo-level: the root is the single published, Changesets-managed package. A changeset that names a per-skill package (`@acme-skunkworks/skill-<name>`) points at something Changesets can't see and silently no-ops, so the `validate:changesets` CI guard rejects it. Skills carry their own **non-npm** version in `SKILL.md` `metadata.version` (mirrored in the skill's private `package.json`), bumped by hand per ADR-0001 Decision 2's semver semantics — never via a changeset.
 - **Linear `In Review` writeback** runs after PR creation/update. Linked issues in Triage/Backlog/Todo/In Progress are transitioned; already-In-Review and Done/Canceled/Duplicate are skipped. Re-runs are idempotent.
 
 ## Steps Summary
@@ -232,8 +282,9 @@ $ARGUMENTS
 3. Commit any uncommitted changes as logical atomic commits.
 4. Fetch `origin/main`; confirm commits ahead.
 5. Author or update `.changeset/<slug>.md` (slug from branch; bump from commits).
+5b. Author or update the dated `changelog/<ts>-<slug>.md` entry, gated identically (only when a changeset was written). Validate with `pnpm validate:changelog`.
 6. `pnpm changeset status`. Skipped if Step 5 was skipped.
-7. Commit `docs(changeset): <title>`.
+7. Commit `docs(changeset): <title>` (changeset + changelog entry).
 8. Push branch.
 9. `gh pr create --draft` (or `--ready`) / `gh pr edit`; `--merge-when-ready` enables auto-merge.
 10. Transition linked Linear issues to **In Review**.

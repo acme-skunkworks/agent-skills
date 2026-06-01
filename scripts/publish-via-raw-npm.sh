@@ -9,17 +9,27 @@
 # of re-publishing (which would 403/409). Lets release.yml retry safely
 # after the version commit lands but before npm has the artifact.
 #
+# Publishes the prebuilt $TARBALL (ASW-328) rather than re-packing the working
+# tree, so the npm tarball, the GitHub Packages tarball, and the attested digest
+# are byte-identical — and no build-time code runs in this credential-holding
+# job. `--provenance` still works on a prebuilt tarball: npm derives the
+# provenance statement from the GHA OIDC token + run context, not from a re-run
+# build.
+#
 # Dormant by design: while package.json has `private: true`, npm refuses to
 # publish and this script is wired in but never ships anything. See CLAUDE.md
 # "Release" for the flip-to-public sequence.
 #
 # Inputs (all from env, set by the workflow):
 #   PNPM_HOME — directory containing the upgraded npm binary
+#   TARBALL   — path to the .tgz built and uploaded by the unprivileged build
+#               job, downloaded here as an artifact
 #
 # Reads ./package.json for the package name and version.
 set -euo pipefail
 
 : "${PNPM_HOME:?PNPM_HOME is not set; pnpm/action-setup must run first}"
+: "${TARBALL:?TARBALL is not set; the build job must npm pack and upload the tarball first}"
 
 NAME=$(node -p "require('./package.json').name")
 VERSION=$(node -p "require('./package.json').version")
@@ -62,5 +72,5 @@ if [ "$view_status" -ne 0 ] && ! printf '%s' "$view_output" | grep -qiE 'E404|40
   exit 1
 fi
 
-echo "Publishing $NAME@$VERSION via $PNPM_HOME/npm..."
-"$PNPM_HOME/npm" publish --access public --provenance
+echo "Publishing $NAME@$VERSION from $TARBALL via $PNPM_HOME/npm..."
+"$PNPM_HOME/npm" publish "$TARBALL" --access public --provenance

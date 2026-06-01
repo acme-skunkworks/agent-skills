@@ -1,0 +1,5 @@
+{
+  "linearTeamName": "Your Linear Team",
+  "issueKeys": ["ABC", "XYZ"],
+  "protectedBranches": ["main"]
+}

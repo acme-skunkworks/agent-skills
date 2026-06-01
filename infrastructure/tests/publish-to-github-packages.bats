@@ -7,10 +7,11 @@
 # the host PATH after the fake-npm dir. This script uses plain `npm` (token
 # auth, no OIDC), so the fake lives on PATH rather than at $PNPM_HOME/npm.
 #
-# Unlike eslint-config's public variant this script (a) carries a `private: true`
-# dormancy skip and (b) does NOT take a $TARBALL — there's no build job yet, so
-# it publishes the working tree. The fixture package.json sets `"private": false`
-# to exercise the publish paths; a dedicated test covers the dormant skip.
+# Unlike eslint-config's public variant this script carries a `private: true`
+# dormancy skip. Like it (since ASW-345 / the build-once split) it publishes the
+# prebuilt $TARBALL and hard-codes the registry host (ASW-330). The fixture
+# package.json sets `"private": false` to exercise the publish paths; a
+# dedicated test covers the dormant skip.
 
 setup() {
   SCRIPT_DIR="${BATS_TEST_DIRNAME}/../../scripts"
@@ -24,11 +25,17 @@ setup() {
 { "name": "@test/pkg", "version": "1.0.0", "private": false }
 EOF
 
+  # The attested tarball the workflow would pass through. Contents are
+  # irrelevant — the fake npm never reads it.
+  TARBALL_PATH="${BATS_TEST_TMPDIR}/test-pkg-1.0.0.tgz"
+  printf 'fake tarball' > "$TARBALL_PATH"
+
   # Fake npm first on PATH; real PATH kept after it so `node` resolves.
   export PATH="$FAKE_BIN:$PATH"
   # Env the script requires (set by the workflow in production).
   export NODE_AUTH_TOKEN="fake-token"
   export GITHUB_PACKAGES_REGISTRY_URL="https://npm.pkg.github.com"
+  export TARBALL="$TARBALL_PATH"
 }
 
 write_fake_npm() {
@@ -78,13 +85,13 @@ EOF
   echo "$output" | grep -q "Already published to GitHub Packages: @test/pkg@1.0.0"
 }
 
-@test "not-published: npm view fails, script publishes without --provenance" {
+@test "not-published: npm view fails, script publishes the tarball without --provenance" {
   write_fake_npm 1
 
   run bash "$SCRIPT_DIR/publish-to-github-packages.sh"
   [ "$status" -eq 0 ]
   grep -q "^npm view @test/pkg@1.0.0 version --registry https://npm.pkg.github.com$" "$CALLS_LOG"
-  grep -q "^npm publish --access public --registry https://npm.pkg.github.com$" "$CALLS_LOG"
+  grep -q "^npm publish ${TARBALL} --access public --registry https://npm.pkg.github.com$" "$CALLS_LOG"
   ! grep -q -- "--provenance" "$CALLS_LOG"
   echo "$output" | grep -q "Publishing @test/pkg@1.0.0 to GitHub Packages"
 }
@@ -96,7 +103,7 @@ EOF
 
   run bash "$SCRIPT_DIR/publish-to-github-packages.sh"
   [ "$status" -eq 0 ]
-  grep -q "^npm publish --access public --registry https://npm.pkg.github.com$" "$CALLS_LOG"
+  grep -q "^npm publish ${TARBALL} --access public --registry https://npm.pkg.github.com$" "$CALLS_LOG"
   ! grep -q -- "--provenance" "$CALLS_LOG"
 }
 
@@ -105,7 +112,7 @@ EOF
 
   run bash "$SCRIPT_DIR/publish-to-github-packages.sh"
   [ "$status" -ne 0 ]
-  grep -q "^npm publish --access public --registry https://npm.pkg.github.com$" "$CALLS_LOG"
+  grep -q "^npm publish ${TARBALL} --access public --registry https://npm.pkg.github.com$" "$CALLS_LOG"
 }
 
 @test "non-404 view error: script aborts without publishing" {
@@ -137,4 +144,28 @@ npm error 500 Internal Server Error'
   [ "$status" -ne 0 ]
   echo "$output" | grep -q "GITHUB_PACKAGES_REGISTRY_URL is not set"
   ! grep -q "^npm publish" "$CALLS_LOG"
+}
+
+@test "missing TARBALL: script fails fast with documented error" {
+  write_fake_npm 1
+  unset TARBALL
+
+  run bash "$SCRIPT_DIR/publish-to-github-packages.sh"
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "TARBALL is not set"
+  ! grep -q "^npm publish" "$CALLS_LOG"
+}
+
+@test "registry drift: a non-canonical GITHUB_PACKAGES_REGISTRY_URL aborts without publishing" {
+  # ASW-330: the publish target is hard-coded; the script fails closed rather
+  # than send the GITHUB_TOKEN to whatever host a config edit points it at.
+  write_fake_npm 1
+  export GITHUB_PACKAGES_REGISTRY_URL="https://evil.example.com"
+
+  run bash "$SCRIPT_DIR/publish-to-github-packages.sh"
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "not the expected"
+  ! grep -q "^npm publish" "$CALLS_LOG"
+  # And it never probed the attacker host either.
+  ! grep -q "evil.example.com" "$CALLS_LOG"
 }

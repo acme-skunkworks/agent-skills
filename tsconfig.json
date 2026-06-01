@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // agent-skills ships skills.sh bundles, not a transpiled package — the
+    // infrastructure .ts scripts run via tsx and the tests via vitest, neither
+    // of which emits. This config exists for type-checking + editor support only.
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "types": ["node"],
+    "useDefineForClassFields": true
+  },
+  "include": [
+    "infrastructure/scripts/**/*.ts",
+    "infrastructure/send-it/**/*.ts"
+  ],
+  "exclude": ["node_modules", "**/*.test.ts"]
+}

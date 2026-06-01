@@ -22,10 +22,14 @@ Architectural decisions live under `architecture/` as ADRs (sequentially numbere
 ## Commands
 
 ```bash
-pnpm install              # install deps
+pnpm install              # install deps (runs husky via the prepare script)
 pnpm changeset            # interactive changeset (or hand-write .changeset/<slug>.md)
 pnpm changeset status     # show pending changesets and what would be released
-pnpm changeset version    # consume pending changesets, bump versions, write CHANGELOG
+pnpm changeset:version    # changeset version + changelog:finalise (orchestrator-run at release)
+pnpm test                 # vitest — changelog + send-it helper unit tests
+pnpm validate:changelog   # validate changelog/<ts>-<slug>.md entries against the schema
+pnpm validate:changesets  # assert every .changeset/*.md names only the root package (ASW-364)
+pnpm validate:skills      # assert each skills/*/ package.json + SKILL.md metadata.version are consistent (ASW-364)
 ```
 
 Node 22 required (`.nvmrc`, `engines.node: ">=22"`, `engine-strict=true` in `.npmrc`).
@@ -35,11 +39,14 @@ Node 22 required (`.nvmrc`, `engines.node: ">=22"`, `engine-strict=true` in `.np
 - **Conventional Commits.** Commits follow `<type>(<scope>?): <subject>` (e.g. `feat(cleanup-repo): add stale-branch prune step`, `chore: bump @changesets/cli`). Enforced by convention only for now — no commitlint until the repo has enough churn to justify it.
 - **Draft PRs.** Open PRs as drafts by default; flip to ready when CI is green and the work is review-ready.
 - **Changesets per behavioural change.** Every PR that ships a skill change or a new skill includes a `.changeset/<slug>.md`. Tooling-only PRs (CI tweaks, dependency bumps that don't affect consumers) can skip.
+- **Changesets always name the root package** `@acme-skunkworks/agent-skills` — never a per-skill `@acme-skunkworks/skill-<name>`. npm versioning is repo-level: the root is the single published, Changesets-managed package (ADR-0002). There is no `pnpm-workspace.yaml` and no `workspaces` field, so Changesets only discovers the root; a skill-named changeset silently no-ops or makes `pnpm changeset status` error. `pnpm validate:changesets` enforces this in CI (the `🏷️ Validate changeset package names` step in `build-and-lint`) — a mis-named package fails the build loudly. Docs-only/tooling PRs use the empty-frontmatter changeset (`---\n---\nbody…`).
+- **Skill versioning is non-npm.** Each skill carries its own version in its `package.json` `version` (kept `private: true`) mirrored into `SKILL.md` `metadata.version`, bumped **by hand** per ADR-0001 Decision 2's semver semantics when that skill changes. This label is for consumers/runtime introspection and is decoupled from the root npm release — it is **never** driven by a changeset. See [ADR-0002](architecture/0002-repo-level-npm-versioning.md).
+- **Skill bundle metadata contract.** Every `skills/<name>/` ships a `package.json` with `name: "@acme-skunkworks/skill-<name>"` (the `skill-` prefix + directory name), `private: true`, a semver `version` (starts at `0.1.0`), and `repository.directory: "skills/<name>"`; plus a `SKILL.md` whose `name` equals the directory and whose `metadata.version` **matches** the `package.json` version. Full layout in [ADR-0001 Decision 3](architecture/0001-skill-layout.md). `pnpm validate:skills` enforces the naming/`private`/version + `metadata.version` parity rules in CI (the `🧩 Validate skill bundle metadata` step in `build-and-lint`); `skills-ref validate` (the `skill-manifests` job) covers the rest of the spec.
 - **Branch naming.** `<linear-id>-<slug>` lower-cased, matching Linear's `gitBranchName` (e.g. `asw-132-set-up-the-agent-skills-repo`).
 
 ## Shipping changes (`/send-it`)
 
-`/send-it` (`.claude/commands/send-it.md` plus `scripts/send-it/`) is the all-in-one finisher: it commits uncommitted work as atomic Conventional Commits, writes or updates a `.changeset/<slug>.md`, pushes the branch, opens or updates a draft PR, and transitions linked Linear issues to **In Review**. Prefer it over hand-rolled `git commit` + `git push` + `gh pr create` flows.
+`/send-it` (`.claude/commands/send-it.md` plus `infrastructure/send-it/`) is the all-in-one finisher: it commits uncommitted work as atomic Conventional Commits, writes or updates a `.changeset/<slug>.md` **and a dated `changelog/<ts>-<slug>.md` companion**, pushes the branch, opens or updates a draft PR, and transitions linked Linear issues to **In Review**. Prefer it over hand-rolled `git commit` + `git push` + `gh pr create` flows.
 
 Common invocations:
 
@@ -51,23 +58,23 @@ Common invocations:
 /send-it --worktree=<branch-or-path>  # cd into a worktree first, then run
 ```
 
-**`/send-it` here is a stopgap.** It was cloned from `@acme-skunkworks/eslint-config`'s `/send-it` and lightly adapted. The whole point of the Agent Skills project is to extract `/send-it` into a single reusable skill so the per-repo copies disappear. When that skill ships, this slash command and `scripts/send-it/` get deleted and replaced by `npx skills add … --skill send-it`. Tracked in the Agent Skills Linear project.
+**`/send-it` here is a stopgap.** It was cloned from `@acme-skunkworks/eslint-config`'s `/send-it` and lightly adapted. The whole point of the Agent Skills project is to extract `/send-it` into a single reusable skill so the per-repo copies disappear. When that skill ships, this slash command and `infrastructure/send-it/` get deleted and replaced by `npx skills add … --skill send-it`. Tracked in the Agent Skills Linear project.
 
 ## Release
 
-`.github/workflows/release.yml` is **publish-only** and runs on every push to `main` (no `workflow_dispatch` — ASW-326). It never opens or merges the version PR. Versioning is owned by the private **road-runner-bot `release-orchestrator`** repo, mirroring `@acme-skunkworks/eslint-config` (ASW-311 / ASW-312 / ASW-320). Publishing is dual-registry (public npm + GitHub Packages) and **dormant by design**: both publish scripts guard on `private: true` and `exit 0` while the root package is private, so the full machinery runs green and publishes nothing. (The guard matters because these scripts call raw `npm publish`, which — unlike `pnpm changeset publish` — *errors* on a private package rather than skipping it; without the guard the release job would go red.)
+`.github/workflows/release.yml` is **publish-only** and runs on every push to `main` (no `workflow_dispatch` — ASW-326). It never opens or merges the version PR. Versioning is owned by the private **road-runner-bot `release-orchestrator`** repo, mirroring `@acme-skunkworks/eslint-config` (ASW-311 / ASW-312 / ASW-320). It is a **build-once-publish-exact 3-job split** (ASW-328): an unprivileged `build` job (`pnpm install` + `npm pack` — no compile step; agent-skills ships skills.sh bundles) packs one tarball and uploads it as an artifact; `release` (npm OIDC) and `publish-github-packages` (GitHub-native provenance attestation) each download and publish that exact tarball, so the npm tarball, the GitHub Packages tarball, and the attested digest are byte-identical and no build-time code runs alongside a publish credential. Non-secret knobs (node-version-file, registry URLs, npm scope) come from `infrastructure/repo-config.yaml` via the `load-repo-config` composite action (allowlist-validated → `GITHUB_OUTPUT`, ASW-330). `files: ["skills/"]` in `package.json` scopes the tarball to the skill bundles. Publishing is dual-registry (public npm + GitHub Packages) and **dormant by design**: both publish scripts guard on `private: true` and `exit 0` while the root package is private, so the full machinery runs green and publishes nothing. (The guard matters because these scripts call raw `npm publish`, which — unlike `pnpm changeset publish` — *errors* on a private package rather than skipping it; without the guard the release job would go red.)
 
 ### How a release flows
 
 1. A feature PR with a `.changeset/*.md` merges to `main`. `release.yml` fires, **detects pending changesets**, and is a clean no-op (it only publishes when there are none).
-2. On its 15-minute cron tick the orchestrator sees the pending changeset, mints a short-lived repo-scoped App token (the bot's private key **never** touches this public repo's CI), runs `pnpm changeset:version`, and opens a `changeset-release/main` PR titled `<pkg>@<version>`.
+2. On its 15-minute cron tick the orchestrator sees the pending changeset, mints a short-lived repo-scoped App token (the bot's private key **never** touches this public repo's CI), runs `pnpm changeset:version` (which is `changeset version && pnpm changelog:finalise` — the latter enriches + version-stamps the dated `changelog/` entries), and opens a `changeset-release/main` PR titled `<pkg>@<version>`.
 3. The orchestrator waits for the required **`🔬 Build & Lint`** check (the `build-and-lint` job in `validate.yml`, which deliberately runs on the version PR), then squash-merges it.
-4. That merge re-fires `release.yml`, which now finds **no** pending changesets and runs the publish path: npm (OIDC Trusted Publishing) + GitHub Packages + an explicit idempotent git tag / GitHub release. While `private: true`, both publish legs `exit 0` — green, ships nothing. A `🚨 Notify on release failure` step opens/updates a tracking issue if any step fails (the run is unattended).
+4. That merge re-fires `release.yml`, which now finds **no** pending changesets and runs the publish path: `build` packs the tarball, then `release` (npm OIDC) + `publish-github-packages` (provenance attestation) publish that exact artifact, plus an explicit idempotent git tag / GitHub release. While `private: true`, both publish legs `exit 0` — green, ships nothing. A `🚨 Notify on release failure` step opens/updates a tracking issue if any step fails (the run is unattended).
 
-- **npm leg.** `changesets/action`'s `publish:` input is `scripts/publish-via-raw-npm.sh`, not `pnpm changeset publish` — pnpm's OIDC path fails from inside the action even with an upgraded npm on `PATH` (eslint-config ASW-174). The wrapper calls `npm publish --access public --provenance` directly via the upgraded npm and is idempotent (skips only on a genuine `npm view` hit — exit 0 *with* output — and `exit 0`s early while `private: true`). Auth is OIDC Trusted Publishing — **no `NPM_TOKEN`**. Needs npm ≥ 11.5.1, hence the "Upgrade npm" step (the runner ships npm 10.9.x, which is both too old and broken on self-upgrade). The step is gated on `push` + `refs/heads/main` + no-pending-changesets, alongside the branch-restricted `npm-release` environment (ASW-326).
-- **GitHub Packages leg.** `scripts/publish-to-github-packages.sh`, gated on the same no-pending-changesets + main-only condition. It's idempotent against `npm.pkg.github.com`, uses token auth via `GITHUB_TOKEN` (no OIDC, no provenance), and carries the same `private: true` `exit 0` guard.
+- **npm leg.** `changesets/action`'s `publish:` input is `scripts/publish-via-raw-npm.sh`, not `pnpm changeset publish` — pnpm's OIDC path fails from inside the action even with an upgraded npm on `PATH` (eslint-config ASW-174). The wrapper publishes the prebuilt `$TARBALL` from the `build` job via `npm publish "$TARBALL" --access public --provenance` (the upgraded npm), and is idempotent (skips only on a genuine `npm view` hit — exit 0 *with* output — and `exit 0`s early while `private: true`). Auth is OIDC Trusted Publishing — **no `NPM_TOKEN`**. Needs npm ≥ 11.5.1, hence the "Upgrade npm" step (the runner ships npm 10.9.x, which is both too old and broken on self-upgrade). The step is gated on `push` + `refs/heads/main` + no-pending-changesets, alongside the branch-restricted `npm-release` environment (ASW-326).
+- **GitHub Packages leg.** A separate job (so `packages: write` never coexists with the npm OIDC credential). `actions/attest-build-provenance` signs the exact tarball, then `scripts/publish-to-github-packages.sh` publishes it. Gated on the same no-pending-changesets + main-only condition (reused via the `release` job's output). It's idempotent against `npm.pkg.github.com`, uses token auth via `GITHUB_TOKEN` (no OIDC; `npm --provenance` is npmjs.org-only, so provenance rides the attestation instead), hard-codes the registry host and fails closed on drift (ASW-330), and carries the same `private: true` `exit 0` guard.
 
-Both publish scripts are exercised by bats tests in `infrastructure/tests/` (run in `validate.yml`'s `infra` job alongside shellcheck). Workflow YAML is linted by digest-pinned `yamllint` + `actionlint` (`infrastructure/scripts/ensure-*.sh`, ASW-327) in the `yaml-lint` job.
+Both publish scripts are exercised by bats tests in `infrastructure/tests/` (run in `validate.yml`'s `infra` job alongside shellcheck); the dated-changelog `.ts` helpers (`infrastructure/scripts/*-changelog.ts`, `infrastructure/send-it/derive-changeset.ts`) have vitest unit tests run in `build-and-lint`. Workflow YAML is linted by digest-pinned `yamllint` + `actionlint` (`infrastructure/scripts/ensure-*.sh`, ASW-327) in the `yaml-lint` job.
 
 ### One-time setup (out of band, operator)
 
@@ -90,16 +97,93 @@ The orchestrator model needs server-side config that lives outside this repo:
 
 ### Flip-to-public checklist (the deferred first live publish)
 
-When the root — or an extracted package — becomes publishable, the release machinery is already in place; flipping it on is mechanical:
+When the root — or an extracted package — becomes publishable, the release machinery is already in place; flipping it on is mostly mechanical. The one part that is **not** mechanical is the very first publish: it **cannot go through CI** and must be done by hand (see **Bootstrap publish** below for why and how). npm has no pending-Trusted-Publisher flow, so the package has to exist on the registry *before* the Trusted Publisher allowlist form is even reachable.
 
-1. **Configure the npm Trusted Publishing allowlist** on [npmjs.com](https://npmjs.com) for the package. The workflow filename (`release.yml`) and the `acme-skunkworks/agent-skills` repo must match the allowlist entry exactly, or OIDC publish 404s (eslint-config ASW-174).
-2. **Set `private: false`** in `package.json`. `publishConfig` (`access: public`, `provenance: true`, registry) is already present. Note the publish scripts stop short-circuiting the moment this flips — they will publish on the next version-PR merge.
-3. **Land a changeset** so the orchestrator cuts a version and the publish steps fire on the next push to `main`.
-4. The GitHub Packages leg needs no extra config — `packages: write` and the `GITHUB_TOKEN` auth are already wired.
+1. **Set `private: false`** in `package.json`. `publishConfig` (`access: public`, `provenance: true`, registry) is already present. Note the publish scripts stop short-circuiting the moment this flips — they will publish on the next version-PR merge.
+2. **Land a changeset** so the orchestrator cuts a version (the bootstrap publish ships at that version).
+3. **Manual publish #1** — follow the **Bootstrap publish** runbook below: a hand-driven `npm publish` reserves the name on npm. With the default `auth-type=web`, npm opens a browser and your passkey approves the first-publish 2FA (a recovery-code `--otp` is the headless fallback). This step is unavoidable; bypass-2FA tokens don't work for a brand-new package's first publish.
+4. **Configure the npm Trusted Publishing allowlist** at `npmjs.com/package/@acme-skunkworks/agent-skills/access` → GitHub Actions. The workflow filename (`release.yml`) and the `acme-skunkworks/agent-skills` repo must match the allowlist entry exactly, or OIDC publish 404s (eslint-config ASW-174). This is only reachable *after* step 3.
+5. **CI takes over from publish #2.** The next version-PR merge publishes via OIDC (npm) + GitHub Packages + provenance, with no standing `NPM_TOKEN`. The GitHub Packages leg needs no extra config — `packages: write` and `GITHUB_TOKEN` auth are already wired.
 
-`validate.yml` has three jobs: **`🔬 Build & Lint`** (the required gate — runs on the version PR; today it hard-gates on the frozen-lockfile install with `changeset status` kept informational, and gains compile/lint + `skills/<name>/SKILL.md` manifest-lint with the first skill), **`yaml-lint`** (digest-pinned yamllint + actionlint), and **`infra`** (shellcheck + bats over the publish scripts). The latter two are skipped on `changeset-release/*` so the version PR isn't blocked on them.
+`validate.yml` has four jobs: **`🔬 Build & Lint`** (the required gate — runs on the version PR; hard-gates on the frozen-lockfile install, the vitest unit tests, `pnpm validate:changelog`, `pnpm validate:changesets` (the changeset package-name guard, ASW-364), and `pnpm validate:skills` (the per-skill bundle-metadata guard, ASW-364), with `changeset status` kept informational), **`yaml-lint`** (digest-pinned yamllint + actionlint), **`infra`** (shellcheck + bats over the publish scripts), and **`skill-manifests`** (validates every `skills/<name>/SKILL.md`). The latter three are skipped on `changeset-release/*` so the version PR isn't blocked on them.
 
-The deeper eslint-config hardening that's inert while dormant — the build-once 3-job split + provenance attestation, the `load-repo-config` action, the dated-changelog system, and husky — is **deferred to [ASW-345](https://linear.app/acme-skunkworks/issue/ASW-345)**, to fold into a publishing PR when the package goes live.
+The deeper eslint-config hardening that was deferred during the bootstrap — the build-once 3-job split + provenance attestation, the `load-repo-config` action, the dated-changelog system, and husky — **landed in [ASW-345](https://linear.app/acme-skunkworks/issue/ASW-345)** ahead of the publishing flip. The machinery is fully wired and exercised in CI, but stays dormant (publishing nothing) until `private: false`.
+
+> **While `private: true`, the real `pnpm run release:manual` refuses** — `npm publish` errors `EPRIVATE` ("This package has been marked as private") by design. Note that `pnpm run release:manual:dry` does **not** refuse: on current npm (11.x) the `--dry-run` path skips the private guard and happily simulates the tarball, reporting success. So a green dry-run while still private only proves the tarball packs and your auth works — it does **not** prove the real publish is unblocked. Both scripts are validated end-to-end at flip time once `private: false`; until then they exist only as wiring.
+
+### Manual publish (break-glass — CI-down only, after the package exists)
+
+> **This is break-glass, not a routine path (ASW-331).** Reach for it only when CI/OIDC is genuinely down — every normal release goes through `release.yml` (OIDC, no standing token). The `.env` `NPM_TOKEN` is a long-lived credential, so treat it accordingly:
+>
+> - **Store it in a secrets manager**, retrieved just-in-time into the shell — not committed to a plaintext `.env` that lingers on disk (`.env` is gitignored, but a secrets manager is the stronger control).
+> - **Shortest viable lifetime + a documented rotation cadence**; rotate immediately if a laptop is lost or the token is exposed.
+> - It never touches CI (this file forbids `NPM_TOKEN` as a CI secret), and manual publishes are distinguishable from CI ones (no provenance badge), so a manual release can't masquerade as a verified CI one. The only way this token leaks is full local-machine compromise.
+
+For when CI is down. **If you're at an interactive machine, the simplest break-glass is no token at all** — run `pnpm run release:manual` and approve the 2FA in the browser with your passkey (same flow as a bootstrap publish). The `.env` `NPM_TOKEN` path below is for *unattended/headless* break-glass, where there's no browser to complete the passkey challenge.
+
+Token auth setup (one-time, or after rotating your token):
+
+```bash
+NPM_TOKEN=$(grep '^NPM_TOKEN=' .env | cut -d'=' -f2-)
+npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+npm whoami    # verify
+```
+
+The token must be a **Granular Access Token with the "Bypass 2FA" option enabled at creation time**. Without that flag, every publish hits `EOTP` and you're stuck. Tokens are immutable after creation — if you forgot the flag, revoke and regenerate.
+
+Then publish:
+
+```bash
+pnpm run release:manual:dry    # simulate — verifies tarball + auth
+pnpm run release:manual        # actual publish
+```
+
+`--provenance=false` is intentional — provenance attestation requires a GitHub Actions OIDC issuer, which a laptop doesn't have. Manual publishes ship without the provenance badge; CI publishes get it. (agent-skills has no build step, so `release:manual` is a bare `npm publish` — unlike eslint-config's chained `build && publish`.) Use `release:manual:dry` to simulate rather than passing `--dry-run` through `release:manual`.
+
+### Bootstrap publish — read this when setting up a new package
+
+The very first publish of a brand-new npm package **cannot go through CI**. Two reasons that compound:
+
+- npm (unlike PyPI) has no pending-Trusted-Publisher flow. The package must exist on the registry before the Trusted Publisher form is reachable at `npmjs.com/package/<name>/access`.
+- npm enforces 2FA at the publish endpoint for the first publish of a new package, irrespective of account/org/token bypass settings. Granular bypass-2FA tokens only honour the bypass on subsequent publishes.
+
+So bootstrap is always: manual first publish → configure Trusted Publisher → CI takes over from publish #2.
+
+**Pre-flight:**
+
+- You belong to the target npm org with publish rights.
+- npm CLI ≥ 11.5.1 (`npm install -g npm@latest`).
+- Account has 2FA enabled with a **passkey registered** (preferred — it satisfies the first-publish 2FA in the browser). Have **recovery codes generated and saved** too, as the headless fallback.
+- An interactive browser is available and `auth-type=web` is in effect (the npm default — check with `npm config get auth-type`). That's what lets npm hand off the publish 2FA to your passkey.
+- `package.json` is at the version you want to ship (`pnpm changeset:version` consumes pending changesets, bumps `package.json`, and version-stamps the dated `changelog/` entries).
+
+**Sequence:**
+
+1. `pnpm changeset:version` — consume pending changesets, bump `package.json`, write the changeset-native `CHANGELOG.md`, and finalise the dated `changelog/<ts>-<slug>.md` entries (the custom system runs alongside `CHANGELOG.md`, not instead of it).
+2. `pnpm run release:manual:dry` — verify tarball + auth. **Note:** dry-run does NOT trigger 2FA enforcement, so a successful dry-run does not predict a successful real publish. It only proves the tarball is valid and your credentials authenticate.
+3. `pnpm run release:manual` — the real publish. With `auth-type=web` (the npm default) npm **opens a browser and prompts for 2FA; approve it with your passkey** (Touch ID / Face ID / security key). That satisfies the first-publish 2FA and the package publishes — no `--otp`, no recovery code. This is the normal path on current npm.
+4. **Fallback — only if the browser flow isn't available** (headless host, no passkey registered, or an npm too old for web auth): the publish stops at `EOTP`. Pass a **recovery code as the `--otp` value**:
+
+   ```bash
+   npm publish --access public --provenance=false --otp=<recovery-code>
+   ```
+
+   Generate codes at npmjs.com → Profile → Two-Factor Authentication → Manage Recovery Codes. Each is single-use. The format is a long hex string (not a 6-digit TOTP) — npm accepts it as `--otp` anyway. **If you use one, immediately regenerate recovery codes** — the one you used is burnt; if you transmitted it anywhere (chat, paste buffer with cloud sync, screen share), treat the rest of the set as compromised. (The passkey path in step 3 burns nothing, so there's nothing to regenerate.)
+
+5. Configure Trusted Publisher: `https://www.npmjs.com/package/@acme-skunkworks/agent-skills/access` → GitHub Actions → org, repo, workflow filename (`release.yml`), environment blank.
+6. From here on, releases go through CI cleanly.
+
+#### Fallback troubleshooting — things that look like solutions but aren't
+
+These only matter when you're on a headless host (or have no passkey) and stuck on `EOTP` — on an interactive machine the passkey browser flow (step 3) just works and you skip all of this. When you *are* stuck, a recovery-code `--otp` (step 4) is the answer; these are **not**:
+
+- Toggling "Require 2FA for write actions" off in account settings.
+- Disabling org-level 2FA enforcement.
+- Generating a Granular token with bypass-2FA enabled — works for publish #2+, NOT publish #1.
+- `oathtool` for generating TOTP — only works if you have a TOTP secret, and **npm has phased TOTP out of new accounts** (only passkeys + recovery codes are offered now).
+- Disabling 2FA entirely — npm's policy _requires_ either 2FA or a bypass-2FA token; you can't disable both. And the bypass token doesn't help for publish #1 anyway.
+
+> **Don't disable `auth-type=web` reaching for a recovery code.** `auth-type=web` is the npm default and is precisely what lets a passkey satisfy the publish 2FA in the browser — it is the *primary* path (step 3), not a dead-end. Recovery codes only become "the answer" when no browser/passkey is in play.
 
 ## Linear
 
@@ -109,5 +193,4 @@ The deeper eslint-config hardening that's inert while dormant — the build-once
 
 ## Out of scope (deferred)
 
-- **Husky / lint-staged / commitlint.** Lands with the first skill, not the bootstrap — the lint-config sibling repos have the setup to crib from. Also tracked in [ASW-345](https://linear.app/acme-skunkworks/issue/ASW-345) (deferred eslint-config hardening), to land with the publishing flip if not sooner.
-- **Manifest lint for `skills/<name>/SKILL.md`.** Joins `validate.yml` with skill #1.
+- **commitlint.** No commit-message linting until the repo has enough churn to justify it. Husky + lint-staged landed in [ASW-345](https://linear.app/acme-skunkworks/issue/ASW-345) (`.husky/pre-push` blocks direct `main` pushes, `pre-commit` runs lint-staged, `commit-msg` strips the Claude trailer), but the `commit-msg` hook does **not** enforce Conventional Commits — that stays convention-only for now.
