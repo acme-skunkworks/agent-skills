@@ -114,7 +114,7 @@ export function buildResult({
 
 // ---- argument parsing ----------------------------------------------------
 
-/** Parse argv into `{ pr, bots, repo, includeResolved }`; throws on a flag missing its value. */
+/** Parse argv into `{ pr, bots, repo, includeResolved }`; throws on a flag missing its value, an unknown `--flag`, or a malformed `--repo`. */
 export function parseArgs(argv) {
   const opts = { bots: DEFAULT_BOTS, repo: null, includeResolved: false, pr: null };
   for (let i = 0; i < argv.length; i += 1) {
@@ -137,8 +137,12 @@ export function parseArgs(argv) {
       if (!value || value.startsWith("--")) {
         throw new Error("--repo requires an owner/name value");
       }
+      if (!/^[^/\s]+\/[^/\s]+$/.test(value)) {
+        throw new Error("--repo must be exactly owner/name");
+      }
       opts.repo = value;
     } else if (!arg.startsWith("--") && opts.pr === null) opts.pr = arg;
+    else if (arg.startsWith("--")) throw new Error(`unknown option: ${arg}`);
   }
   return opts;
 }
@@ -238,8 +242,11 @@ function fetchAll(query, owner, name, number, pick) {
 /** Fetch a PR's review threads and issue comments from GitHub. */
 function fetchFromGitHub(number, repo) {
   const nameWithOwner = repo ?? detectRepo();
-  const [owner, name] = nameWithOwner.split("/");
-  if (!owner || !name) throw new Error(`could not resolve repo: ${nameWithOwner}`);
+  const parts = nameWithOwner.split("/");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    throw new Error(`could not resolve repo: ${nameWithOwner}`);
+  }
+  const [owner, name] = parts;
   const threads = fetchAll(THREADS_QUERY, owner, name, number, (pr) => pr.reviewThreads);
   const comments = fetchAll(COMMENTS_QUERY, owner, name, number, (pr) => pr.comments);
   return { isDraft: threads.isDraft, threadNodes: threads.nodes, commentNodes: comments.nodes };
@@ -429,6 +436,28 @@ function selfTest() {
     ok: (() => {
       try {
         parseArgs(["123", "--repo"]);
+        return false;
+      } catch {
+        return true;
+      }
+    })(),
+  });
+  cases.push({
+    name: "parseArgs throws on an unknown --flag",
+    ok: (() => {
+      try {
+        parseArgs(["123", "--nope"]);
+        return false;
+      } catch {
+        return true;
+      }
+    })(),
+  });
+  cases.push({
+    name: "parseArgs throws on a malformed --repo (extra segments)",
+    ok: (() => {
+      try {
+        parseArgs(["123", "--repo", "acme/widgets/extra"]);
         return false;
       } catch {
         return true;
