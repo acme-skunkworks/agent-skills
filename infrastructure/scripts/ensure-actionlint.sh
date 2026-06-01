@@ -35,7 +35,25 @@ ACTIONLINT_VERSION="${ACTIONLINT_VERSION:-1.7.5}"
 ACTIONLINT_BOOTSTRAP_REF="${ACTIONLINT_BOOTSTRAP_REF:-e11169d0656294827d65370a3c76a2325406da85}"
 ACTIONLINT_SHA256_LINUX_AMD64="${ACTIONLINT_SHA256_LINUX_AMD64-76e1b008a05f55effccb39355d76c74e5312fefa6c98253032a499b227d01149}"
 
-if [ ! -x ./actionlint ]; then
+# Re-download when ./actionlint is missing OR present at the wrong version. A
+# bare existence check isn't enough: the ci cache uses a version-keyed entry and
+# a stale ./actionlint (or a cache restored under a mismatched key) would be
+# executable, so the download — and the sha256 check nested inside it — would be
+# skipped and the wrong version would run silently. Mirrors ensure-bats.sh's
+# needs_install() guard. `actionlint -version` prints the bare version on its
+# first line, so `grep -Fqx` matches it exactly (e.g. 1.13.0 won't match 11.13.0).
+needs_install() {
+  if [ ! -x ./actionlint ]; then
+    return 0
+  fi
+  if ! ./actionlint -version 2>/dev/null | grep -Fqx "${ACTIONLINT_VERSION}"; then
+    return 0
+  fi
+  return 1
+}
+
+if needs_install; then
+  rm -f ./actionlint
   DOWNLOAD_URL="https://raw.githubusercontent.com/rhysd/actionlint/${ACTIONLINT_BOOTSTRAP_REF}/scripts/download-actionlint.bash"
   bash <(curl -fsSL "$DOWNLOAD_URL") "$ACTIONLINT_VERSION"
 
