@@ -7,11 +7,24 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Defence-in-depth (ASW-313): the repo default is already read-only, but
+# pin it here so a future org-policy change can't silently widen CI's token.
+permissions:
+  contents: read
+
 jobs:
-  changeset-status:
-    name: 📝 Changeset status
-    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+  build-and-lint:
+    name: 🔬 Build & Lint
+    # Deliberately NOT skipped on changeset-release/* — this job is the required
+    # status check that gates the version PR (ASW-311). The road-runner-bot
+    # orchestrator reopens the version PR to trigger this run, then merges once
+    # it's green. agent-skills has no compile/lint step yet (it ships skills.sh
+    # bundles); the hard gate today is the frozen-lockfile install, with the
+    # changeset-status check kept informational. Build/lint and SKILL.md
+    # manifest-lint steps join this job with the first skill.
     runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -35,6 +48,103 @@ jobs:
 
       - name: 📝 Changeset status
         # Informational: chore-only PRs can legitimately have no changeset.
-        # Manifest-lint for skills/<name>/SKILL.md joins this job with the first skill.
         run: pnpm changeset status --since=origin/${{ github.base_ref }}
         continue-on-error: true
+
+  yaml-lint:
+    name: 📝 YAML & Workflows
+    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: 📦 Cache yamllint (pip --user)
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.local
+          # Keyed on the hash-locked requirements file (ASW-327): a version or
+          # transitive-dependency bump busts the cache automatically. No
+          # restore-keys prefix fallback on purpose — a prefix hit would restore
+          # an old ~/.local with yamllint already present, and ensure-yamllint.sh
+          # only installs when `command -v yamllint` fails, so the bumped /
+          # hash-verified version would be silently skipped until the old cache
+          # evicts. Exact-key-or-cold-install keeps the pin honest.
+          key: ${{ runner.os }}-python-yamllint-${{ hashFiles('infrastructure/requirements-yamllint.txt') }}
+
+      - name: 📦 Cache actionlint binary
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ./actionlint
+          # Exact-key-or-cold, like the yamllint cache above — no restore-keys
+          # prefix fallback, which could restore an older actionlint under a
+          # bumped version key. ensure-actionlint.sh also version-gates the
+          # binary (re-downloads a stale hit), so this is belt-and-braces.
+          # Bump in lockstep with ACTIONLINT_VERSION in ensure-actionlint.sh.
+          key: ${{ runner.os }}-actionlint-1.7.5
+
+      - name: 📝 Run yamllint
+        # Logic lives in infrastructure/scripts/ensure-yamllint.sh — install
+        # if missing, then run. Tested via bats; see infrastructure/tests/.
+        run: bash infrastructure/scripts/ensure-yamllint.sh
+
+      - name: 🔍 Run actionlint
+        # Logic lives in infrastructure/scripts/ensure-actionlint.sh — download
+        # the pinned binary if missing, then run. Tested via bats.
+        run: bash infrastructure/scripts/ensure-actionlint.sh
+
+  infra:
+    name: 🧪 Infrastructure scripts
+    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+    runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v4.4.0
+        with:
+          run_install: false
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+
+      # No `pnpm install` here: the publish-script bats tests invoke `node`
+      # (for package.json parsing) and `shellcheck`/`bats` directly — none of
+      # them touch node_modules, so installing deps would be wasted work. node
+      # comes from setup-node; pnpm (for `pnpm lint:sh`/`pnpm test:sh`) from the
+      # action-setup step above.
+
+      - name: 📦 Cache bats binary
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.local
+          key: ${{ runner.os }}-bats-1.13.0
+          restore-keys: |
+            ${{ runner.os }}-bats-
+
+      - name: 🐚 Install shellcheck (apt)
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          shellcheck --version | head -2
+
+      - name: 🐚 Install bats (pinned)
+        # Logic lives in infrastructure/scripts/ensure-bats.sh — bootstraps
+        # bats-core from GitHub releases at the pinned version.
+        run: bash infrastructure/scripts/ensure-bats.sh
+
+      - name: 🔬 Shellcheck
+        run: pnpm lint:sh
+
+      - name: 🧪 Bats
+        run: pnpm test:sh
