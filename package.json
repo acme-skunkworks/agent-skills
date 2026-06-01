@@ -1,6 +1,6 @@
 {
   "name": "@acme-skunkworks/agent-skills",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "Shared agent skills (Claude Code, Cursor) distributed as skills.sh-compatible bundles.",
   "keywords": [
