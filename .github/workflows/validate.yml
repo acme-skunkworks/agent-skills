@@ -19,8 +19,10 @@ jobs:
     # status check that gates the version PR (ASW-311). The road-runner-bot
     # orchestrator reopens the version PR to trigger this run, then merges once
     # it's green. Hard gates: frozen-lockfile install, the vitest unit tests for
-    # the changelog/send-it helpers, and changelog-entry validation. The
-    # changeset-status check stays informational (chore-only PRs need no entry).
+    # the changelog/send-it helpers, changelog-entry validation, and the
+    # changeset package-name guard (ASW-364 — fails loudly on a changeset that
+    # names anything but the root package). The changeset-status check stays
+    # informational (chore-only PRs need no entry).
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -55,6 +57,19 @@ jobs:
 
       - name: 📒 Validate changelog entries
         run: pnpm validate:changelog
+
+      - name: 🏷️ Validate changeset package names
+        # Hard gate (ASW-364): every .changeset/*.md must name only the root
+        # package. A skill-named changeset can't reach a package Changesets
+        # discovers, so it would silently no-op — fail the build instead.
+        run: pnpm validate:changesets
+
+      - name: 🧩 Validate skill bundle metadata
+        # Hard gate (ASW-364): every skills/*/ must have a package.json named
+        # @acme-skunkworks/skill-<dir>, private: true, a semver version, and a
+        # SKILL.md whose metadata.version matches. Stops per-skill version
+        # metadata drifting silently (skills version out-of-band — ADR-0002).
+        run: pnpm validate:skills
 
       - name: 📝 Changeset status
         # Informational: chore-only PRs can legitimately have no changeset.
