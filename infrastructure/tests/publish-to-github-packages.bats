@@ -68,7 +68,8 @@ EOF
 }
 
 @test "already-published: npm view succeeds, script exits 0 without publishing" {
-  write_fake_npm 0
+  # Realistic hit: exit 0 with a version string on stdout.
+  write_fake_npm 0 0 '1.0.0'
 
   run bash "$SCRIPT_DIR/publish-to-github-packages.sh"
   [ "$status" -eq 0 ]

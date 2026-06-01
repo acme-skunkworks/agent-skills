@@ -65,7 +65,8 @@ EOF
 }
 
 @test "already-published: npm view succeeds, script exits 0 without publishing" {
-  write_fake_npm 0
+  # Realistic hit: exit 0 with a version string on stdout.
+  write_fake_npm 0 0 '1.0.0'
 
   run bash "$SCRIPT_DIR/publish-via-raw-npm.sh"
   [ "$status" -eq 0 ]
@@ -91,6 +92,14 @@ EOF
 
   run bash "$SCRIPT_DIR/publish-via-raw-npm.sh"
   [ "$status" -eq 0 ]
+  grep -q "^npm publish --access public --provenance$" "$CALLS_LOG"
+}
+
+@test "publish-failure: npm publish fails, script exits non-zero" {
+  write_fake_npm 1 1
+
+  run bash "$SCRIPT_DIR/publish-via-raw-npm.sh"
+  [ "$status" -ne 0 ]
   grep -q "^npm publish --access public --provenance$" "$CALLS_LOG"
 }
 
