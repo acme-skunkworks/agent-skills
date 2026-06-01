@@ -75,8 +75,16 @@ The orchestrator model needs server-side config that lives outside this repo:
 
 1. **Add `agent-skills` to the orchestrator matrix** — `strategy.matrix.repo` in `release-orchestrator/.github/workflows/orchestrate-releases.yml` (a separate PR in that repo). This is the only orchestrator-side change; there is no central allowlist file.
 2. **Install road-runner-bot** on `agent-skills` with `contents: write` + `pull-requests: write`. Its private key stays scoped to the orchestrator repo — never broaden it here.
-3. **Create the `npm-release` environment** restricted to `main`: `gh api -X PUT repos/acme-skunkworks/agent-skills/environments/npm-release -F 'deployment_branch_policy[custom_branch_policies]=true' --input=/dev/null` then add a `main` branch policy. `release.yml`'s `environment: npm-release` won't deploy until this exists.
-4. **Make `🔬 Build & Lint` a required status check** on `main` (it must also run on `changeset-release/*` PRs) so the orchestrator has a gate to wait on. Keep "Allow GitHub Actions to create and approve pull requests" **off**; enable "Allow auto-merge".
+3. **Create the `npm-release` environment** restricted to `main` (defence-in-depth, ASW-326). Without it the workflow still runs — GitHub auto-creates an *unprotected* environment on first use and publishing stays gated by the explicit `push` + `refs/heads/main` step guards — so this adds the structural branch restriction on top:
+
+   ```bash
+   gh api -X PUT repos/acme-skunkworks/agent-skills/environments/npm-release \
+     --input - <<<'{"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}'
+   gh api -X POST repos/acme-skunkworks/agent-skills/environments/npm-release/deployment-branch-policies \
+     -f name=main -f type=branch
+   ```
+
+4. **Make `🔬 Build & Lint` a required status check** on `main` (exact name, incl. emoji — the orchestrator polls it verbatim). Add it to a **repo-level** ruleset / branch-protection rule on `agent-skills`, *not* the org-level "Protect main trunk" ruleset (that governs every org repo). Do this **after this PR merges** — the renamed job only reaches `main` then, and requiring it earlier would block sibling PRs still on the old job name. The job already runs on `changeset-release/*` (no skip), so the orchestrator's version PRs satisfy it. Keep "Allow GitHub Actions to create and approve pull requests" **off**; enable "Allow auto-merge".
 
 > **60-day caveat.** The orchestrator's schedule auto-disables after 60 days with no commits to the orchestrator repo — releases then stop silently. Keep it alive (a periodic commit, or an external cron trigger).
 
