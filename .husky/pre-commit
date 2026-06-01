@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Run lint-staged to lint only staged files (shellcheck, yamllint, actionlint,
+# and the changelog validator — see "lint-staged" in package.json).
+# --allow-empty so the hook doesn't fail when tasks produce no modifications.
+pnpm lint-staged --allow-empty

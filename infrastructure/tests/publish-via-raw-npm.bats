@@ -6,9 +6,9 @@
 # a log file. The host PATH is preserved so `node` (used by the script for
 # package.json parsing) resolves normally.
 #
-# Unlike eslint-config's public variant this script (a) carries a `private: true`
-# dormancy skip and (b) does NOT take a $TARBALL — there's no build job yet, so
-# it publishes the working tree with `--access public --provenance`. The fixture
+# Unlike eslint-config's public variant this script carries a `private: true`
+# dormancy skip. Like it (since ASW-345 / the build-once split) it publishes the
+# prebuilt $TARBALL with `--access public --provenance`. The fixture
 # package.json therefore sets `"private": false` to exercise the publish paths,
 # and a dedicated test covers the dormant skip.
 
@@ -24,7 +24,13 @@ setup() {
 { "name": "@test/pkg", "version": "1.0.0", "private": false }
 EOF
 
+  # The prebuilt tarball the workflow packs, uploads and downloads (ASW-328).
+  # Contents are irrelevant — the fake npm never reads it.
+  TARBALL_PATH="${BATS_TEST_TMPDIR}/test-pkg-1.0.0.tgz"
+  printf 'fake tarball' > "$TARBALL_PATH"
+
   export PNPM_HOME="$FAKE_PNPM_HOME"
+  export TARBALL="$TARBALL_PATH"
 }
 
 write_fake_npm() {
@@ -77,13 +83,13 @@ EOF
   echo "$output" | grep -q "Already published: @test/pkg@1.0.0"
 }
 
-@test "not-published: npm view 404s, script calls npm publish with TP flags" {
+@test "not-published: npm view 404s, script calls npm publish with the tarball + TP flags" {
   write_fake_npm 1
 
   run bash "$SCRIPT_DIR/publish-via-raw-npm.sh"
   [ "$status" -eq 0 ]
   grep -q "^npm view @test/pkg@1.0.0 version$" "$CALLS_LOG"
-  grep -q "^npm publish --access public --provenance$" "$CALLS_LOG"
+  grep -q "^npm publish ${TARBALL} --access public --provenance$" "$CALLS_LOG"
   echo "$output" | grep -q "Publishing @test/pkg@1.0.0"
 }
 
@@ -94,7 +100,7 @@ EOF
 
   run bash "$SCRIPT_DIR/publish-via-raw-npm.sh"
   [ "$status" -eq 0 ]
-  grep -q "^npm publish --access public --provenance$" "$CALLS_LOG"
+  grep -q "^npm publish ${TARBALL} --access public --provenance$" "$CALLS_LOG"
 }
 
 @test "publish-failure: npm publish fails, script exits non-zero" {
@@ -102,7 +108,7 @@ EOF
 
   run bash "$SCRIPT_DIR/publish-via-raw-npm.sh"
   [ "$status" -ne 0 ]
-  grep -q "^npm publish --access public --provenance$" "$CALLS_LOG"
+  grep -q "^npm publish ${TARBALL} --access public --provenance$" "$CALLS_LOG"
 }
 
 @test "non-404 view error: script aborts without publishing" {
@@ -122,4 +128,14 @@ npm error 500 Internal Server Error'
   run bash "$SCRIPT_DIR/publish-via-raw-npm.sh"
   [ "$status" -ne 0 ]
   echo "$output" | grep -q "PNPM_HOME is not set"
+}
+
+@test "missing TARBALL: script fails fast with documented error" {
+  write_fake_npm 1
+  unset TARBALL
+
+  run bash "$SCRIPT_DIR/publish-via-raw-npm.sh"
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q "TARBALL is not set"
+  ! grep -q "^npm publish" "$CALLS_LOG"
 }

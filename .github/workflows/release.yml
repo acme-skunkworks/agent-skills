@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    # Canonical branch name mirrors infrastructure/repo-config.yaml defaultBranch
+    # (GitHub workflows cannot derive on.push.branches from that file).
     branches:
       - main
   # No workflow_dispatch (ASW-326). A dispatched run can target any ref, and npm
@@ -17,8 +19,70 @@ concurrency:
   cancel-in-progress: false # Queue releases instead of cancelling
 
 jobs:
+  # Build-time code (pnpm install + npm pack) runs ONLY here, in a job that holds
+  # no publish credential (ASW-328). agent-skills has no compile step — it ships
+  # skills.sh bundles, not a transpiled package — so this is install + pack only,
+  # no `pnpm run build`. The single tarball this job packs is the exact artifact
+  # both publish legs download and ship, so the npm tarball, the GitHub Packages
+  # tarball, and the attested digest are byte-identical, and a compromised
+  # build-time dependency can never reach a mintable OIDC token.
+  build:
+    name: 🏗️ Build & pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read # Checkout + pack only — no publish identity here.
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false # Nothing git-pushes; avoid artipacked exposure.
+
+      - name: ⚙️ Load repo config
+        id: repo
+        uses: ./.github/actions/load-repo-config
+
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v4.4.0
+        with:
+          run_install: false
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: ${{ steps.repo.outputs.node_version_file }}
+          cache: pnpm
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Pack once. The published tarball (both registries) and the attested digest
+      # are all this exact file — consumers can `gh attestation verify <tarball>`.
+      # `files: ["skills/"]` in package.json scopes the tarball to the skill
+      # bundles (+ package.json/README/LICENSE that npm always includes).
+      - name: 📦 Pack tarball
+        id: pack
+        run: |
+          set -euo pipefail
+          tarball="$(npm pack --silent)"
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+          echo "Packed $tarball"
+
+      - name: ⬆️ Upload tarball artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: npm-tarball
+          path: ${{ steps.pack.outputs.tarball }}
+          if-no-files-found: error
+          # Tight TTL keeps the credential-adjacent artifact around only as long
+          # as a release needs it. Trade-off: re-running the release/publish jobs
+          # in isolation >24h later finds the artifact gone — re-run the whole
+          # workflow (or push again) to rebuild it.
+          retention-days: 1
+
   release:
-    name: 🚀 Release
+    name: 🚀 Release (npm)
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Branch-restricted Environment (ASW-326): npm-release permits deployments
@@ -28,16 +92,18 @@ jobs:
     # not a manual approval gate. The environment must exist server-side (see
     # CLAUDE.md "Release" → out-of-band setup) or deployment is refused.
     environment: npm-release
+    outputs:
+      # Reused by publish-github-packages so it gates on the same condition
+      # without re-detecting (false = version-PR merge = publish; true = no-op).
+      has_pending_changesets: ${{ steps.cs.outputs.has }}
     permissions:
       contents: write # Git tags + GitHub releases on publish
-      packages: write # Publish to GitHub Packages
       id-token: write # OIDC for npm Trusted Publishing + provenance attestation
       issues: write # Open a tracking issue if the release fails (notify step)
-      # NB: no `pull-requests: write` — this workflow no longer opens the version
-      # PR. The private release-orchestrator owns versioning + the version PR
-      # (ASW-320). Single-job split deferred to ASW-345 (no build artefact while
-      # private), so packages:write + id-token:write currently coexist here;
-      # they move to a separate publish job when the build-once split lands.
+      # NB: no `packages: write` here — the GitHub Packages leg is a separate job
+      # (publish-github-packages) so that permission never coexists with the npm
+      # OIDC credential. No `pull-requests: write` — the private
+      # release-orchestrator owns versioning + the version PR (ASW-320).
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -55,6 +121,10 @@ jobs:
           # credential-persistence exposure.
           persist-credentials: false
 
+      - name: ⚙️ Load repo config
+        id: repo
+        uses: ./.github/actions/load-repo-config
+
       - name: 📦 Install pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v4.4.0
         with:
@@ -63,9 +133,12 @@ jobs:
       - name: 🟢 Setup Node.js (npm registry)
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version-file: .nvmrc
+          node-version-file: ${{ steps.repo.outputs.node_version_file }}
+          # This job no longer runs `pnpm install` (build does), but cache: pnpm
+          # still warms the pnpm store the next step's `pnpm add -g npm@…` pulls
+          # from. Cheap and keeps the upgrade-npm step fast.
           cache: pnpm
-          registry-url: https://registry.npmjs.org
+          registry-url: ${{ steps.repo.outputs.npm_registry_url }}
 
       - name: ⬆️ Upgrade npm for Trusted Publishing
         # npm Trusted Publishing requires npm CLI v11.5.1+. Latest Node 22
@@ -86,17 +159,11 @@ jobs:
           echo "$PNPM_HOME" >> "$GITHUB_PATH"
           echo "Upgraded npm at $PNPM_HOME/npm: $("$PNPM_HOME/npm" --version)"
 
-      - name: 📥 Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # No build step: agent-skills ships skills.sh bundles, not a compiled
-      # package. The build-once-publish-exact split (unprivileged build + tarball
-      # artefact) is deferred until there's something to compile/publish (ASW-345).
-
-      # Publish-only: versioning (changeset version + the version PR) is owned by
-      # the private release-orchestrator (ASW-320). On a feature-merge there are
-      # pending changesets → this is a clean no-op and the orchestrator opens the
-      # version PR. On the version-PR merge there are none → we publish.
+      # Publish-only: versioning (changeset version + changelog finalise + the
+      # version PR) is owned by the private release-orchestrator (ASW-320). On a
+      # feature-merge there are pending changesets → this is a clean no-op and
+      # the orchestrator opens the version PR. On the version-PR merge there are
+      # none → we publish.
       - name: 🔎 Detect pending changesets
         id: cs
         run: |
@@ -109,6 +176,23 @@ jobs:
           done
           echo "has=$has" >> "$GITHUB_OUTPUT"
           echo "Pending changesets: $has"
+
+      # Download the exact tarball built in the unprivileged `build` job (ASW-328)
+      # — this job never builds from source, so no build-time code runs alongside
+      # the npm OIDC credential.
+      - name: ⬇️ Download tarball artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-tarball
+          path: ./.artifact
+
+      - name: 🔎 Resolve tarball path
+        id: tb
+        run: |
+          set -euo pipefail
+          tarball="$(ls "$PWD"/.artifact/*.tgz)"
+          echo "path=$tarball" >> "$GITHUB_OUTPUT"
+          echo "Publishing tarball: $tarball"
 
       - name: 🚀 Publish (npm)
         id: changesets
@@ -126,7 +210,8 @@ jobs:
           # Bypass `pnpm changeset publish` — its OIDC TP path fails even when
           # the upgraded npm is correctly on PATH (proven in eslint-config). The
           # wrapper calls `npm publish` directly via $PNPM_HOME/npm and is
-          # idempotent. It also guards on `private: true`: unlike
+          # idempotent. It publishes the prebuilt $TARBALL (ASW-328), not a
+          # re-pack of the working tree, and guards on `private: true`: unlike
           # `pnpm changeset publish`, raw `npm publish` errors on a private
           # package, so the wrapper short-circuits (exit 0) while the root is
           # private — publishing nothing, job stays green. See CLAUDE.md
@@ -141,6 +226,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # No NPM_TOKEN — Trusted Publishing via OIDC.
           # Provenance is enabled in package.json's publishConfig.
+          TARBALL: ${{ steps.tb.outputs.path }}
           HUSKY: 0
 
       # changesets/action would normally tag + create the GitHub release, but it
@@ -178,33 +264,6 @@ jobs:
             --notes "$notes"
           echo "Created $tag at $GITHUB_SHA."
 
-      # Rewrites .npmrc for GitHub Packages (scoped registry + token auth). Gated
-      # on the same no-pending-changesets + main-only condition so a feature-merge
-      # is a clean no-op and only a version-PR merge publishes. The publish script
-      # below calls plain `npm`, which resolves to the upgraded $PNPM_HOME/npm
-      # prepended to GITHUB_PATH above — fine, since this leg uses token auth
-      # (NODE_AUTH_TOKEN), not OIDC, so the npm version is immaterial here.
-      - name: 🟢 Setup Node.js (GitHub Packages)
-        if: >-
-          github.event_name == 'push'
-          && github.ref == 'refs/heads/main'
-          && steps.cs.outputs.has == 'false'
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version-file: .nvmrc
-          registry-url: https://npm.pkg.github.com
-          scope: "@acme-skunkworks"
-
-      - name: 📦 Publish to GitHub Packages
-        if: >-
-          github.event_name == 'push'
-          && github.ref == 'refs/heads/main'
-          && steps.cs.outputs.has == 'false'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_PACKAGES_REGISTRY_URL: https://npm.pkg.github.com
-        run: bash scripts/publish-to-github-packages.sh
-
       # Fires only if a step above failed. A release runs post-merge on `main`
       # with nobody watching a PR, so a failed publish would otherwise be
       # silent — this opens (or comments on) a tracking issue with a runbook.
@@ -225,7 +284,7 @@ jobs:
             "- Run: $RUN_URL" \
             "" \
             "## Likely cause & fix" \
-            "- **Detect changesets / install** — see the failing step in the run log." \
+            "- **Build / pack** — see the failing step in the run log." \
             "- **npm publish (OIDC)** — Trusted Publishing hiccup, or the version is already published. The publish wrapper is idempotent, so a re-run usually clears a transient failure." \
             "- **Dormant** — while the root is \`private: true\` the publish scripts exit 0 and ship nothing, so a failure here is in the workflow plumbing, not the publish itself." \
             "" \
@@ -244,3 +303,78 @@ jobs:
             echo "Opening a new failure issue."
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"
           fi
+
+  # Secondary publish target (ASW-323). A SEPARATE job so packages: write is
+  # scoped here and never granted to the main `release` job. Runs only after npm
+  # publish succeeds (needs: release) and only on a version-PR merge — the same
+  # no-pending-changesets gate, reused via the release job's output, plus the
+  # same main-only ref guard + npm-release environment (ASW-326). GitHub Packages
+  # has no OIDC Trusted-Publisher flow, so this leg authenticates with the
+  # ephemeral per-job GITHUB_TOKEN; provenance is supplied out-of-band by a
+  # GitHub-native attestation over the exact tarball (npm --provenance is
+  # npmjs.org-only). It downloads and publishes the SAME tarball the npm leg
+  # shipped (ASW-328) — never re-built from source.
+  publish-github-packages:
+    name: 📦 Publish to GitHub Packages
+    needs: release
+    if: >-
+      needs.release.outputs.has_pending_changesets == 'false'
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+    environment: npm-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read # Checkout only
+      packages: write # Publish to GitHub Packages
+      id-token: write # Sigstore signing for the build-provenance attestation
+      attestations: write # Upload the attestation to GitHub
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          # Publish/attest only — never git-pushes. Don't persist GITHUB_TOKEN in
+          # .git/config (artipacked credential-persistence exposure).
+          persist-credentials: false
+
+      - name: ⚙️ Load repo config
+        id: repo
+        uses: ./.github/actions/load-repo-config
+
+      # GitHub Packages variant: scoped .npmrc pointing at npm.pkg.github.com.
+      # No pnpm/build step — this job publishes the prebuilt artifact (ASW-328),
+      # and no npm-upgrade step (token auth has no npm-version floor; the 11.5.1
+      # bump on the npm leg is a Trusted-Publishing requirement that doesn't
+      # apply here).
+      - name: 🟢 Setup Node.js (GitHub Packages)
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: ${{ steps.repo.outputs.node_version_file }}
+          registry-url: ${{ steps.repo.outputs.github_packages_registry_url }}
+          scope: ${{ steps.repo.outputs.npm_scope }}
+
+      - name: ⬇️ Download tarball artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: npm-tarball
+          path: ./.artifact
+
+      - name: 🔎 Resolve tarball path
+        id: tb
+        run: |
+          set -euo pipefail
+          tarball="$(ls "$PWD"/.artifact/*.tgz)"
+          echo "path=$tarball" >> "$GITHUB_OUTPUT"
+          echo "Publishing tarball: $tarball"
+
+      - name: 🔏 Attest build provenance
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        with:
+          subject-path: ${{ steps.tb.outputs.path }}
+
+      - name: 📦 Publish to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PACKAGES_REGISTRY_URL: ${{ steps.repo.outputs.github_packages_registry_url }}
+          TARBALL: ${{ steps.tb.outputs.path }}
+        run: bash scripts/publish-to-github-packages.sh

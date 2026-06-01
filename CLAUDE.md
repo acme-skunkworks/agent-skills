@@ -22,10 +22,12 @@ Architectural decisions live under `architecture/` as ADRs (sequentially numbere
 ## Commands
 
 ```bash
-pnpm install              # install deps
+pnpm install              # install deps (runs husky via the prepare script)
 pnpm changeset            # interactive changeset (or hand-write .changeset/<slug>.md)
 pnpm changeset status     # show pending changesets and what would be released
-pnpm changeset version    # consume pending changesets, bump versions, write CHANGELOG
+pnpm changeset:version    # changeset version + changelog:finalise (orchestrator-run at release)
+pnpm test                 # vitest — changelog + send-it helper unit tests
+pnpm validate:changelog   # validate changelog/<ts>-<slug>.md entries against the schema
 ```
 
 Node 22 required (`.nvmrc`, `engines.node: ">=22"`, `engine-strict=true` in `.npmrc`).
@@ -39,7 +41,7 @@ Node 22 required (`.nvmrc`, `engines.node: ">=22"`, `engine-strict=true` in `.np
 
 ## Shipping changes (`/send-it`)
 
-`/send-it` (`.claude/commands/send-it.md` plus `scripts/send-it/`) is the all-in-one finisher: it commits uncommitted work as atomic Conventional Commits, writes or updates a `.changeset/<slug>.md`, pushes the branch, opens or updates a draft PR, and transitions linked Linear issues to **In Review**. Prefer it over hand-rolled `git commit` + `git push` + `gh pr create` flows.
+`/send-it` (`.claude/commands/send-it.md` plus `infrastructure/send-it/`) is the all-in-one finisher: it commits uncommitted work as atomic Conventional Commits, writes or updates a `.changeset/<slug>.md` **and a dated `changelog/<ts>-<slug>.md` companion**, pushes the branch, opens or updates a draft PR, and transitions linked Linear issues to **In Review**. Prefer it over hand-rolled `git commit` + `git push` + `gh pr create` flows.
 
 Common invocations:
 
@@ -51,23 +53,23 @@ Common invocations:
 /send-it --worktree=<branch-or-path>  # cd into a worktree first, then run
 ```
 
-**`/send-it` here is a stopgap.** It was cloned from `@acme-skunkworks/eslint-config`'s `/send-it` and lightly adapted. The whole point of the Agent Skills project is to extract `/send-it` into a single reusable skill so the per-repo copies disappear. When that skill ships, this slash command and `scripts/send-it/` get deleted and replaced by `npx skills add … --skill send-it`. Tracked in the Agent Skills Linear project.
+**`/send-it` here is a stopgap.** It was cloned from `@acme-skunkworks/eslint-config`'s `/send-it` and lightly adapted. The whole point of the Agent Skills project is to extract `/send-it` into a single reusable skill so the per-repo copies disappear. When that skill ships, this slash command and `infrastructure/send-it/` get deleted and replaced by `npx skills add … --skill send-it`. Tracked in the Agent Skills Linear project.
 
 ## Release
 
-`.github/workflows/release.yml` is **publish-only** and runs on every push to `main` (no `workflow_dispatch` — ASW-326). It never opens or merges the version PR. Versioning is owned by the private **road-runner-bot `release-orchestrator`** repo, mirroring `@acme-skunkworks/eslint-config` (ASW-311 / ASW-312 / ASW-320). Publishing is dual-registry (public npm + GitHub Packages) and **dormant by design**: both publish scripts guard on `private: true` and `exit 0` while the root package is private, so the full machinery runs green and publishes nothing. (The guard matters because these scripts call raw `npm publish`, which — unlike `pnpm changeset publish` — *errors* on a private package rather than skipping it; without the guard the release job would go red.)
+`.github/workflows/release.yml` is **publish-only** and runs on every push to `main` (no `workflow_dispatch` — ASW-326). It never opens or merges the version PR. Versioning is owned by the private **road-runner-bot `release-orchestrator`** repo, mirroring `@acme-skunkworks/eslint-config` (ASW-311 / ASW-312 / ASW-320). It is a **build-once-publish-exact 3-job split** (ASW-328): an unprivileged `build` job (`pnpm install` + `npm pack` — no compile step; agent-skills ships skills.sh bundles) packs one tarball and uploads it as an artifact; `release` (npm OIDC) and `publish-github-packages` (GitHub-native provenance attestation) each download and publish that exact tarball, so the npm tarball, the GitHub Packages tarball, and the attested digest are byte-identical and no build-time code runs alongside a publish credential. Non-secret knobs (node-version-file, registry URLs, npm scope) come from `infrastructure/repo-config.yaml` via the `load-repo-config` composite action (allowlist-validated → `GITHUB_OUTPUT`, ASW-330). `files: ["skills/"]` in `package.json` scopes the tarball to the skill bundles. Publishing is dual-registry (public npm + GitHub Packages) and **dormant by design**: both publish scripts guard on `private: true` and `exit 0` while the root package is private, so the full machinery runs green and publishes nothing. (The guard matters because these scripts call raw `npm publish`, which — unlike `pnpm changeset publish` — *errors* on a private package rather than skipping it; without the guard the release job would go red.)
 
 ### How a release flows
 
 1. A feature PR with a `.changeset/*.md` merges to `main`. `release.yml` fires, **detects pending changesets**, and is a clean no-op (it only publishes when there are none).
-2. On its 15-minute cron tick the orchestrator sees the pending changeset, mints a short-lived repo-scoped App token (the bot's private key **never** touches this public repo's CI), runs `pnpm changeset:version`, and opens a `changeset-release/main` PR titled `<pkg>@<version>`.
+2. On its 15-minute cron tick the orchestrator sees the pending changeset, mints a short-lived repo-scoped App token (the bot's private key **never** touches this public repo's CI), runs `pnpm changeset:version` (which is `changeset version && pnpm changelog:finalise` — the latter enriches + version-stamps the dated `changelog/` entries), and opens a `changeset-release/main` PR titled `<pkg>@<version>`.
 3. The orchestrator waits for the required **`🔬 Build & Lint`** check (the `build-and-lint` job in `validate.yml`, which deliberately runs on the version PR), then squash-merges it.
-4. That merge re-fires `release.yml`, which now finds **no** pending changesets and runs the publish path: npm (OIDC Trusted Publishing) + GitHub Packages + an explicit idempotent git tag / GitHub release. While `private: true`, both publish legs `exit 0` — green, ships nothing. A `🚨 Notify on release failure` step opens/updates a tracking issue if any step fails (the run is unattended).
+4. That merge re-fires `release.yml`, which now finds **no** pending changesets and runs the publish path: `build` packs the tarball, then `release` (npm OIDC) + `publish-github-packages` (provenance attestation) publish that exact artifact, plus an explicit idempotent git tag / GitHub release. While `private: true`, both publish legs `exit 0` — green, ships nothing. A `🚨 Notify on release failure` step opens/updates a tracking issue if any step fails (the run is unattended).
 
-- **npm leg.** `changesets/action`'s `publish:` input is `scripts/publish-via-raw-npm.sh`, not `pnpm changeset publish` — pnpm's OIDC path fails from inside the action even with an upgraded npm on `PATH` (eslint-config ASW-174). The wrapper calls `npm publish --access public --provenance` directly via the upgraded npm and is idempotent (skips only on a genuine `npm view` hit — exit 0 *with* output — and `exit 0`s early while `private: true`). Auth is OIDC Trusted Publishing — **no `NPM_TOKEN`**. Needs npm ≥ 11.5.1, hence the "Upgrade npm" step (the runner ships npm 10.9.x, which is both too old and broken on self-upgrade). The step is gated on `push` + `refs/heads/main` + no-pending-changesets, alongside the branch-restricted `npm-release` environment (ASW-326).
-- **GitHub Packages leg.** `scripts/publish-to-github-packages.sh`, gated on the same no-pending-changesets + main-only condition. It's idempotent against `npm.pkg.github.com`, uses token auth via `GITHUB_TOKEN` (no OIDC, no provenance), and carries the same `private: true` `exit 0` guard.
+- **npm leg.** `changesets/action`'s `publish:` input is `scripts/publish-via-raw-npm.sh`, not `pnpm changeset publish` — pnpm's OIDC path fails from inside the action even with an upgraded npm on `PATH` (eslint-config ASW-174). The wrapper publishes the prebuilt `$TARBALL` from the `build` job via `npm publish "$TARBALL" --access public --provenance` (the upgraded npm), and is idempotent (skips only on a genuine `npm view` hit — exit 0 *with* output — and `exit 0`s early while `private: true`). Auth is OIDC Trusted Publishing — **no `NPM_TOKEN`**. Needs npm ≥ 11.5.1, hence the "Upgrade npm" step (the runner ships npm 10.9.x, which is both too old and broken on self-upgrade). The step is gated on `push` + `refs/heads/main` + no-pending-changesets, alongside the branch-restricted `npm-release` environment (ASW-326).
+- **GitHub Packages leg.** A separate job (so `packages: write` never coexists with the npm OIDC credential). `actions/attest-build-provenance` signs the exact tarball, then `scripts/publish-to-github-packages.sh` publishes it. Gated on the same no-pending-changesets + main-only condition (reused via the `release` job's output). It's idempotent against `npm.pkg.github.com`, uses token auth via `GITHUB_TOKEN` (no OIDC; `npm --provenance` is npmjs.org-only, so provenance rides the attestation instead), hard-codes the registry host and fails closed on drift (ASW-330), and carries the same `private: true` `exit 0` guard.
 
-Both publish scripts are exercised by bats tests in `infrastructure/tests/` (run in `validate.yml`'s `infra` job alongside shellcheck). Workflow YAML is linted by digest-pinned `yamllint` + `actionlint` (`infrastructure/scripts/ensure-*.sh`, ASW-327) in the `yaml-lint` job.
+Both publish scripts are exercised by bats tests in `infrastructure/tests/` (run in `validate.yml`'s `infra` job alongside shellcheck); the dated-changelog `.ts` helpers (`infrastructure/scripts/*-changelog.ts`, `infrastructure/send-it/derive-changeset.ts`) have vitest unit tests run in `build-and-lint`. Workflow YAML is linted by digest-pinned `yamllint` + `actionlint` (`infrastructure/scripts/ensure-*.sh`, ASW-327) in the `yaml-lint` job.
 
 ### One-time setup (out of band, operator)
 
@@ -97,9 +99,9 @@ When the root — or an extracted package — becomes publishable, the release m
 3. **Land a changeset** so the orchestrator cuts a version and the publish steps fire on the next push to `main`.
 4. The GitHub Packages leg needs no extra config — `packages: write` and the `GITHUB_TOKEN` auth are already wired.
 
-`validate.yml` has three jobs: **`🔬 Build & Lint`** (the required gate — runs on the version PR; today it hard-gates on the frozen-lockfile install with `changeset status` kept informational, and gains compile/lint + `skills/<name>/SKILL.md` manifest-lint with the first skill), **`yaml-lint`** (digest-pinned yamllint + actionlint), and **`infra`** (shellcheck + bats over the publish scripts). The latter two are skipped on `changeset-release/*` so the version PR isn't blocked on them.
+`validate.yml` has four jobs: **`🔬 Build & Lint`** (the required gate — runs on the version PR; hard-gates on the frozen-lockfile install, the vitest unit tests, and `pnpm validate:changelog`, with `changeset status` kept informational), **`yaml-lint`** (digest-pinned yamllint + actionlint), **`infra`** (shellcheck + bats over the publish scripts), and **`skill-manifests`** (validates every `skills/<name>/SKILL.md`). The latter three are skipped on `changeset-release/*` so the version PR isn't blocked on them.
 
-The deeper eslint-config hardening that's inert while dormant — the build-once 3-job split + provenance attestation, the `load-repo-config` action, the dated-changelog system, and husky — is **deferred to [ASW-345](https://linear.app/acme-skunkworks/issue/ASW-345)**, to fold into a publishing PR when the package goes live.
+The deeper eslint-config hardening that was deferred during the bootstrap — the build-once 3-job split + provenance attestation, the `load-repo-config` action, the dated-changelog system, and husky — **landed in [ASW-345](https://linear.app/acme-skunkworks/issue/ASW-345)** ahead of the publishing flip. The machinery is fully wired and exercised in CI, but stays dormant (publishing nothing) until `private: false`.
 
 ## Linear
 
@@ -109,5 +111,4 @@ The deeper eslint-config hardening that's inert while dormant — the build-once
 
 ## Out of scope (deferred)
 
-- **Husky / lint-staged / commitlint.** Lands with the first skill, not the bootstrap — the lint-config sibling repos have the setup to crib from. Also tracked in [ASW-345](https://linear.app/acme-skunkworks/issue/ASW-345) (deferred eslint-config hardening), to land with the publishing flip if not sooner.
-- **Manifest lint for `skills/<name>/SKILL.md`.** Joins `validate.yml` with skill #1.
+- **commitlint.** No commit-message linting until the repo has enough churn to justify it. Husky + lint-staged landed in [ASW-345](https://linear.app/acme-skunkworks/issue/ASW-345) (`.husky/pre-push` blocks direct `main` pushes, `pre-commit` runs lint-staged, `commit-msg` strips the Claude trailer), but the `commit-msg` hook does **not** enforce Conventional Commits — that stays convention-only for now.
