@@ -41,6 +41,8 @@
     "test:sh": "bash -c 'if command -v bats >/dev/null 2>&1; then bats infrastructure/tests/*.bats; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  bats not installed — skipping. Install: brew install bats-core\"; else echo \"⚠️  bats not installed — skipping. Install: apt-get install bats\"; fi'",
     "test:watch": "vitest",
     "validate:changelog": "tsx infrastructure/scripts/validate-changelog.ts",
+    "validate:changesets": "tsx infrastructure/scripts/validate-changesets.ts",
+    "validate:skills": "tsx infrastructure/scripts/validate-skills.ts",
     "version": "changeset version"
   },
   "lint-staged": {
