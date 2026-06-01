@@ -37,12 +37,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 YAMLLINT_REQUIREMENTS="${YAMLLINT_REQUIREMENTS:-$SCRIPT_DIR/../requirements-yamllint.txt}"
 
+# Prepend $HOME/.local/bin BEFORE the guard so a cache-restored yamllint (under
+# ~/.local/bin from a previous run) is discoverable to `command -v`. Otherwise a
+# cache hit where ~/.local/bin isn't already on PATH falls through to a redundant
+# pip re-install. Mirrors ensure-bats.sh's PATH-before-check ordering (ASW-349).
+export PATH="$HOME/.local/bin:$PATH"
+if [ -n "${GITHUB_PATH:-}" ]; then
+  echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+fi
+
 if ! command -v yamllint >/dev/null 2>&1; then
   pip install --user --break-system-packages --require-hashes -r "$YAMLLINT_REQUIREMENTS"
-  if [ -n "${GITHUB_PATH:-}" ]; then
-    echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-  fi
-  export PATH="$HOME/.local/bin:$PATH"
 fi
 
 yamllint .
