@@ -50,7 +50,7 @@ match the consuming repo's review bots.
 
 | Key | Meaning | Default |
 | --- | --- | --- |
-| `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback. Matched against `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match (the GraphQL API returns the bare form). Edit to match your install — review-bot logins vary per repo. | `["claude", "cursor", "coderabbitai", "github-actions"]` |
+| `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback. Matched against `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match (the GraphQL API returns the bare form). Edit to match your install — review-bot logins vary per repo. `github-actions` is deliberately excluded by default: it posts CI status and release-PR comments, not code review, so Phase B would otherwise action them as findings; add it only if your install genuinely posts review-type comments via the Actions bot. | `["claude", "cursor", "coderabbitai"]` |
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers. Bounds the fix-and-watch loop so it can't spin forever. | `5` |
 
 Only the configured `reviewBots` are actioned in Phase B. Human review comments
@@ -177,7 +177,7 @@ from the consuming repo's root, or the run fails with `ENOENT`. The `--bots`
 value is `config.reviewBots` joined by commas:
 
 ```bash
-node scripts/review-threads.mjs <pr> --bots "claude,cursor,coderabbitai,github-actions"
+node scripts/review-threads.mjs <pr> --bots "claude,cursor,coderabbitai"
 ```
 
 It prints minimal JSON with three groups:

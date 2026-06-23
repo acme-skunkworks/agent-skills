@@ -142,7 +142,8 @@ export function parseArgs(argv) {
       }
       opts.repo = value;
     } else if (!arg.startsWith("--") && opts.pr === null) opts.pr = arg;
-    else if (arg.startsWith("--")) throw new Error(`unknown option: ${arg}`);
+    else if (!arg.startsWith("--")) throw new Error(`unexpected argument: ${arg}`);
+    else throw new Error(`unknown option: ${arg}`);
   }
   return opts;
 }
@@ -458,6 +459,17 @@ function selfTest() {
     ok: (() => {
       try {
         parseArgs(["123", "--repo", "acme/widgets/extra"]);
+        return false;
+      } catch {
+        return true;
+      }
+    })(),
+  });
+  cases.push({
+    name: "parseArgs throws on an extra positional argument",
+    ok: (() => {
+      try {
+        parseArgs(["123", "456"]);
         return false;
       } catch {
         return true;

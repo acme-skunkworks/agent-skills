@@ -22,7 +22,7 @@ Edit [`config.json`](config.json) in your installed copy:
 
 | Key | Meaning | Default |
 | --- | --- | --- |
-| `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback (matched on `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match). Edit to match your install — review-bot logins vary per repo. | `["claude", "cursor", "coderabbitai", "github-actions"]` |
+| `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback (matched on `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match). Edit to match your install — review-bot logins vary per repo. `github-actions` is excluded by default (it posts CI/release comments, not code review); add it only if your install posts review-type comments via the Actions bot. | `["claude", "cursor", "coderabbitai"]` |
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers — bounds the fix-and-watch loop. | `5` |
 
 ## Requirements
