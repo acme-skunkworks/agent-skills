@@ -78,7 +78,7 @@ silently.
 | --------------- | ------------------------------------------ | ----------------------------------------------------------- | ----------------------------------- |
 | **In Progress** | `Triage`, `Backlog`, `Todo`                | `In Progress`, `In Review`, `Done`, `Canceled`, `Duplicate` | Starting work on an issue           |
 | **In Review**   | `Triage`, `Backlog`, `Todo`, `In Progress` | `In Review`, `Done`, `Canceled`, `Duplicate`                | PR open/update (a ship flow)        |
-| **Done**        | any not-yet-`Done` state                   | `Done`                                                      | Branch cleanup                      |
+| **Done**        | `Triage`, `Backlog`, `Todo`, `In Progress`, `In Review` | `Done`, `Canceled`, `Duplicate`                             | Branch cleanup                      |
 
 Apply a transition by calling `mcp__linear-server__save_issue` with
 `state: "<target>"` (or the resolved state ID).
