@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+/**
+ * Change-gated, branch-scoped lint preflight (originally ASW-282).
+ */
+import { spawnSync } from "node:child_process";
+import { existsSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { getBranchScope, relativiseToWorkspace, resolveConfig } from "./lib/scope.mjs";
 import {
   classifyViolations,
@@ -6,12 +13,6 @@ import {
   parseEslintJson,
   parseMarkdownlintJson,
 } from "./classify-lint.mjs";
-/**
- * Change-gated, branch-scoped lint preflight (originally ASW-282).
- */
-import { spawnSync } from "node:child_process";
-import { existsSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 
 const ROOT = process.cwd();
 const SUMMARY_PATH = join(ROOT, ".preflight-summary.json");
@@ -27,6 +28,10 @@ function run(cmd, args, opts = {}) {
     cwd: ROOT,
     encoding: opts.encoding ?? "utf8",
     input: opts.input,
+    // ESLint/markdownlint `--format json` can exceed Node's 1 MiB default on a
+    // sizeable codebase; truncated output fails JSON.parse and is swallowed as
+    // "zero violations", so the run falsely passes. Raise the buffer well clear.
+    maxBuffer: 20 * 1024 * 1024,
     stdio: ["pipe", "pipe", "pipe"],
   });
 }

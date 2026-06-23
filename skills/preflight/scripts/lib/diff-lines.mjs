@@ -12,10 +12,20 @@ export function getIntroducedLinesPerFile(mergeBase) {
   const result = spawnSync(
     "git",
     ["diff", `${mergeBase}...HEAD`, "-U0", "--no-color"],
-    { encoding: "utf8" },
+    // A large branch diff can exceed Node's 1 MiB default and be silently
+    // truncated (with `result.error` set but `status` possibly still 0).
+    // Truncation drops hunks → introduced lines misclassified as pre-existing
+    // → preflight falsely passes, so raise the limit and treat `error` as fatal.
+    { encoding: "utf8", maxBuffer: 10 * 1024 * 1024 },
   );
-  if (result.status !== 0) {
-    throw new Error("preflight: git diff for line classification failed");
+  if (result.error || result.status !== 0) {
+    const detail =
+      result.error?.message ||
+      result.stderr?.trim() ||
+      "unknown git diff error";
+    throw new Error(
+      `preflight: git diff for line classification failed: ${detail}`,
+    );
   }
 
   /** @type {Map<string, Set<number>>} */

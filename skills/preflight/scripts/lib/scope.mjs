@@ -25,6 +25,10 @@ const ROOT_ESLINT_CONFIG = /^eslint\.config\.[^/]+$/;
 const MARKDOWN = /\.(md|mdx)$/i;
 const WORKFLOW = /^\.github\/workflows\/.*\.ya?ml$/i;
 const ACTIONLINT_CONFIG = /^\.github\/actionlint\.yaml$/i;
+// Excludes build output plus installed skill bundles (`.agents/skills/`,
+// `.claude/skills/`): a consumer's vendored skills are third-party content, not
+// the branch's own markdown, so re-linting them would surface noise the author
+// can't fix.
 const MD_IGNORE =
   /(?:^|\/)(?:node_modules|dist|\.astro|\.turbo|\.cache)(?:\/|$)|(?:^|\/)\.agents\/skills\/|(?:^|\/)\.claude\/skills\//;
 
@@ -266,7 +270,18 @@ function validateOverride(raw) {
         }
       }
 
-      override.workspaces = workspaces;
+      // Only treat the override as authoritative when at least one entry
+      // survived validation. An all-invalid block must NOT win over
+      // auto-detection: `resolveConfig` uses `override.workspaces ??
+      // detectWorkspaces(root)`, and an empty `{}` is truthy, so it would
+      // otherwise silently run ESLint on zero workspaces.
+      if (Object.keys(workspaces).length > 0) {
+        override.workspaces = workspaces;
+      } else {
+        console.warn(
+          "preflight: ignoring preflight.config.json workspaces (no valid entries; falling back to auto-detection)",
+        );
+      }
     }
   }
 
@@ -356,10 +371,12 @@ export function gitChangedFiles(mergeBase) {
   const result = spawnSync(
     "git",
     ["diff", "--name-only", "--diff-filter=d", `${mergeBase}...HEAD`],
-    { cwd: ROOT, encoding: "utf8" },
+    { cwd: ROOT, encoding: "utf8", maxBuffer: 10 * 1024 * 1024 },
   );
-  if (result.status !== 0) {
-    throw new Error("preflight: git diff failed");
+  if (result.error || result.status !== 0) {
+    const detail =
+      result.error?.message || result.stderr?.trim() || "unknown git diff error";
+    throw new Error(`preflight: git diff failed: ${detail}`);
   }
 
   return result.stdout.split("\n").filter(Boolean);
@@ -397,6 +414,7 @@ function resolveActionlintTargets(workflowsChanged, workflows) {
   const ls = spawnSync("git", ["ls-files", ".github/workflows"], {
     cwd: ROOT,
     encoding: "utf8",
+    maxBuffer: 10 * 1024 * 1024,
   });
   if (ls.status !== 0) {
     return [];

@@ -61,6 +61,9 @@ export function parseEslintJson(eslintJson) {
   for (const result of data) {
     const file = toRepoRelative(result.filePath ?? "");
     for (const msg of result.messages ?? []) {
+      // Drop severity 0 (off) only. Severity 1 (warn) is kept and counts as a
+      // blocking violation when on an introduced line — preflight is
+      // deliberately strict about warnings the branch adds.
       if (msg.severity === 0 || !msg.line) {
         continue;
       }

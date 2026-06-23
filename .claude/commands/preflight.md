@@ -3,6 +3,8 @@ description: Run change-gated, branch-scoped lint preflight on the current branc
 allowed-tools: Read, Bash(git:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
+# Preflight
+
 Run the standalone lint preflight for the current branch and report the result.
 This is the deterministic entry point for the [`preflight`
 skill](../../skills/preflight/SKILL.md) — follow that skill's loop, with the
