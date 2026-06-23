@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Publish the current package to npm via the upgraded npm at $PNPM_HOME/npm,
-# bypassing `pnpm changeset publish`. Diagnosed in eslint-config's ASW-174:
-# pnpm's publish path from inside `changesets/action` ends up failing OIDC
-# Trusted Publishing even when `$PNPM_HOME` is on $PATH and `which npm`
-# correctly resolves to npm 11.x. Calling npm directly works.
+# Publish the current package to npm via the upgraded npm at $PNPM_HOME/npm.
+# Called directly from release.yml's publish step (SK-380 dropped the
+# changesets/action shell). Calling npm directly rather than `pnpm publish`:
+# diagnosed in eslint-config's ASW-174, pnpm's publish path fails OIDC Trusted
+# Publishing even when `$PNPM_HOME` is on $PATH and `which npm` correctly
+# resolves to npm 11.x. Calling npm directly works.
 #
 # Idempotent: if the package@version already exists on npm, exit 0 instead
 # of re-publishing (which would 403/409). Lets release.yml retry safely

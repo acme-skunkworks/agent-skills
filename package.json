@@ -28,22 +28,17 @@
   ],
   "scripts": {
     "changelog:finalise": "tsx infrastructure/scripts/finalise-changelog.ts",
-    "changeset": "changeset",
-    "changeset:version": "changeset version && pnpm changelog:finalise",
     "lint:sh": "bash -c 'if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh infrastructure/scripts/*.sh .husky/pre-commit .husky/pre-push .husky/commit-msg; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  shellcheck not installed — skipping. Install: brew install shellcheck\"; else echo \"⚠️  shellcheck not installed — skipping. Install: apt-get install shellcheck\"; fi'",
     "lint:workflows": "actionlint",
     "lint:yaml": "yamllint .",
     "prepare": "husky",
-    "release": "changeset publish",
     "release:manual": "npm publish --access public --provenance=false",
     "release:manual:dry": "npm publish --access public --provenance=false --dry-run",
     "test": "vitest run",
     "test:sh": "bash -c 'if command -v bats >/dev/null 2>&1; then bats infrastructure/tests/*.bats; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  bats not installed — skipping. Install: brew install bats-core\"; else echo \"⚠️  bats not installed — skipping. Install: apt-get install bats\"; fi'",
     "test:watch": "vitest",
     "validate:changelog": "tsx infrastructure/scripts/validate-changelog.ts",
-    "validate:changesets": "tsx infrastructure/scripts/validate-changesets.ts",
-    "validate:skills": "tsx infrastructure/scripts/validate-skills.ts",
-    "version": "changeset version"
+    "validate:skills": "tsx infrastructure/scripts/validate-skills.ts"
   },
   "lint-staged": {
     "**/*.sh": [
@@ -60,7 +55,6 @@
     ]
   },
   "devDependencies": {
-    "@changesets/cli": "^2.31.0",
     "@types/node": "^25.6.0",
     "gray-matter": "^4.0.3",
     "husky": "^9.1.7",
