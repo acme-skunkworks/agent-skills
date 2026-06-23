@@ -4,17 +4,7 @@ import {
   deriveBody,
   deriveBump,
   deriveSlug,
-  ROOT_PACKAGE,
 } from "../send-it/derive-changeset.js";
-
-describe("ROOT_PACKAGE", () => {
-  it("is the single root package every changeset names", () => {
-    // The changeset always names the root (ADR-0002); the validate:changesets
-    // guard rejects anything else. Keep this string in lockstep with the root
-    // package.json name and the guard's ROOT_PACKAGE.
-    expect(ROOT_PACKAGE).toBe("@acme-skunkworks/agent-skills");
-  });
-});
 
 describe("deriveSlug", () => {
   it("truncates over the 60-char ceiling at a word boundary when possible", () => {

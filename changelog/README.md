@@ -2,7 +2,7 @@
 
 One Markdown file per change, capturing what changed and why. Entries are written by the `/send-it` slash command at PR-creation time and finalised by GitHub Actions after merge.
 
-This is a browsable, per-change, machine-readable companion to the root `CHANGELOG.md` (which Changesets still owns for npm release notes). Each entry carries a `version` so it can be tied back to the published release it shipped in.
+This is the curated, per-change, machine-readable record — and, since the move to release-please (which runs with `skip-changelog`, SK-380), the **only** changelog in the repo: there is no root `CHANGELOG.md`. These entries are also what `release.yml` sources the GitHub-release notes from. Each entry carries a `version` so it can be tied back to the published release it shipped in.
 
 ## File naming
 
@@ -95,10 +95,10 @@ Only include `Added` / `Changed` / `Fixed` headings that have entries.
 
 ## Lifecycle
 
-Two stages — and finalisation rides inside the Changesets version PR, so there's no separate workflow and nothing pushes to `main`:
+Two stages — and finalisation rides inside the release-please release PR, so there's no separate workflow and nothing pushes to `main`:
 
 1. **Create or update an entry (PR-time):** run `/send-it` from a feature branch. It writes the entry with the PR-time fields (`title`, `release_note`, `created_at`, `branch`, `author`, `co_authors`, `category`, `breaking`, `issues`) and empty placeholders for the rest. The entry merges to `main` with the feature PR and waits.
-2. **Finalise (at release, inside the version PR):** the private release-orchestrator runs `pnpm changeset:version` (which is `changeset version && pnpm changelog:finalise`). For every entry without a `version`, `finalise-changelog.ts` resolves the merged PR from the `branch` field via `gh` — filling `merged_at`, `commit`, `merge_strategy`, `pr`, and `stats` (`files_changed`, `loc_added`, `loc_removed`) — stamps the just-bumped `version`, and rewrites Linear IDs to links. These edits land in the `changeset-release/main` version PR, which publishes through the normal flow.
+2. **Finalise (at release, inside the release PR):** the private release-orchestrator runs `release-please release-pr` (which bumps `package.json` + `.release-please-manifest.json`) then `pnpm changelog:finalise`. For every entry without a `version`, `finalise-changelog.ts` resolves the merged PR from the `branch` field via `gh` — filling `merged_at`, `commit`, `merge_strategy`, `pr`, and `stats` (`files_changed`, `loc_added`, `loc_removed`) — stamps the just-bumped `version`, and rewrites Linear IDs to links. These edits land in the `release-please--branches--main` release PR, which publishes through the normal flow.
 
 **CI validation:** the `🔬 Build & Lint` job in `validate.yml` runs `pnpm validate:changelog` on every PR. Malformed entries fail the check. Run it locally with:
 

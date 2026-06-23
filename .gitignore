@@ -1,3 +1,10 @@
+# Release packing ephemerals (release.yml packs into .pack/)
+*.tgz
+.pack/
+
+# actionlint binary fetched by infrastructure/scripts/ensure-actionlint.sh
+/actionlint
+
 node_modules/
 dist/
 build/
