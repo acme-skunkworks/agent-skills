@@ -16,7 +16,7 @@
 // The base ref is `origin/main` (falling back to `main`), overridable via the
 // BASE_REF env var. The pure functions are exported for vitest.
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
 const SLUG_MAX = 60;
 
@@ -72,12 +72,16 @@ export function deriveBody(commits) {
 }
 
 function resolveBaseRef() {
-  const candidates = process.env.BASE_REF
-    ? [process.env.BASE_REF]
-    : ["origin/main", "main"];
+  // BASE_REF (if set) is tried first, then the defaults — so an unresolvable
+  // override still falls back rather than silently yielding zero commits.
+  const candidates = [process.env.BASE_REF, "origin/main", "main"].filter(
+    Boolean,
+  );
   for (const ref of candidates) {
     try {
-      execSync(`git rev-parse --verify ${ref}`, { stdio: "ignore" });
+      // execFileSync (no shell) — ref never reaches a shell, so a hostile
+      // BASE_REF can't inject.
+      execFileSync("git", ["rev-parse", "--verify", ref], { stdio: "ignore" });
       return ref;
     } catch {
       // ref doesn't exist; try next
@@ -93,9 +97,11 @@ function readGitCommits() {
     return [];
   }
 
-  const out = execSync(`git log ${base}..HEAD --format=%H%x1f%s%x1f%b%x1e`, {
-    encoding: "utf8",
-  });
+  const out = execFileSync(
+    "git",
+    ["log", `${base}..HEAD`, "--format=%H%x1f%s%x1f%b%x1e"],
+    { encoding: "utf8" },
+  );
   return out
     .split(RECORD_SEP)
     .map((segment) => segment.trim())
@@ -107,7 +113,9 @@ function readGitCommits() {
 }
 
 function readGitBranch() {
-  return execSync("git branch --show-current", { encoding: "utf8" }).trim();
+  return execFileSync("git", ["branch", "--show-current"], {
+    encoding: "utf8",
+  }).trim();
 }
 
 function main() {

@@ -101,4 +101,8 @@ describe("deriveBody", () => {
       deriveBody([{ subject: "feat!: remove legacy API", body: "" }]),
     ).toBe("remove legacy API");
   });
+
+  it("returns an empty string when there are no commits", () => {
+    expect(deriveBody([])).toBe("");
+  });
 });

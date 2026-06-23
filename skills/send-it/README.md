@@ -59,8 +59,9 @@ which send-it's delegated steps read.
 - `git` and `gh` CLIs (`gh` authenticated — `gh auth status`).
 - Node.js ≥22 for the bundled `derive-bump.mjs` helper (Node built-ins only — no
   npm dependencies, no build step, no `tsx`).
-- The sibling skills `preflight`, `changelog`, and `linear-sync` installed in the
-  consumer repo.
+- The sibling skills `preflight` and `changelog` installed in the consumer repo;
+  `linear-sync` is recommended but optional — the In Review writeback is skipped
+  if it (or the Linear MCP server) is unavailable.
 - The Linear MCP server for the In Review writeback (delegated to `linear-sync`);
   skipped if unavailable.
 

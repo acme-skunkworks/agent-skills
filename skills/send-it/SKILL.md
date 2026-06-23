@@ -97,9 +97,11 @@ before any other step runs. Skip this step otherwise.
    `node_modules`. If it is absent, run `pnpm install --frozen-lockfile` now —
    before any step that invokes a bundled script or a validator — so `--worktree`
    is self-sufficient:
+
    ```bash
    [ -d node_modules ] || pnpm install --frozen-lockfile
    ```
+
 6. Continue to Step 1.
 
 This step does nothing when `--worktree` is omitted — no-arg send-it keeps working
@@ -139,6 +141,7 @@ Skip this step if no `package.json` was touched on the branch.
    sync — continue.
 3. If it fails, run `pnpm install` to update the lockfile.
 4. If the lockfile changed, stage and commit it before any other commits go in:
+
    ```bash
    git add pnpm-lock.yaml
    git commit -m "chore: update lockfile"
