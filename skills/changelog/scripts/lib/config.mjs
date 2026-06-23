@@ -26,11 +26,21 @@ export function loadConfig() {
     return cached;
   }
 
+  let raw;
   try {
-    cached = { ...DEFAULTS, ...JSON.parse(readFileSync(CONFIG_URL, "utf8")) };
-  } catch {
-    cached = { ...DEFAULTS };
+    raw = readFileSync(CONFIG_URL, "utf8");
+  } catch (err) {
+    // A missing file is fine — fall back to defaults so a partially-configured
+    // bundle still runs. Any other read error (e.g. EACCES) is real: surface it.
+    if (err.code === "ENOENT") {
+      cached = { ...DEFAULTS };
+      return cached;
+    }
+    throw err;
   }
 
+  // A present-but-malformed config is a mistake the author needs to see, not
+  // something to mask by silently reverting to ACME defaults.
+  cached = { ...DEFAULTS, ...JSON.parse(raw) };
   return cached;
 }

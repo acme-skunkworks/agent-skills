@@ -71,7 +71,26 @@ const raw = readFileSync(file, "utf8");
 const parsed = parseFrontmatter(raw);
 // Always overwrite (not fill-only like the post-merge fields): re-running must
 // re-derive affected_packages from the latest branch diff as commits are added.
-const fm = { ...parsed.data, affected_packages: packages };
+//
+// Rebuild in canonical field order — `affected_packages` immediately before
+// `stats` — instead of spreading it on the end. `stringifyFrontmatter` emits in
+// insertion order, so a source entry that lacked the `affected_packages: []`
+// placeholder would otherwise drift the field after `stats` permanently.
+const fm = {};
+for (const [key, value] of Object.entries(parsed.data)) {
+  if (key === "affected_packages") {
+    continue; // re-inserted in its canonical slot below
+  }
+  if (key === "stats") {
+    fm.affected_packages = packages;
+  }
+  fm[key] = value;
+}
+if (!("affected_packages" in fm)) {
+  // No `stats` key to anchor against; append (a missing `stats` is itself a
+  // contract violation the validator will flag).
+  fm.affected_packages = packages;
+}
 
 writeFileSync(file, stringifyFrontmatter(parsed.content, fm));
 

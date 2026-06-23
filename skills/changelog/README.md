@@ -14,7 +14,7 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill changelog
 ```
 
 `--copy` writes real files so the bundle is portable. Don't use `-g` / `--global`
-— the install should live in the consumer repo.
+— the installation should live in the consumer repo.
 
 ## Configure
 

@@ -5,7 +5,22 @@ import { join } from "node:path";
 
 const CHANGELOG_DIR = "changelog";
 const { linearWorkspaceSlug: WORKSPACE, issueKeys: TEAM_KEYS } = loadConfig();
-const ISSUE_RE = new RegExp(`\\b(?:${TEAM_KEYS.join("|")})-\\d+\\b`, "g");
+
+/**
+ * Escape regex metacharacters so a configured key such as `C++` or `MY.KEY`
+ * can't throw at construction or silently widen the match.
+ * @param {string} s
+ */
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// `null` when no issue keys are configured: an empty alternation would match the
+// empty string before every `-<digits>` and inject bogus links (e.g. `-2`).
+const ISSUE_RE =
+  TEAM_KEYS.length > 0
+    ? new RegExp(`\\b(?:${TEAM_KEYS.map(escapeRegex).join("|")})-\\d+\\b`, "g")
+    : null;
 const FENCE_RE = /```[\s\S]*?```/g;
 const INLINE_CODE_RE = /`[^`]*`/g;
 const ALREADY_LINKED_RE = /\[[^\]]*\]\([^)]*\)/g;
@@ -15,40 +30,39 @@ function buildUrl(id) {
 }
 
 function rewriteBody(body) {
+  if (!ISSUE_RE) {
+    return body;
+  }
+
+  // Mask fenced/inline code and existing links so issue-like text inside them
+  // isn't linkified. Tokens are delimited with NUL bytes, which cannot occur in
+  // a UTF-8 text file, so a token can never collide with real prose on restore
+  // (the previous bare `FENCE0`/`INLINE1`/`LINK2` tokens could).
   const masks = [];
-  let masked = body
-    .replace(FENCE_RE, (m) => {
-      masks.push(m);
-      return `FENCE${masks.length - 1}`;
-    })
-    .replace(INLINE_CODE_RE, (m) => {
-      masks.push(m);
-      return `INLINE${masks.length - 1}`;
-    })
-    .replace(ALREADY_LINKED_RE, (m) => {
-      masks.push(m);
-      return `LINK${masks.length - 1}`;
-    });
+  const mask = (m) => {
+    masks.push(m);
+    return `\x00CR_MASK_${masks.length - 1}\x00`;
+  };
 
-  masked = masked.replace(ISSUE_RE, (id) => `[${id}](${buildUrl(id)})`);
+  const masked = body
+    .replace(FENCE_RE, mask)
+    .replace(INLINE_CODE_RE, mask)
+    .replace(ALREADY_LINKED_RE, mask)
+    .replace(ISSUE_RE, (id) => `[${id}](${buildUrl(id)})`);
 
-  return masked
-    .replace(/FENCE(\d+)/g, (_, i) => masks[Number(i)])
-    .replace(/INLINE(\d+)/g, (_, i) => masks[Number(i)])
-    .replace(/LINK(\d+)/g, (_, i) => masks[Number(i)]);
+  return masked.replace(/\x00CR_MASK_(\d+)\x00/g, (_, i) => masks[Number(i)]);
 }
 
 function splitFrontmatter(raw) {
-  if (!raw.startsWith("---\n")) {
+  // Match the opening/closing `---` fences with either LF or CRLF endings so a
+  // file authored on Windows isn't treated as having no frontmatter (which
+  // would let `rewriteBody` rewrite the frontmatter region too).
+  const match = raw.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n/);
+  if (!match) {
     return { fm: "", body: raw };
   }
 
-  const end = raw.indexOf("\n---\n", 4);
-  if (end === -1) {
-    return { fm: "", body: raw };
-  }
-
-  return { fm: raw.slice(0, end + 5), body: raw.slice(end + 5) };
+  return { fm: match[0], body: raw.slice(match[0].length) };
 }
 
 let stat;

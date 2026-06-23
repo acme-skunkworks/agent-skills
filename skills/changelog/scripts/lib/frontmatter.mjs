@@ -55,6 +55,47 @@ function parseScalar(token) {
   return t;
 }
 
+// Split an inline-array body on top-level commas only — commas inside single-
+// or double-quoted strings are preserved (e.g. `"Smith, Jr. <a@b>"` stays one
+// item). Mirrors parseScalar's quoting: `''` is an escaped quote inside single
+// quotes, `\` escapes inside double quotes.
+function splitInlineItems(inner) {
+  const items = [];
+  let current = "";
+  /** @type {"'"|'"'|null} */
+  let quote = null;
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (quote === '"') {
+      current += ch;
+      if (ch === "\\" && i + 1 < inner.length) {
+        current += inner[++i];
+      } else if (ch === '"') {
+        quote = null;
+      }
+    } else if (quote === "'") {
+      current += ch;
+      if (ch === "'") {
+        if (inner[i + 1] === "'") {
+          current += inner[++i];
+        } else {
+          quote = null;
+        }
+      }
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+      current += ch;
+    } else if (ch === ",") {
+      items.push(current);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+  items.push(current);
+  return items;
+}
+
 // Parse an inline array body (the text between the surrounding brackets).
 function parseInlineArray(body) {
   const inner = body.trim();
@@ -62,7 +103,7 @@ function parseInlineArray(body) {
     return [];
   }
 
-  return inner.split(",").map((item) => parseScalar(item));
+  return splitInlineItems(inner).map((item) => parseScalar(item));
 }
 
 // Collect an indented block following a `key:` / block-scalar header, returning
@@ -123,6 +164,12 @@ function parseMapping(lines, startIndent) {
     }
 
     const colon = line.indexOf(":");
+    if (colon === -1) {
+      // No `:` means malformed input (or a mis-routed block-array item). Fail
+      // loudly: silently slicing on colon === -1 mangles the key/value and
+      // produces a confusing downstream validation error instead.
+      throw new Error(`Invalid frontmatter line (expected "key: value"): ${line}`);
+    }
     const key = line.slice(indentOf(line), colon).trim();
     const rest = line.slice(colon + 1).trim();
     i++;

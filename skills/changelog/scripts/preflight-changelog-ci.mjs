@@ -10,15 +10,31 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 
 function parseVersion(raw) {
+  // Accept full and partial versions: a bare `22` or `22.5` (common in
+  // `.nvmrc`, which is what `nvm use` writes) pads the missing parts with 0.
   const m = String(raw)
     .trim()
     .replace(/^v/, "")
-    .match(/^(\d+)\.(\d+)\.(\d+)/);
+    .match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
   if (!m) {
     return null;
   }
 
-  return [Number(m[1]), Number(m[2]), Number(m[3])];
+  return [Number(m[1]), Number(m[2] ?? 0), Number(m[3] ?? 0)];
+}
+
+// Extract the minimum concrete version from any common `engines.node` range
+// without a semver dependency: `>=22`, `>=22.1.0`, `^22.0.0`, `~22.1`, `22.x`,
+// `>=22 <23`, or a bare `22`. We take the first version-like token (the lower
+// bound for the ranges we emit) and treat `x`/`*`/missing parts as 0.
+function coerceMinVersion(spec) {
+  const m = String(spec).match(/(\d+)(?:\.(\d+|[xX*]))?(?:\.(\d+|[xX*]))?/);
+  if (!m) {
+    return null;
+  }
+
+  const part = (s) => (s === undefined || /[xX*]/.test(s) ? 0 : Number(s));
+  return [Number(m[1]), part(m[2]), part(m[3])];
 }
 
 function compareVersions(a, b) {
@@ -49,18 +65,10 @@ function readEnginesNode() {
     process.exit(1);
   }
 
-  const m = spec.match(/^>=\s*(\S+)$/);
-  if (!m) {
-    console.error(
-      `preflight-changelog-ci: unsupported engines.node spec "${spec}" (expected >=x.y.z)`,
-    );
-    process.exit(1);
-  }
-
-  const min = parseVersion(m[1]);
+  const min = coerceMinVersion(spec);
   if (!min) {
     console.error(
-      `preflight-changelog-ci: could not parse engines.node minimum "${m[1]}"`,
+      `preflight-changelog-ci: could not parse a minimum version from engines.node "${spec}"`,
     );
     process.exit(1);
   }

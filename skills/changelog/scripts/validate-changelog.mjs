@@ -120,8 +120,8 @@ function validateEntry(file, raw) {
     fail(file, "branch must be a non-empty string");
   }
 
-  if (fm.pr != null && fm.pr !== "" && !isInt(fm.pr)) {
-    fail(file, "pr must be an integer when set");
+  if (fm.pr != null && fm.pr !== "" && (!isInt(fm.pr) || Number(fm.pr) <= 0)) {
+    fail(file, "pr must be a positive integer when set");
   }
 
   if (fm.commit != null && fm.commit !== "" && !SHA7_RE.test(fm.commit)) {

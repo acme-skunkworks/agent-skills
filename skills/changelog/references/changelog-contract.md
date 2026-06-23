@@ -77,6 +77,10 @@ Three owners, never overlapping:
    a consumer adds one. Emit these as blank placeholders; never hand-edit them —
    so an in-flight PR never shows numbers that drift as commits land.
 
+`branch` is set by the author at create time and is the stable lookup key for
+enrichment. `pr` is **back-filled by the ship flow** (`/send-it`) when the PR is
+opened — left blank by the author and untouched by enrichment until then.
+
 `created_at` is **sacred**: set once at create time, preserved verbatim on every
 update. The release step refuses to finalise an entry without it.
 

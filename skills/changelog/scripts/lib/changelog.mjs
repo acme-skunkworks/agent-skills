@@ -20,7 +20,19 @@ export function findEntryByBranch(
   branch,
   changelogDir = DEFAULT_CHANGELOG_DIR,
 ) {
-  const files = readdirSync(changelogDir)
+  let names;
+  try {
+    names = readdirSync(changelogDir);
+  } catch (err) {
+    // A repo with no `changelog/` directory yet means "no entry found", not a
+    // crash — callers (e.g. set-affected-packages.mjs) already handle null.
+    if (err.code === "ENOENT") {
+      return null;
+    }
+    throw err;
+  }
+
+  const files = names
     .filter((n) => n.endsWith(".md") && n !== "README.md")
     .map((n) => join(changelogDir, n));
   for (const entryPath of files) {
