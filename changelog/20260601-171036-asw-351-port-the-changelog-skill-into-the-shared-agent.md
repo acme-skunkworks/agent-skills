@@ -5,7 +5,7 @@ version:
 created_at: "2026-06-01T17:10:36Z"
 merged_at:
 branch: "asw-351-port-the-changelog-skill-into-the-shared-agent-skills-repo"
-pr:
+pr: 21
 commit:
 merge_strategy:
 author: "rob@acmeskunkworks.io"
@@ -13,6 +13,7 @@ co_authors: []
 category: feature
 breaking: false
 issues: ["ASW-351"]
+affected_packages: []
 stats:
   files_changed:
   loc_added:
@@ -35,3 +36,9 @@ stats:
 - A local `/changelog` command wrapper runs the standalone write/validate flow,
   and `references/changelog-contract.md` documents the full schema and
   field-ownership rules.
+
+## Changed
+
+- Document `pr` as a fourth field owner (the ship flow) in `changelog-contract.md`.
+- Surface malformed `config.json` parse errors with the file path instead of silently falling back to defaults.
+- Show vendored `skills/changelog/scripts/` paths in `SKILL.md` enrichment examples.
