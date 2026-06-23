@@ -41,6 +41,13 @@ export function loadConfig() {
 
   // A present-but-malformed config is a mistake the author needs to see, not
   // something to mask by silently reverting to ACME defaults.
-  cached = { ...DEFAULTS, ...JSON.parse(raw) };
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    console.error(`Invalid JSON in ${CONFIG_URL.pathname}: ${err.message}`);
+    throw err;
+  }
+  cached = { ...DEFAULTS, ...parsed };
   return cached;
 }

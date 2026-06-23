@@ -140,13 +140,11 @@ Then run the two deterministic enrichment scripts from the consumer repo root
 post-merge fields blank):
 
 ```bash
-node scripts/set-affected-packages.mjs   # writes affected_packages from the branch diff
-node scripts/add-links.mjs               # rewrites bare issue IDs in the body to Linear URLs
+node skills/changelog/scripts/set-affected-packages.mjs   # writes affected_packages from the branch diff
+node skills/changelog/scripts/add-links.mjs               # rewrites bare issue IDs in the body to Linear URLs
 ```
 
-(Adjust the `scripts/` prefix to wherever the bundle was installed — e.g.
-`node skills/changelog/scripts/set-affected-packages.mjs` when run from a repo
-that vendored the skill under `skills/`.)
+Adjust the path prefix if you installed the skill to a different location.
 
 ### Step 6 — Validate against the contract
 

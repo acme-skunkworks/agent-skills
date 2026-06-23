@@ -64,7 +64,7 @@ body must contain at least one of `## Breaking` / `## Added` / `## Changed` /
 
 ## Field ownership boundaries
 
-Three owners, never overlapping:
+Four owners, never overlapping:
 
 1. **The author (this skill).** `title`, `release_note`, `category`, `breaking`,
    `issues`, `co_authors`, `author`. Re-derived on every run.
@@ -76,10 +76,11 @@ Three owners, never overlapping:
    `merge_strategy`, and authoritative `stats`, plus the published `version` where
    a consumer adds one. Emit these as blank placeholders; never hand-edit them —
    so an in-flight PR never shows numbers that drift as commits land.
+4. **The ship flow (`/send-it`).** `pr` — back-filled when the PR is opened; left
+   blank by the author and untouched by enrichment until then.
 
 `branch` is set by the author at create time and is the stable lookup key for
-enrichment. `pr` is **back-filled by the ship flow** (`/send-it`) when the PR is
-opened — left blank by the author and untouched by enrichment until then.
+enrichment.
 
 `created_at` is **sacred**: set once at create time, preserved verbatim on every
 update. The release step refuses to finalise an entry without it.
