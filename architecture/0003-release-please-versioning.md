@@ -18,7 +18,7 @@ The change is **strand A only**: it swaps the engine that decides the bump. Ever
 
 **release-please (Conventional Commits) replaces Changesets as the version engine. The repo-level single-package model from ADR-0002 is unchanged.**
 
-1. **The bump is decided by the merged PR title**, not a changeset file. `feat:` → minor, `fix:` → patch, `!`/`BREAKING CHANGE:` → major; `docs`/`chore`/`ci`/`refactor`/`perf`/`test`/`build`/`style`/`revert` cut no release. release-please reads it (the squash subject), bumps `package.json` + `.release-please-manifest.json`, and opens the `release-please--branches--main` release PR.
+1. **The bump is decided by the merged PR title**, not a changeset file. `feat:` → minor, `fix:`/`perf:`/`revert:` → patch, `!`/`BREAKING CHANGE:` → major; `docs`/`chore`/`ci`/`refactor`/`test`/`build`/`style` cut no release. `/send-it` maps shippable changes to `feat`/`fix`/`feat!` only; release-please still bumps on a manually titled `perf:` or `revert:`. release-please reads the squash subject, bumps `package.json` + `.release-please-manifest.json`, and opens the `release-please--branches--main` release PR.
 2. **`release-please-config.json` is a single-package config** (`packages: { ".": … }`, `release-type: node`, `include-v-in-tag: true`, `skip-changelog: true`). There is **no root `CHANGELOG.md`** — the dated `changelog/` entries are the only changelog, and `release.yml` sources GitHub-release notes from the entry stamped with the release version.
 3. **Two CI guards replace the changeset guard.** A SHA-pinned conventional-PR-title lint (`amannn/action-semantic-pull-request`) checks the title format; a changelog-completeness gate (`check-changelog-completeness.ts`) requires a `feat`/`fix`/breaking title to carry a dated `changelog/*.md` entry — restoring the "no changeset → no release" coupling Changesets gave for free. ADR-0002's `validate-changesets.ts` guard and the `pkg` field in `derive-changeset.ts` are removed (there are no changeset files to validate).
 4. **`/send-it` composes the PR title** from the branch's derived bump (shippable → `feat`/`fix`/breaking; non-shippable → a non-release type) and writes the dated `changelog/` entry for shippable changes. Shippability is keyed on `files: ["skills/"]`: a change is shippable iff it touches `skills/` or a publish-surface `package.json` key.
@@ -32,7 +32,7 @@ The change is **strand A only**: it swaps the engine that decides the bump. Ever
 
 ## Rejected alternatives
 
-- **Keep Changesets here.** Rejected: it leaves this repo as the estate's lone divergent release flow, against the cross-repo-consistency driver of ADR 0002.
+- **Keep Changesets here.** Rejected: it leaves this repo as the estate's lone divergent release flow, against the cross-repo-consistency driver of ADR-0002.
 - **Adopt release-please's own changelog (`skip-changelog: false`).** Rejected: the dated `changelog/` system (ADR-0002 / ASW-345) is richer (per-change frontmatter, enrichment, Linear links) and is what `release.yml` and consumers already read. release-please runs with `skip-changelog: true` so the two don't collide.
 
 ## Consequences

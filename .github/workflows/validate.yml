@@ -99,9 +99,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Mirror the Conventional Commits types /send-it emits. Only feat / fix
-          # / a `!` breaking marker are release-triggering (release-please default
-          # node bump table); the rest are non-release types.
+          # Mirror the Conventional Commits types /send-it emits. feat / fix /
+          # perf / revert and a `!` breaking marker are release-triggering
+          # (release-please default node bump table); the rest are non-release types.
           types: |
             feat
             fix

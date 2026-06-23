@@ -5,9 +5,10 @@
 // release-please infers the bump from the Conventional-Commit PR title rather
 // than an explicit file. Wired into validate.yml's build-and-lint job.
 //
-// "Release-triggering" mirrors release-please's default node bump table exactly:
-// only `feat` (minor), `fix` (patch), and a `!` breaking marker (major) cut a
-// release; `docs`/`chore`/`ci`/`refactor`/`perf`/`test`/`build`/`style` do not.
+// "Release-triggering" mirrors release-please's default node bump table:
+// `feat` (minor), `fix`/`perf`/`revert` (patch), and a `!` breaking marker
+// (major) cut a release; `docs`/`chore`/`ci`/`refactor`/`test`/`build`/`style`
+// do not.
 //
 // Inputs (env, set by the workflow):
 //   PR_TITLE — the pull request title (github.event.pull_request.title)
@@ -17,7 +18,7 @@
 
 import { execSync } from "node:child_process";
 
-const RELEASE_TRIGGERING_TYPE = /^(feat|fix)(\([^)]+\))?:/;
+const RELEASE_TRIGGERING_TYPE = /^(feat|fix|perf|revert)(\([^)]+\))?:/;
 const BREAKING_SUBJECT = /^[a-z]+(\([^)]+\))?!:/;
 const CHANGELOG_ENTRY = /^changelog\/.+\.md$/;
 
@@ -32,7 +33,10 @@ export function hasChangelogEntry(changedFiles: readonly string[]): boolean {
   );
 }
 
-export type CompletenessResult = { ok: boolean; reason: string };
+export interface CompletenessResult {
+  ok: boolean;
+  reason: string;
+}
 
 export function checkCompleteness(
   prTitle: string,

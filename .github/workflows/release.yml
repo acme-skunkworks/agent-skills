@@ -64,7 +64,21 @@ jobs:
         id: pack
         run: |
           set -euo pipefail
-          tarball="$(npm pack --silent)"
+          # Pack into an isolated, empty directory so the artifact can't collide
+          # with any stray .tgz in the workspace, then assert exactly one tarball
+          # was produced before trusting it (this file is what gets published).
+          # --ignore-scripts skips the only `prepare` script (dev-only husky):
+          # the published tarball never needs git hooks, and husky's stdout would
+          # otherwise be a foot-gun. The name is read from disk, not stdout, so
+          # lifecycle chatter is irrelevant regardless.
+          rm -rf .pack && mkdir .pack
+          npm pack --ignore-scripts --silent --pack-destination .pack
+          set -- .pack/*.tgz
+          if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+            echo "::error::expected exactly one packed tarball in .pack/, found $#: $*"
+            exit 1
+          fi
+          tarball="$1"
           echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
           echo "Packed $tarball"
 
@@ -182,7 +196,9 @@ jobs:
             publish=true
           fi
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
-          echo "package.json version: $version; tag $tag exists: $([ "$publish" = false ] && echo yes || echo no); publish: $publish"
+          tag_exists="$([ "$publish" = false ] && echo yes || echo no)"
+          echo "package.json version: $version"
+          echo "tag $tag exists: $tag_exists; publish: $publish"
 
       # Download the exact tarball built in the unprivileged `build` job (ASW-328)
       # — this job never builds from source, so no build-time code runs alongside

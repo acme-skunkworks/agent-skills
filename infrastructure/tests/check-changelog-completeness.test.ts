@@ -24,13 +24,20 @@ describe("isReleaseTriggering", () => {
     expect(isReleaseTriggering("feat!: remove skill")).toBe(true);
   });
 
+  it("is true for perf", () => {
+    expect(isReleaseTriggering("perf: speed up")).toBe(true);
+  });
+
+  it("is true for revert", () => {
+    expect(isReleaseTriggering("revert: undo foo")).toBe(true);
+  });
+
   it("is false for non-release types", () => {
     for (const title of [
       "docs: update readme",
       "chore: bump dep",
       "ci: harden workflow",
       "refactor: tidy internals",
-      "perf: speed up",
       "test: add cases",
       "build: tweak config",
       "style: reformat",

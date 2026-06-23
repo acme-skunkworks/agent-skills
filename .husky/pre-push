@@ -6,19 +6,15 @@
 # Uses printf (not echo) for colour output so escape codes render under
 # strict POSIX sh (dash, busybox), where echo doesn't interpret \033.
 
-LATEST_COMMIT_MSG=$(git log -1 --pretty=%B)
 LATEST_AUTHOR=$(git log -1 --pretty=%an)
 LATEST_COMMITTER=$(git log -1 --pretty=%cn)
 
-# Skip for automated release commits (release-please release PR, SK-380).
-# release-please's default commit/PR-title pattern is `chore(main): release X`.
-if echo "$LATEST_COMMIT_MSG" | grep -qE "^chore(\(.+\))?: release "; then
-  printf '⏭️  Skipping pre-push check for automated release commit\n'
-  exit 0
-fi
-
-# Skip for known bot identities. Check both author and committer:
-# the orchestrator sets both, but other bots may set only one.
+# Skip for known bot identities only. This is what authorises the release-please
+# release commit (`chore(main): release X`, pushed by road-runner-bot) to reach
+# main — the bypass signal is the bot identity, NOT the commit message. Message
+# shape alone is deliberately not trusted: a human could craft a
+# `chore(main): release …` subject to sidestep the main-push guard. Check both
+# author and committer: the orchestrator sets both, but other bots may set only one.
 for actor in "$LATEST_AUTHOR" "$LATEST_COMMITTER"; do
   case "$actor" in
     "github-actions[bot]"|"road-runner-bot[bot]")
