@@ -2,6 +2,11 @@ name: Validate
 
 on:
   pull_request:
+    # `edited` is included so the conventional-PR-title lint (pr-title job) and
+    # the changelog-completeness gate re-run when a title is corrected — the PR
+    # title is the release-please bump signal (SK-380), so a stale pass on an
+    # old title would be unsafe. The default set is opened/synchronize/reopened.
+    types: [opened, edited, synchronize, reopened]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,14 +20,15 @@ permissions:
 jobs:
   build-and-lint:
     name: 🔬 Build & Lint
-    # Deliberately NOT skipped on changeset-release/* — this job is the required
-    # status check that gates the version PR (ASW-311). The road-runner-bot
-    # orchestrator reopens the version PR to trigger this run, then merges once
-    # it's green. Hard gates: frozen-lockfile install, the vitest unit tests for
-    # the changelog/send-it helpers, changelog-entry validation, and the
-    # changeset package-name guard (ASW-364 — fails loudly on a changeset that
-    # names anything but the root package). The changeset-status check stays
-    # informational (chore-only PRs need no entry).
+    # Deliberately NOT skipped on the release-please branch — this job is the
+    # required status check that gates the release PR (ASW-311). The
+    # road-runner-bot orchestrator authors the release PR (App-token), which fires
+    # this run, then merges once it's green. The release PR's title is a
+    # non-release `chore: release …`, so the changelog-completeness step below is
+    # a clean no-op on it. Hard gates: frozen-lockfile install, the vitest unit
+    # tests for the changelog/send-it helpers, changelog-entry validation, the
+    # per-skill bundle-metadata guard (ASW-364), and the changelog-completeness
+    # gate (SK-380 — a release-triggering PR title must carry a dated entry).
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -58,12 +64,6 @@ jobs:
       - name: 📒 Validate changelog entries
         run: pnpm validate:changelog
 
-      - name: 🏷️ Validate changeset package names
-        # Hard gate (ASW-364): every .changeset/*.md must name only the root
-        # package. A skill-named changeset can't reach a package Changesets
-        # discovers, so it would silently no-op — fail the build instead.
-        run: pnpm validate:changesets
-
       - name: 🧩 Validate skill bundle metadata
         # Hard gate (ASW-364): every skills/*/ must have a package.json named
         # @acme-skunkworks/skill-<dir>, private: true, a semver version, and a
@@ -71,14 +71,53 @@ jobs:
         # metadata drifting silently (skills version out-of-band — ADR-0002).
         run: pnpm validate:skills
 
-      - name: 📝 Changeset status
-        # Informational: chore-only PRs can legitimately have no changeset.
-        run: pnpm changeset status --since=origin/${{ github.base_ref }}
-        continue-on-error: true
+      # Changelog-completeness gate (SK-380): a release-triggering PR title
+      # (feat/fix/breaking) must carry a dated changelog/ entry. Restores the
+      # no-changeset-no-release coupling now that the bump is inferred from the
+      # PR title. Non-release titles (docs/chore/ci/…) — including the
+      # release-please PR's own `chore: release …` — are a clean pass.
+      - name: 📓 Changelog completeness
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_REF: ${{ github.base_ref }}
+        run: pnpm tsx infrastructure/scripts/check-changelog-completeness.ts
+
+  # Conventional-PR-title lint (SK-380). The repo squash-merges, so the PR title
+  # IS the squash subject release-please parses to decide the bump — a mistyped
+  # prefix silently ships the wrong semver. This guards the format. Runs on every
+  # PR including the release-please PR (whose `chore: release …` title is a valid
+  # conventional subject, so it passes cleanly — no skip needed).
+  pr-title:
+    name: 🔠 PR title (Conventional Commits)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      pull-requests: read
+    steps:
+      - name: 🔠 Lint PR title
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Mirror the Conventional Commits types /send-it emits. feat / fix /
+          # perf / revert and a `!` breaking marker are release-triggering
+          # (release-please default node bump table); the rest are non-release types.
+          types: |
+            feat
+            fix
+            docs
+            chore
+            ci
+            refactor
+            perf
+            test
+            build
+            style
+            revert
 
   yaml-lint:
     name: 📝 YAML & Workflows
-    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -130,7 +169,7 @@ jobs:
 
   infra:
     name: 🧪 Infrastructure scripts
-    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -187,10 +226,10 @@ jobs:
 
   skill-manifests:
     name: 🧪 Validate skill manifests
-    # Skipped on changeset-release/* for consistency with yaml-lint/infra: the
-    # orchestrator's version PRs don't touch skills/, so there's nothing new to
-    # validate there. Still a hard gate on feature PRs that add/change a skill.
-    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
+    # Skipped on the release-please branch for consistency with yaml-lint/infra:
+    # the orchestrator's release PRs don't touch skills/, so there's nothing new
+    # to validate there. Still a hard gate on feature PRs that add/change a skill.
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

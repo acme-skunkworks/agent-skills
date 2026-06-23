@@ -16,7 +16,6 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill <name> --
 
 ```
 .
-├── .changeset/              # pending changesets + config
 ├── .claude/commands/
 │   └── send-it.md           # all-in-one finisher (stopgap until the send-it skill ships)
 ├── .github/
@@ -24,10 +23,12 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill <name> --
 │   │   └── load-repo-config/ # infrastructure/repo-config.yaml → step outputs
 │   └── workflows/
 │       ├── release.yml       # publish-only: build → npm (OIDC) → GitHub Packages (dormant)
-│       └── validate.yml      # PR gate: build & lint, changelog validation, infra tests
+│       └── validate.yml      # PR gate: build & lint, changelog validation, PR-title lint, infra tests
 ├── .husky/                  # git hooks (block main pushes; lint-staged; strip Claude trailer)
 ├── architecture/            # ADRs (sequentially numbered, immutable)
-├── changelog/               # dated per-change release-note entries (companion to CHANGELOG.md)
+├── changelog/               # dated per-change release-note entries (the repo's only changelog)
+├── release-please-config.json      # release-please packages config (single root package)
+├── .release-please-manifest.json   # release-please version manifest
 ├── infrastructure/
 │   ├── repo-config.yaml      # non-secret CI/release knobs
 │   ├── scripts/              # changelog .ts helpers + ensure-*.sh tool bootstraps
@@ -49,4 +50,4 @@ ADRs land under `architecture/` as `NNNN-<slug>.md`. ADR-0001 — the foundation
 
 ## Contributing
 
-See [CLAUDE.md](./CLAUDE.md) for the conventions (Conventional Commits, draft PRs, Changesets per behavioural change).
+See [CLAUDE.md](./CLAUDE.md) for the conventions (Conventional Commits, draft PRs, release-please versioning driven by the PR title).
