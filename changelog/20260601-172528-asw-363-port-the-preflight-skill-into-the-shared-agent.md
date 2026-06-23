@@ -1,22 +1,25 @@
 ---
-title: "Add the preflight skill"
-release_note: "Adds a preflight skill that is the single source of truth for the change-gated, branch-scoped lint preflight."
-version:
-created_at: "2026-06-01T17:25:28Z"
-merged_at:
-branch: "asw-363-port-the-preflight-skill-into-the-shared-agent-skills-repo"
-pr:
-commit:
-merge_strategy:
-author: "rob@acmeskunkworks.io"
+title: Add the preflight skill
+release_note: >-
+  Adds a preflight skill that is the single source of truth for the
+  change-gated, branch-scoped lint preflight.
+version: 1.1.0
+created_at: '2026-06-01T17:25:28Z'
+merged_at: '2026-06-23T19:43:26Z'
+branch: asw-363-port-the-preflight-skill-into-the-shared-agent-skills-repo
+pr: 24
+commit: 41a17fe
+merge_strategy: squash
+author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
 breaking: false
-issues: ["ASW-363"]
+issues:
+  - ASW-363
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 12
+  loc_added: 1656
+  loc_removed: 0
 ---
 
 ## Added

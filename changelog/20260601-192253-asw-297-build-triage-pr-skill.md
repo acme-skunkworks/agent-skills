@@ -1,22 +1,26 @@
 ---
-title: "Add the triage-pr skill"
-release_note: "New triage-pr skill — drives a pull request from draft with failing CI to merge-ready: fixes in-scope CI failures, then validates and actions unresolved AI review feedback."
-version:
-created_at: "2026-06-01T19:22:53Z"
-merged_at:
-branch: "asw-297-build-triage-pr-skill"
-pr:
-commit:
-merge_strategy:
-author: "rob@acmeskunkworks.io"
+title: Add the triage-pr skill
+release_note: >-
+  New triage-pr skill — drives a pull request from draft with failing CI to
+  merge-ready: fixes in-scope CI failures, then validates and actions unresolved
+  AI review feedback.
+version: 1.1.0
+created_at: '2026-06-01T19:22:53Z'
+merged_at: '2026-06-23T19:42:58Z'
+branch: asw-297-build-triage-pr-skill
+pr: 10
+commit: e183795
+merge_strategy: squash
+author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
 breaking: false
-issues: ["ASW-297"]
+issues:
+  - ASW-297
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 7
+  loc_added: 1031
+  loc_removed: 0
 ---
 
 ## Added

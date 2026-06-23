@@ -1,23 +1,26 @@
 ---
-title: "Add the changelog skill"
-release_note: "Adds a changelog skill that is the single source of truth for the changelog-entry contract."
-version:
-created_at: "2026-06-01T17:10:36Z"
-merged_at:
-branch: "asw-351-port-the-changelog-skill-into-the-shared-agent-skills-repo"
+title: Add the changelog skill
+release_note: >-
+  Adds a changelog skill that is the single source of truth for the
+  changelog-entry contract.
+version: 1.1.0
+created_at: '2026-06-01T17:10:36Z'
+merged_at: '2026-06-23T20:00:07Z'
+branch: asw-351-port-the-changelog-skill-into-the-shared-agent-skills-repo
 pr: 21
-commit:
-merge_strategy:
-author: "rob@acmeskunkworks.io"
+commit: 166ab63
+merge_strategy: squash
+author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
 breaking: false
-issues: ["ASW-351"]
+issues:
+  - ASW-351
 affected_packages: []
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 16
+  loc_added: 1617
+  loc_removed: 0
 ---
 
 ## Added
