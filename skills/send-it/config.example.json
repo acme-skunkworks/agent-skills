@@ -1,0 +1,5 @@
+{
+  "baseBranch": "main",
+  "shippablePaths": ["dist/", "src/"],
+  "shippableManifestKeys": ["name", "version", "files", "publishConfig"]
+}

@@ -4,7 +4,7 @@ import {
   deriveBody,
   deriveBump,
   deriveSlug,
-} from "../send-it/derive-changeset.js";
+} from "../../skills/send-it/scripts/derive-bump.mjs";
 
 describe("deriveSlug", () => {
   it("truncates over the 60-char ceiling at a word boundary when possible", () => {
@@ -57,7 +57,7 @@ describe("deriveBump", () => {
   it("is patch when the first commit is a fix even if a later commit is a feat", () => {
     // Documents an intentional asymmetry in deriveBump: only commits[0] is
     // checked for `feat:`, while breaking-change detection scans all commits.
-    // The /send-it heuristic treats the lead commit as the release intent.
+    // The send-it heuristic treats the lead commit as the release intent.
     expect(
       deriveBump([
         { subject: "fix: stabilise", body: "" },

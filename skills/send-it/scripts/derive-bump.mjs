@@ -1,24 +1,30 @@
-#!/usr/bin/env -S npx tsx
-// Derives the deterministic bits /send-it needs from the branch commits.
-// Run: pnpm tsx infrastructure/send-it/derive-changeset.ts
+// Derives the deterministic bits the send-it ship flow needs from the branch
+// commits. Zero dependencies — Node built-ins only, no build step, no tsx.
+// Run: node skills/send-it/scripts/derive-bump.mjs
 //
-// Since SK-380 there is no changeset file; /send-it uses these to name the dated
-// changelog/ entry and to compose the Conventional Commits PR title (the
-// release-please bump signal). The filename is retained for git history.
+// Under release-please (Conventional Commits) there is no changeset file: the
+// release signal is the Conventional Commits PR title. send-it uses these
+// derived bits to name the dated changelog/ entry and to compose that title
+// (the bump signal release-please reads).
 //
-// Fields:
+// Fields printed as JSON to stdout:
 //   slug : branch-name-derived slug (changelog/<ts>-<slug>.md filename)
 //   bump : major | minor | patch (drives the PR-title prefix: feat!/feat/fix)
-//   body : a one-line draft summary (the slash command may rewrite this)
+//   body : a one-line draft summary (the ship flow may rewrite this)
 //
-// Reads from git via `git branch --show-current` and `git log origin/main..HEAD`
-// and prints JSON to stdout. Pure functions live exported for vitest.
+// Reads from git via `git branch --show-current` and `git log <base>..HEAD`.
+// The base ref is `origin/main` (falling back to `main`), overridable via the
+// BASE_REF env var. The pure functions are exported for vitest.
 
 import { execSync } from "node:child_process";
 
 const SLUG_MAX = 60;
 
-export function deriveSlug(branch: string): string {
+// Git --format field/record separators (%x1f unit, %x1e record).
+const UNIT_SEP = "";
+const RECORD_SEP = "";
+
+export function deriveSlug(branch) {
   const cleaned = branch
     .toLowerCase()
     .replaceAll(/[^a-z0-9]+/g, "-")
@@ -32,13 +38,10 @@ export function deriveSlug(branch: string): string {
   return lastHyphen > 0 ? truncated.slice(0, lastHyphen) : truncated;
 }
 
-export type Commit = { body: string; hash?: string; subject: string };
-export type Bump = "major" | "minor" | "patch";
-
 const BREAKING_SUBJECT = /^[a-z]+(\([^)]+\))?!:/;
 const FEAT_SUBJECT = /^feat(\([^)]+\))?:/;
 
-export function deriveBump(commits: readonly Commit[]): Bump {
+export function deriveBump(commits) {
   if (commits.length === 0) {
     return "patch";
   }
@@ -59,7 +62,7 @@ export function deriveBump(commits: readonly Commit[]): Bump {
   return "patch";
 }
 
-export function deriveBody(commits: readonly Commit[]): string {
+export function deriveBody(commits) {
   if (commits.length === 0) {
     return "";
   }
@@ -68,8 +71,11 @@ export function deriveBody(commits: readonly Commit[]): string {
   return subject.replace(/^[a-z]+(\([^)]+\))?!?:\s*/, "");
 }
 
-function resolveBaseRef(): null | string {
-  for (const ref of ["origin/main", "main"]) {
+function resolveBaseRef() {
+  const candidates = process.env.BASE_REF
+    ? [process.env.BASE_REF]
+    : ["origin/main", "main"];
+  for (const ref of candidates) {
     try {
       execSync(`git rev-parse --verify ${ref}`, { stdio: "ignore" });
       return ref;
@@ -81,7 +87,7 @@ function resolveBaseRef(): null | string {
   return null;
 }
 
-function readGitCommits(): Commit[] {
+function readGitCommits() {
   const base = resolveBaseRef();
   if (!base) {
     return [];
@@ -91,20 +97,20 @@ function readGitCommits(): Commit[] {
     encoding: "utf8",
   });
   return out
-    .split("\u001E")
+    .split(RECORD_SEP)
     .map((segment) => segment.trim())
     .filter(Boolean)
     .map((entry) => {
-      const [hash, subject, body] = entry.split("\u001F");
+      const [hash, subject, body] = entry.split(UNIT_SEP);
       return { body: body ?? "", hash, subject: subject ?? "" };
     });
 }
 
-function readGitBranch(): string {
+function readGitBranch() {
   return execSync("git branch --show-current", { encoding: "utf8" }).trim();
 }
 
-function main(): void {
+function main() {
   const branch = readGitBranch();
   const commits = readGitCommits();
   console.log(
