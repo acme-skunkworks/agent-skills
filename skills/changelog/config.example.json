@@ -1,0 +1,5 @@
+{
+  "issueKeys": ["ABC", "XYZ"],
+  "linearWorkspaceSlug": "your-workspace-slug",
+  "baseBranch": "main"
+}

@@ -1,0 +1,187 @@
+---
+name: changelog
+description: >-
+  Author, refresh, or repair the changelog entry for the current branch — derive
+  metadata, write the frontmatter and grouped body, run the deterministic
+  enrichment scripts, and validate against the changelog contract. Use when asked
+  to write or update a changelog entry, refresh an entry after new commits, or as
+  the changelog step inside a ship/PR flow. Detects an existing entry for the
+  branch (idempotent update-vs-create), keeps `created_at` sacred, leaves
+  post-merge fields to the release step, and validates with a zero-dependency
+  Node script.
+license: MIT
+compatibility: >-
+  Requires Node.js ≥22 for the bundled scripts (no npm dependencies — Node
+  built-ins only) and the `git` CLI for branch/diff analysis. The optional
+  `preflight-changelog-ci.mjs` step assumes the consumer repo uses pnpm with a
+  committed lockfile; skip it if yours does not.
+metadata:
+  version: 0.1.0
+allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(node:*), Bash(pnpm:*)
+---
+
+# changelog
+
+Generate or update the changelog entry for the current branch under
+`changelog/YYYYMMDD-HHMMSS-<slug>.md`: derive its metadata from git and the diff,
+write the frontmatter and a grouped, categorised body, run the deterministic
+enrichment scripts, then validate the result.
+
+This skill is the single source of truth for **what a valid changelog entry is**
+— the frontmatter schema, the field-ownership boundaries, idempotent
+update-vs-create, and the validation gate. The same contract is enforced
+downstream by a consumer repo's CI and relied on by a release-orchestrator that
+finalises the post-merge fields, so the authoring rules live here once.
+
+It is invoked two ways:
+
+- **Standalone** (`/changelog`) — author, refresh, or repair this branch's entry
+  and leave it **uncommitted** in the working tree for review. No commit, push,
+  or PR.
+- **Inside a ship flow** (e.g. a `/send-it`) — the changelog step that runs
+  before push; the ship flow **commits** the entry, pushes, and opens the PR.
+
+## Configuration
+
+Three knobs live in [`config.json`](config.json) beside this file; the bundled
+scripts read it automatically. Edit your copied `config.json` to match the
+consuming repo (a neutral [`config.example.json`](config.example.json) ships as a
+template):
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `issueKeys` | Team-key prefixes used to recognise issue IDs in the branch and body. The issue-ID regex is built from these; keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW"]` |
+| `linearWorkspaceSlug` | Linear workspace slug used to build issue links (`https://linear.app/<slug>/issue/<id>`). | `"goose-and-hobbes"` |
+| `baseBranch` | The trunk the branch diff is taken against (`origin/<baseBranch>`). Overridable per-run via the `BASE_REF` env var. | `"main"` |
+
+All bundled scripts use only Node built-ins — no `npm install`, no build step.
+They operate on the **consumer repo's root `changelog/` directory** (run them
+from the repo root).
+
+## Running it
+
+### Step 1 — Detect an existing entry (idempotency)
+
+Grep `changelog/` for a file whose frontmatter contains `branch: "<current-branch>"`.
+If exactly one matches, you are in **update mode**: preserve its `created_at` and
+filename, rewrite the rest. Otherwise you are in **create mode**.
+
+### Step 2 — Analyse the branch
+
+- `git log origin/<base>..HEAD --pretty=full` — full commit list including bodies
+  and trailers.
+- `git diff origin/<base>...HEAD --name-only` — changed files, for grouping the
+  body by package.
+
+`<base>` is `config.json`'s `baseBranch` (default `main`). Fetch it first
+(`git fetch origin <base>`) so the diff is accurate — skip the fetch if the
+caller already did it (e.g. a ship flow fetches in its preflight step).
+
+### Step 3 — Derive metadata
+
+| Field          | How to derive                                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `issues`       | Match the issue-ID regex (built from `issueKeys`) against the branch name (upper-cased) and against commit subjects/bodies. Deduplicate.               |
+| `author`       | `git config user.email`.                                                                                                                               |
+| `co_authors`   | Parse `Co-authored-by: Name <email>` trailers across all branch commits. Store the email or `Name <email>` form. Empty array if none.                  |
+| `category`     | Infer from commit subjects and diff: `feature`, `fix`, `chore`, `docs`, `refactor`, `perf`. If ambiguous, ask the user to confirm.                     |
+| `breaking`     | Infer from `BREAKING CHANGE:` trailers, `!` in conventional-commit subjects, or removal of public surfaces. If unclear, ask the user. Default `false`. |
+| `release_note` | One-sentence user-facing summary distinct from `title`. Optional — leave blank if the change has no public-facing impact (chore, internal refactor).   |
+
+**Field ownership** — what this skill authors vs. what it must leave alone is the
+crux of the contract; see [`references/changelog-contract.md`](references/changelog-contract.md)
+for the full rules. In short:
+
+- **Authored here:** `title`, `release_note`, `category`, `breaking`, `issues`,
+  `co_authors`, `author`, and `affected_packages` (written by the enrichment
+  script in Step 5, not hand-edited).
+- **`created_at` is sacred** — set once on create (UTC time of first run); on
+  update, preserve it verbatim.
+- **Never authored here:** `stats` (`files_changed`, `loc_added`, `loc_removed`)
+  and the post-merge fields `merged_at` / `commit` / `merge_strategy`. A release
+  step finalises them from canonical GitHub PR data after merge. Emit them as
+  blank placeholders on create; leave existing values untouched on update.
+- `pr` is back-filled by the ship flow once the PR exists (not here when
+  standalone).
+
+The skill **emits the derived `issues` array** as a handoff — a ship flow reuses
+it for the PR body and any Linear writeback (e.g. via a `linear-sync` skill).
+
+### Step 4 — Generate the body
+
+Group bullets by package, categorised under `## Added` / `## Changed` / `## Fixed`.
+Only include headings that have entries. For multi-package changes use
+`**<pkg-name>:**` subheaders.
+
+If `breaking: true`, the body MUST start with a `## Breaking` section describing
+the change and the migration path.
+
+### Step 5 — Write or update the file
+
+**Filename:** `changelog/YYYYMMDD-HHMMSS-<slug>.md`, where the timestamp is
+`created_at` (UTC time of first run) and the slug derives from `title` (lowercase,
+non-alphanumerics → `-`, collapse repeats, ~60-char cap on a word boundary).
+
+**Always quote timestamp strings** in YAML (`created_at: "2026-04-26T13:24:00Z"`).
+Unquoted ISO timestamps parse as Date objects and gain `.000Z` millis on the
+enrichment round-trip; quoting keeps them lossless.
+
+**On update:** preserve `created_at` and the filename; rewrite `title`,
+`release_note`, `category`, `breaking`, `co_authors`, `issues`, and the body;
+leave `merged_at` / `commit` / `merge_strategy` / `stats` alone; update `pr` only
+if it was blank and a PR now exists.
+
+Use the frontmatter field order shown in
+[`references/changelog-contract.md`](references/changelog-contract.md), emitting
+`affected_packages: []` as a placeholder — the script fills it in place.
+
+Then run the two deterministic enrichment scripts from the consumer repo root
+(both idempotent; they match the entry by its `branch:` frontmatter and leave the
+post-merge fields blank):
+
+```bash
+node skills/changelog/scripts/set-affected-packages.mjs   # writes affected_packages from the branch diff
+node skills/changelog/scripts/add-links.mjs               # rewrites bare issue IDs in the body to Linear URLs
+```
+
+Adjust the path prefix if you installed the skill to a different location.
+
+### Step 6 — Validate against the contract
+
+This is the gate:
+
+```bash
+node scripts/preflight-changelog-ci.mjs   # optional: checks Node vs engines/.nvmrc, then pnpm install --frozen-lockfile
+node scripts/validate-changelog.mjs       # validates frontmatter schema, filename format, field types, ISO timestamps, Breaking section, issue IDs
+```
+
+`preflight-changelog-ci.mjs` is optional and pnpm-specific — skip it if the
+consumer repo doesn't use pnpm. On failure, stop and fix the entry before
+continuing — do not hand a malformed entry to the ship flow.
+
+## Standalone vs inside a ship flow
+
+- **Standalone (`/changelog`)** runs Steps 1–6 and then **reports**, leaving the
+  entry **uncommitted** in the working tree for the user to review and commit. It
+  never pushes or opens a PR.
+- **Inside a ship flow** the same steps run before push; the ship flow then
+  commits the entry (`docs(changelog): <title>`), pushes, and opens or updates the
+  PR, back-filling `pr:` once the PR number is known.
+
+## Implementation
+
+The enrichment and validation scripts live under [`scripts/`](scripts/) in this
+bundle and run on plain Node (no npm dependencies, no build step):
+
+- `scripts/set-affected-packages.mjs` — writes `affected_packages` from the branch diff.
+- `scripts/add-links.mjs` — rewrites bare issue IDs in the body to Linear URLs.
+- `scripts/preflight-changelog-ci.mjs` — optional Node/lockfile CI-parity check (pnpm).
+- `scripts/validate-changelog.mjs` — validates the entry against the contract.
+
+They share helpers under `scripts/lib/` (`changelog.mjs`, `derive-packages.mjs`,
+`frontmatter.mjs`, `config.mjs`). The post-merge finalisation of `stats` /
+`merged_at` / `commit` / `merge_strategy` is owned by the release-orchestrator and
+is **not** invoked here.
+
+> **Note for adopters:** unit tests for these scripts are maintained in the
+> `agent-skills` repo (not bundled into the skill). See the skill's README.
