@@ -1,9 +1,9 @@
 ---
-description: Bundle uncommitted work, write a Changesets entry, push the branch, open or update a PR.
+description: Bundle uncommitted work, write a dated changelog entry, set a Conventional Commits PR title, push the branch, open or update a PR.
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
-Bundle uncommitted work into atomic commits, author or update a `.changeset/<slug>.md` file, push the branch, and open (or update) a pull request against `main`. Transition any linked Linear issues to **In Review**.
+Bundle uncommitted work into atomic commits, author or update the dated `changelog/<ts>-<slug>.md` entry, compose a **Conventional Commits PR title** (the squash subject release-please reads to decide the version bump), push the branch, and open (or update) a pull request against `main`. Transition any linked Linear issues to **In Review**.
 
 > **Stopgap copy.** This command was cloned from `@acme-skunkworks/eslint-config`'s `/send-it` to give this repo a working finisher before the canonical "send-it" agent skill exists. When that skill ships (tracked in the Agent Skills Linear project), delete this file, delete `infrastructure/send-it/`, and install the skill via `npx skills add`. Until then, this copy is the source of truth for this repo.
 
@@ -13,9 +13,9 @@ Bundle uncommitted work into atomic commits, author or update a `.changeset/<slu
 2. Refresh the lockfile if `package.json` drifted.
 3. Commit any uncommitted changes into logical atomic commits.
 4. Fetch `origin/main` and analyse the full branch diff.
-5. Author or update the changeset entry (`.changeset/<slug>.md`) and the dated changelog companion (`changelog/<ts>-<slug>.md`).
-6. Validate via `pnpm changeset status` (and `pnpm validate:changelog` when a changelog entry was written).
-7. Commit the changeset + changelog entry, push the branch, open or update a PR.
+5. Decide shippability and compose the Conventional Commits PR title; author or update the dated `changelog/<ts>-<slug>.md` entry.
+6. Validate the changelog entry via `pnpm validate:changelog`.
+7. Commit the changelog entry, push the branch, open or update a PR.
 8. Transition linked Linear issues to **In Review**.
 
 This command intentionally does NOT run lint, typecheck, tests, or format checks. CI handles those.
@@ -23,7 +23,7 @@ This command intentionally does NOT run lint, typecheck, tests, or format checks
 ## Prerequisites
 
 - `gh` CLI installed and authenticated (`gh auth status`).
-- `pnpm install` has been run; `@changesets/cli` is wired up and `pnpm changeset status` works.
+- `pnpm install` has been run.
 
 ## Process
 
@@ -76,7 +76,7 @@ This keeps CI's `--frozen-lockfile` install green.
 
 ### Step 3: Commit uncommitted changes
 
-`/send-it` is the all-in-one finisher: you finish coding, run it, and it gets the work into a PR. So whatever's uncommitted at this point should be committed before the changeset work begins — but only what belongs to *this* branch's work.
+`/send-it` is the all-in-one finisher: you finish coding, run it, and it gets the work into a PR. So whatever's uncommitted at this point should be committed before the changelog/PR-title work begins — but only what belongs to *this* branch's work.
 
 1. `git status --porcelain`. If clean, skip this step.
 2. Inspect uncommitted files: `git status --porcelain` for the list, `git diff` and `git diff --cached` for hunks.
@@ -102,54 +102,43 @@ git fetch origin main
 
 If `git log origin/main..HEAD` is empty, exit with: "No commits ahead of `main`. Nothing to ship."
 
-### Step 5: Author or update the changeset
+### Step 5: Decide shippability and compose the Conventional Commits PR title
 
-Versioning lives in [Changesets](https://github.com/changesets/changesets). `/send-it` writes a single `.changeset/<slug>.md` per branch describing the user-facing change and the bump level. The release pipeline (`changesets/action` on `main`) reads these files, bumps versions, writes `CHANGELOG.md`, and tags the release — `/send-it` does **not** do any of that.
+Versioning is driven by [release-please](https://github.com/googleapis/release-please) reading **Conventional Commits**. The repo squash-merges, so the **squash subject is the PR title** — and that single conventional title is what release-please parses to decide the bump. `/send-it`'s job here is to compose a correct conventional PR title and (for shippable changes) write the dated `changelog/` entry. It does **not** bump versions, write any `CHANGELOG.md`, or tag — release-please (in the release PR) and `release.yml` (on `main`) do that.
 
 1. **Compute the slug** from the current branch name: lowercase, replace non-alphanumeric runs with `-`, trim leading/trailing `-`, truncate to ~60 chars at a word boundary. Examples:
    - `asw-132-set-up-the-agent-skills-repo` → `asw-132-set-up-the-agent-skills-repo` (37 chars, no truncation).
    - `feature/very-long-branch-name-that-keeps-going-and-going-and-eventually-stops` → `feature-very-long-branch-name-that-keeps-going-and-going` (truncated at a word boundary).
 
-2. **Check for an existing entry** at `.changeset/<slug>.md`. If present, you're in **update mode** — preserve the bump line, rewrite the body. If absent, create a new file.
-
-3. **Derive the bump level** from commits on the branch (in order — first match wins):
-   - `BREAKING CHANGE:` trailer on any commit, OR a `!` in any conventional-commit subject (e.g. `feat!:`, `refactor!:`) → **major**.
-   - First commit's subject starts with `feat:` or `feat(<scope>):` → **minor**.
-   - Otherwise → **patch**.
-
-   The deterministic bits live in `infrastructure/send-it/derive-changeset.ts` — invoke it to get the slug, bump level, and a draft body:
+2. **Derive the bump level and a draft body** from the branch commits. The deterministic bits live in `infrastructure/send-it/derive-changeset.ts` — invoke it:
 
    ```bash
    pnpm tsx infrastructure/send-it/derive-changeset.ts
    ```
 
-   It prints JSON to stdout: `{ "pkg": "...", "slug": "...", "bump": "...", "body": "..." }`. The `pkg` field is always the root package `@acme-skunkworks/agent-skills` (the single Changesets-managed package — see Notes); use it verbatim in the frontmatter. The slash command then writes the file.
+   It prints JSON to stdout: `{ "slug": "...", "bump": "...", "body": "..." }`, where `bump` is `major` / `minor` / `patch` (first match wins: `BREAKING CHANGE:` trailer or a `!` in any conventional subject → major; first commit `feat:`/`feat(<scope>):` → minor; else patch) and `body` is the first commit's subject with its conventional prefix stripped. Unit tests live alongside (`pnpm test infrastructure/tests/derive-changeset.test.ts`).
 
-4. **Skip the changeset step entirely** when the only commits on the branch are non-shippable (changes to `.changeset/`, `.claude/`, `infrastructure/`, `changelog/`, top-level `README.md`, or a single `chore: update lockfile` commit). For those branches the PR body should note "no changeset (developer-tooling only change)".
+3. **Decide whether this change is shippable.** A change is **shippable** (reaches consumers, so it must trigger a release) **only** if the branch diff touches any of:
+   - any file under `skills/` (the skill bundles — these are the published artefact)
+   - `package.json`, **and** the diff modifies any of these keys: `name`, `version`, `files`, `publishConfig`
 
-5. **Frontmatter format** (Changesets standard):
+   These are the only paths whose changes reach consumers. `files: ["skills/"]` in `package.json` plus npm's auto-bundling of `README.md` / `LICENSE` / `package.json` defines the shippable surface. Verify with `git diff --name-only origin/main...HEAD`; for `package.json`, also run `git diff origin/main...HEAD -- package.json` and check whether any of the listed keys appear in the hunks.
 
-   ```markdown
-   ---
-   "@acme-skunkworks/agent-skills": patch
-   ---
+   Everything else is **non-shippable** — pure docs (top-level `README.md`), CI / infra (`.github/`, `.husky/`, `infrastructure/`, `.npmrc`, `.editorconfig`), agent tooling (`.claude/`), ADRs (`architecture/`), the dated `changelog/` itself, release-please config (`release-please-config.json`, `.release-please-manifest.json`), or a lone `chore: update lockfile` commit. (A skill's own `package.json`/`SKILL.md` `metadata.version` bump is a **non-npm**, by-hand label per ADR-0002 — it lives under `skills/`, so it *is* shippable when the skill content changes alongside it.)
 
-   One-line user-facing summary of the change.
-   ```
+4. **Compose the PR title** as a single Conventional Commits subject — this is the release-please bump signal and is enforced by CI's PR-title lint:
+   - **Shippable** → a **release-triggering** type derived from the bump: `major` → `feat!: <body>`; `minor` → `feat: <body>`; `patch` → `fix: <body>`.
+   - **Non-shippable** → a **non-release-triggering** type that matches the change, never `feat`/`fix`: `docs:`, `chore:`, `ci:`, `refactor:`, `test:`, `build:`, `style:`, `perf:`. Pick by the dominant changed area / first commit's conventional type (e.g. a `.github/` or `infrastructure/` change → `ci:` or `chore:`; a `README.md` change → `docs:`).
 
-   The body is a single paragraph (or short bullet list) phrased as a release-note line. Keep it factual — what changed, not why or how.
+   > ⚠️ **The PR title is the version.** A mistyped prefix silently ships the wrong semver — a `feat:` on a docs PR cuts a needless minor release; a `chore:` on a real fix ships nothing. There is no `.changeset/*.md` file to cross-check against any more: the title **is** the declaration. Match the type to Step 5.3's shippability decision exactly. CI's conventional-PR-title lint guards the format; the changelog-completeness gate guards that a `feat`/`fix`/breaking title carries a `changelog/` entry.
 
-   Substitute `minor` or `major` for `patch` based on Step 5.3.
-
-   **Empty changeset escape hatch.** For repo-tooling PRs that *do* touch tracked files but bump nothing publishable (e.g. CI config tweaks that the developer-tooling skip rule doesn't catch), write an empty frontmatter — `---\n---\nbody…` — instead of skipping. `changeset status` is happy with that; `changeset version` consumes it as a no-op.
-
-6. **On update**, preserve the bump level (don't downgrade a `major` to `patch` because a later commit was a docs tweak), rewrite only the body.
+   When non-shippable, note `no release (developer-tooling/docs only)` in the PR body so reviewers can confirm the non-release type was intentional.
 
 ### Step 5b: Author or update the dated changelog entry
 
-> **Same gate as the changeset.** Write a `changelog/` entry **only when Step 5 wrote a changeset** (the branch touches a shippable path per Step 5.4). Skip it whenever the changeset was skipped — the dated changelog mirrors the published-change surface, not every PR, so each entry stays tied to a version bump. If Step 5 was skipped, skip this step too.
+> **Gated on shippability.** Write a `changelog/` entry **only when the change is shippable** (the branch touches a shippable path per Step 5.3 — i.e. you composed a release-triggering `feat`/`fix`/breaking PR title). Skip it for non-shippable changes — the dated changelog mirrors the published-change surface, not every PR, so each entry stays tied to a version bump. This is the same coupling Changesets gave for free (no changeset → no release); under release-please it is reinforced here **and** by CI's changelog-completeness gate.
 
-The `changelog/` directory holds one dated Markdown file per shippable change — a browsable, per-change companion to the root `CHANGELOG.md`. Full schema in `changelog/README.md`. `/send-it` writes the PR-time fields; the release-orchestrator's version PR finalises the entry at release — enriching `merged_at`/`commit`/`pr`/`merge_strategy`/`stats` from the merged PR and stamping `version` (via `changeset:version` → `finalise-changelog.ts`). No separate workflow or push to `main` is involved.
+The `changelog/` directory holds one dated Markdown file per shippable change — the curated, per-change, machine-readable record (there is no longer a root `CHANGELOG.md`; release-please runs with `skip-changelog`). Full schema in `changelog/README.md`. `/send-it` writes the PR-time fields; the release-please **release PR** finalises the entry at release — enriching `merged_at`/`commit`/`pr`/`merge_strategy`/`stats` from the merged PR and stamping `version` (the orchestrator runs `finalise-changelog.ts` after release-please each tick). No separate workflow or push to `main` is involved.
 
 1. **Filename + timestamps.** `changelog/<YYYYMMDD-HHMMSS>-<slug>.md`, where `<slug>` is the same slug from Step 5.1 and the timestamp is UTC now:
 
@@ -185,30 +174,28 @@ The `changelog/` directory holds one dated Markdown file per shippable change �
    ---
    ```
 
-   - `category`: derive from the changeset bump / conventional-commit types (`feat`→`feature`, `fix`→`fix`, `perf`→`perf`, `refactor`→`refactor`, `docs`→`docs`, else `chore`). `breaking: true` iff the bump is `major`.
+   - `category`: derive from the PR-title type / bump (`feat`→`feature`, `fix`→`fix`, `perf`→`perf`, `refactor`→`refactor`, `docs`→`docs`, else `chore`). `breaking: true` iff the bump is `major`.
    - `co_authors`: emails from any `Co-authored-by:` trailers on the branch commits, else `[]`.
    - Wrap all ISO timestamps in quotes (YAML would otherwise parse them into Date objects — see `changelog/README.md`).
 
-3. **Body** — `## Added` / `## Changed` / `## Fixed` sections (only those with content), mirroring the changeset body. If `breaking: true`, a `## Breaking` section MUST come first.
+3. **Body** — `## Added` / `## Changed` / `## Fixed` sections (only those with content), mirroring the PR-title summary. If `breaking: true`, a `## Breaking` section MUST come first.
 
 4. **Validate** — run `pnpm validate:changelog`; it must pass before committing.
 
 ### Step 6: Validate locally
 
-> **Skipped if Step 5 was skipped** by the developer-tooling skip rule in Step 5.4.
+> **Skipped for non-shippable branches** (no `changelog/` entry was written in Step 5b).
 
-Run `pnpm changeset status`. If it fails (no changesets when one is expected, or the file is malformed), surface the error and abort. Don't auto-fix; the user resolves. When a changelog entry was written, also run `pnpm validate:changelog` and abort on failure.
+If a `changelog/` entry was written, run `pnpm validate:changelog`. It must pass before committing — if it fails, surface the error and abort. Don't auto-fix; the user resolves.
 
-If Step 5 was skipped specifically because the branch is developer-tooling-only (Step 5.4), `pnpm changeset status` may report "no changesets" — that's expected. The release-pipeline policy on whether unchangesetted PRs are allowed is governed by CI's `changesets/action` config, not by `/send-it`.
-
-### Step 7: Commit the changeset and changelog entry
+### Step 7: Commit the changelog entry
 
 ```bash
-git add .changeset/<slug>.md changelog/<YYYYMMDD-HHMMSS>-<slug>.md
-git commit -m "docs(changeset): <one-line summary>"
+git add changelog/<YYYYMMDD-HHMMSS>-<slug>.md
+git commit -m "docs(changelog): <one-line summary>"
 ```
 
-If Steps 5 and 5b were both skipped (developer-tooling branch), there's nothing to commit here — continue. Stage only the files that were actually written.
+If Step 5b was skipped (non-shippable branch), there's nothing to commit here — continue. Stage only the file that was actually written.
 
 ### Step 8: Push the branch
 
@@ -217,6 +204,8 @@ git push -u origin <branch>
 ```
 
 ### Step 9: Create or update the PR
+
+`<title>` is the Conventional Commits PR title composed in Step 5.4 — release-please reads it as the squash subject to decide the bump, so it must be set on **both** create and update (re-derive it on every run so it stays in sync with the branch's commits).
 
 1. Check for an existing PR: `gh pr view --json number,url 2>/dev/null`.
 2. **If creating:** `gh pr create --base main --draft --title "<title>" --body "<body>"`. Use `--ready` (the flag) instead of `--draft` if the user passed `--ready`.
@@ -255,7 +244,7 @@ Drop the `## Related Issues` section if no issues were found.
 
 ## Flags
 
-- `--dry-run` — print what would be written/submitted (changeset preview, branch, PR title), make no commits, no push, no `gh` calls. Exit 0.
+- `--dry-run` — print what would be written/submitted (changelog entry preview, branch, conventional PR title), make no commits, no push, no `gh` calls. Exit 0.
 - `--branch=<name>` — override the auto-derived branch name when running on `main` with uncommitted changes.
 - `--issue=<ID>` — prefix the auto-derived slug with a Linear issue ID (e.g. `--issue=ASW-7` → `asw-7-<slug>`). Ignored if `--branch` is also given.
 - `--ready` — open the PR as ready-for-review instead of draft (default is draft).
@@ -269,9 +258,9 @@ $ARGUMENTS
 ## Notes
 
 - **Trunk-based:** PRs target `main`.
-- **Idempotent:** running `/send-it` again updates the existing changeset and PR.
-- **`/send-it` does not bump versions or write `CHANGELOG.md`.** The `changesets/action` workflow on `main` handles version bumps, CHANGELOG generation, npm publish (no-op while the root is `private: true`), and release tagging.
-- **Changesets always name the root package** `@acme-skunkworks/agent-skills` — this is the settled model (ADR-0002), not a stopgap. npm versioning is repo-level: the root is the single published, Changesets-managed package. A changeset that names a per-skill package (`@acme-skunkworks/skill-<name>`) points at something Changesets can't see and silently no-ops, so the `validate:changesets` CI guard rejects it. Skills carry their own **non-npm** version in `SKILL.md` `metadata.version` (mirrored in the skill's private `package.json`), bumped by hand per ADR-0001 Decision 2's semver semantics — never via a changeset.
+- **Idempotent:** running `/send-it` again updates the existing PR title and changelog entry.
+- **`/send-it` does not bump versions or write any `CHANGELOG.md`.** release-please (run by the orchestrator) reads the merged Conventional-Commit PR titles, bumps `package.json` + `.release-please-manifest.json` in the release PR, and `release.yml` on `main` handles npm publish + release tagging. There is no root `CHANGELOG.md` (release-please uses `skip-changelog`); `/send-it` _does_ write a dated `changelog/<ts>-<slug>.md` entry (Step 5b) — the curated per-change record — which is finalised (enriched + version-stamped) inside the release PR at release.
+- **Single published package.** The PR title always describes the single root `@acme-skunkworks/agent-skills` package — the published surface is `files: ["skills/"]`. npm versioning is repo-level (ADR-0002). Skills carry their own **non-npm** version in `SKILL.md` `metadata.version` (mirrored in the skill's private `package.json`), bumped by hand per ADR-0001 Decision 2's semver semantics — independent of the root npm release.
 - **Linear `In Review` writeback** runs after PR creation/update. Linked issues in Triage/Backlog/Todo/In Progress are transitioned; already-In-Review and Done/Canceled/Duplicate are skipped. Re-runs are idempotent.
 
 ## Steps Summary
@@ -281,19 +270,19 @@ $ARGUMENTS
 2. Refresh lockfile if `package.json` drifted.
 3. Commit any uncommitted changes as logical atomic commits.
 4. Fetch `origin/main`; confirm commits ahead.
-5. Author or update `.changeset/<slug>.md` (slug from branch; bump from commits).
-5b. Author or update the dated `changelog/<ts>-<slug>.md` entry, gated identically (only when a changeset was written). Validate with `pnpm validate:changelog`.
-6. `pnpm changeset status`. Skipped if Step 5 was skipped.
-7. Commit `docs(changeset): <title>` (changeset + changelog entry).
+5. Decide shippability (Step 5.3 allowlist) and compose the Conventional Commits PR title (Step 5.4): shippable → `feat!:`/`feat:`/`fix:` from the bump; non-shippable → a non-release type (`docs:`/`chore:`/`ci:`/…).
+5b. Author or update the dated `changelog/<ts>-<slug>.md` entry, gated on shippability (only when the PR title is release-triggering). Validate with `pnpm validate:changelog`.
+6. `pnpm validate:changelog`. Skipped if Step 5b was skipped.
+7. Commit `docs(changelog): <title>` (staging the changelog entry, when written).
 8. Push branch.
-9. `gh pr create --draft` (or `--ready`) / `gh pr edit`; `--merge-when-ready` enables auto-merge.
+9. `gh pr create --draft` (or `--ready`) / `gh pr edit` with the Step 5.4 title; `--merge-when-ready` enables auto-merge.
 10. Transition linked Linear issues to **In Review**.
 11. Return PR URL.
 
 ## Error Handling
 
 - **`gh auth status` fails** — run `gh auth login` first; abort `/send-it` until authenticated.
-- **`pnpm changeset status` fails** — surface the error; don't auto-fix. The user resolves the changeset and re-runs.
+- **`pnpm validate:changelog` fails** — surface the error; don't auto-fix. The user resolves the changelog entry and re-runs.
 - **No commits ahead of `main`** — exit with "No commits ahead of `main`. Nothing to ship."
 - **Branch push fails** — verify push access; ensure remote is configured.
 - **PR create/update fails** — verify the PR isn't closed; verify branch is pushed.

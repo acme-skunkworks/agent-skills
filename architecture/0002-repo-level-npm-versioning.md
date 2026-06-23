@@ -4,7 +4,7 @@
 - **Date:** 2026-06-01
 - **Tracking:** [ASW-364](https://linear.app/goose-and-hobbes/issue/ASW-364)
 - **Supersedes:** [ADR-0001](0001-skill-layout.md) Decision 1 (per-skill versioning via pnpm workspaces). ADR-0001 Decisions 2–4 still stand.
-- **Superseded by:** —
+- **Superseded by:** [ADR-0003](0003-release-please-versioning.md) — *mechanism only*: the Changesets engine (Decision 4 in full; the Changesets framing in Decisions 1–2) is replaced by release-please. This ADR's core decision — repo-level npm versioning, the root as the single published package, skills versioned out-of-band — **still stands**.
 
 ## Context
 
