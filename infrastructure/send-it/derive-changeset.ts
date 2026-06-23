@@ -1,11 +1,14 @@
 #!/usr/bin/env -S npx tsx
-// Derives the deterministic bits of a /send-it changeset entry.
+// Derives the deterministic bits /send-it needs from the branch commits.
 // Run: pnpm tsx infrastructure/send-it/derive-changeset.ts
 //
+// Since SK-380 there is no changeset file; /send-it uses these to name the dated
+// changelog/ entry and to compose the Conventional Commits PR title (the
+// release-please bump signal). The filename is retained for git history.
+//
 // Fields:
-//   pkg  : the package the changeset names — always the root (see below)
-//   slug : branch-name-derived filename for `.changeset/<slug>.md`
-//   bump : major | minor | patch (per /send-it's bump heuristic)
+//   slug : branch-name-derived slug (changelog/<ts>-<slug>.md filename)
+//   bump : major | minor | patch (drives the PR-title prefix: feat!/feat/fix)
 //   body : a one-line draft summary (the slash command may rewrite this)
 //
 // Reads from git via `git branch --show-current` and `git log origin/main..HEAD`
@@ -14,13 +17,6 @@
 import { execSync } from "node:child_process";
 
 const SLUG_MAX = 60;
-
-// This repo versions a SINGLE published package — the root (ADR-0002). There
-// is no pnpm workspace, so Changesets only discovers the root; a skill-named
-// changeset would silently no-op. The changeset therefore always names the
-// root, and the `validate:changesets` CI guard enforces it. Skills carry their
-// own non-npm version in SKILL.md metadata.version, bumped by hand.
-export const ROOT_PACKAGE = "@acme-skunkworks/agent-skills";
 
 export function deriveSlug(branch: string): string {
   const cleaned = branch
@@ -116,7 +112,6 @@ function main(): void {
       {
         body: deriveBody(commits),
         bump: deriveBump(commits),
-        pkg: ROOT_PACKAGE,
         slug: deriveSlug(branch),
       },
       null,
