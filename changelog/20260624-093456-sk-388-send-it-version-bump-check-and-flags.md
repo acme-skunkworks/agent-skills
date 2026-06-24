@@ -4,7 +4,7 @@ release_note: send-it now offers to bump a changed skill bundle's own version (w
 created_at: '2026-06-24T09:34:56Z'
 merged_at:
 branch: sk-388-deferred-upgrades-for-the-consolidated-send-it-skill
-pr:
+pr: 30
 commit:
 merge_strategy:
 author: rob@acmeskunkworks.io
