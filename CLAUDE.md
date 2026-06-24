@@ -55,7 +55,15 @@ Common invocations:
 /send-it --ready                      # open the PR as ready-for-review (not draft)
 /send-it --merge-when-ready           # enable gh pr merge --auto --squash after creation
 /send-it --worktree=<branch-or-path>  # cd into a worktree first, then run
+/send-it --base=<branch>              # target a non-main base (stacked PRs)
+/send-it --title="fix(x): …"          # override the derived PR title verbatim
+/send-it --skip-preflight             # bypass the lint gate (prints a warning)
 ```
+
+Because this repo ships many independently-versioned skill bundles, the skill's
+`config.json` sets `bundleVersioning`: when a `skills/<name>/` bundle changes without
+a version bump, `/send-it` proposes one and (on confirmation) bumps its `package.json`
+`version` + `SKILL.md` `metadata.version` in lockstep before composing the PR title.
 
 **`/send-it` is now the shared `send-it` skill (SK-389).** The canonical workflow lives in [`skills/send-it/SKILL.md`](skills/send-it/SKILL.md); this repo dogfoods it through the thin `.claude/commands/send-it.md` shim — the same pattern as `/preflight`, `/changelog`, and `/linear-sync`. The deterministic slug/bump helper is the bundle's own zero-dependency `skills/send-it/scripts/derive-bump.mjs` (Node built-ins, no `tsx`; `infrastructure/send-it/` is gone). Consumers install it with `npx skills add … --skill send-it`, alongside the `preflight` / `changelog` / `linear-sync` skills it delegates to. Rolling the other repos (Octavo + the single-package repos) onto the shared skill and deleting their per-repo copies is the remaining cross-repo work tracked under SK-389.
 
