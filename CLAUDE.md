@@ -45,7 +45,7 @@ Node 22 required (`.nvmrc`, `engines.node: ">=22"`, `engine-strict=true` in `.np
 
 ## Shipping changes (`/send-it`)
 
-`/send-it` (`.claude/commands/send-it.md` plus `infrastructure/send-it/`) is the all-in-one finisher: it commits uncommitted work as atomic Conventional Commits, composes a **Conventional Commits PR title** (the release-please bump signal) and writes or updates a dated `changelog/<ts>-<slug>.md` entry for shippable changes, pushes the branch, opens or updates a draft PR, and transitions linked Linear issues to **In Review**. Prefer it over hand-rolled `git commit` + `git push` + `gh pr create` flows.
+`/send-it` (the [`send-it` skill](skills/send-it/SKILL.md), dogfooded via the thin `.claude/commands/send-it.md` shim) is the all-in-one finisher: it commits uncommitted work as atomic Conventional Commits, runs the change-gated lint `preflight`, composes a **Conventional Commits PR title** (the release-please bump signal) and writes or updates a dated `changelog/<ts>-<slug>.md` entry for shippable changes, pushes the branch, opens or updates a draft PR, and transitions linked Linear issues to **In Review**. It is a thin orchestrator that delegates the lint gate, changelog authoring, and Linear writeback to the standalone `preflight` / `changelog` / `linear-sync` skills. Prefer it over hand-rolled `git commit` + `git push` + `gh pr create` flows.
 
 Common invocations:
 
@@ -57,7 +57,7 @@ Common invocations:
 /send-it --worktree=<branch-or-path>  # cd into a worktree first, then run
 ```
 
-**`/send-it` here is a stopgap.** It was cloned from `@acme-skunkworks/eslint-config`'s `/send-it` and lightly adapted. The whole point of the Agent Skills project is to extract `/send-it` into a single reusable skill so the per-repo copies disappear. When that skill ships, this slash command and `infrastructure/send-it/` get deleted and replaced by `npx skills add … --skill send-it`. Tracked in the Agent Skills Linear project.
+**`/send-it` is now the shared `send-it` skill (SK-389).** The canonical workflow lives in [`skills/send-it/SKILL.md`](skills/send-it/SKILL.md); this repo dogfoods it through the thin `.claude/commands/send-it.md` shim — the same pattern as `/preflight`, `/changelog`, and `/linear-sync`. The deterministic slug/bump helper is the bundle's own zero-dependency `skills/send-it/scripts/derive-bump.mjs` (Node built-ins, no `tsx`; `infrastructure/send-it/` is gone). Consumers install it with `npx skills add … --skill send-it`, alongside the `preflight` / `changelog` / `linear-sync` skills it delegates to. Rolling the other repos (Octavo + the single-package repos) onto the shared skill and deleting their per-repo copies is the remaining cross-repo work tracked under SK-389.
 
 ## Release
 
@@ -73,7 +73,7 @@ Common invocations:
 - **npm leg.** The `🚀 Publish (npm)` step calls `scripts/publish-via-raw-npm.sh` directly (no `changesets/action` shell now that Changesets is gone — SK-380) — pnpm's own OIDC path fails even with an upgraded npm on `PATH` (eslint-config ASW-174). The wrapper publishes the prebuilt `$TARBALL` from the `build` job via `npm publish "$TARBALL" --access public --provenance` (the upgraded npm), and is idempotent (skips only on a genuine `npm view` hit — exit 0 *with* output — and `exit 0`s early while `private: true`). Auth is OIDC Trusted Publishing — **no `NPM_TOKEN`**. Needs npm ≥ 11.5.1, hence the "Upgrade npm" step (the runner ships npm 10.9.x, which is both too old and broken on self-upgrade). The step is gated on `push` + `refs/heads/main` + the version-vs-tag gate (`should_publish == 'true'`), alongside the branch-restricted `npm-release` environment (ASW-326).
 - **GitHub Packages leg.** A separate job (so `packages: write` never coexists with the npm OIDC credential). `actions/attest-build-provenance` signs the exact tarball, then `scripts/publish-to-github-packages.sh` publishes it. Gated on the same `should_publish` + main-only condition (reused via the `release` job's output). It's idempotent against `npm.pkg.github.com`, uses token auth via `GITHUB_TOKEN` (no OIDC; `npm --provenance` is npmjs.org-only, so provenance rides the attestation instead), hard-codes the registry host and fails closed on drift (ASW-330), and carries the same `private: true` `exit 0` guard.
 
-Both publish scripts are exercised by bats tests in `infrastructure/tests/` (run in `validate.yml`'s `infra` job alongside shellcheck); the dated-changelog `.ts` helpers (`infrastructure/scripts/*-changelog.ts`, `infrastructure/send-it/derive-changeset.ts`) have vitest unit tests run in `build-and-lint`. Workflow YAML is linted by digest-pinned `yamllint` + `actionlint` (`infrastructure/scripts/ensure-*.sh`, ASW-327) in the `yaml-lint` job.
+Both publish scripts are exercised by bats tests in `infrastructure/tests/` (run in `validate.yml`'s `infra` job alongside shellcheck); the dated-changelog `.ts` helpers (`infrastructure/scripts/*-changelog.ts`) and the send-it slug/bump helper (`skills/send-it/scripts/derive-bump.mjs`) have vitest unit tests run in `build-and-lint`. Workflow YAML is linted by digest-pinned `yamllint` + `actionlint` (`infrastructure/scripts/ensure-*.sh`, ASW-327) in the `yaml-lint` job.
 
 ### One-time setup (out of band, operator)
 

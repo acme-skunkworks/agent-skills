@@ -5,6 +5,9 @@
 # actionlint binary fetched by infrastructure/scripts/ensure-actionlint.sh
 /actionlint
 
+# preflight skill scratch output (written at the repo root on each run)
+.preflight-summary.json
+
 node_modules/
 dist/
 build/
