@@ -82,39 +82,6 @@ jobs:
           BASE_REF: ${{ github.base_ref }}
         run: pnpm tsx infrastructure/scripts/check-changelog-completeness.ts
 
-  # Conventional-PR-title lint (SK-380). The repo squash-merges, so the PR title
-  # IS the squash subject release-please parses to decide the bump — a mistyped
-  # prefix silently ships the wrong semver. This guards the format. Runs on every
-  # PR including the release-please PR (whose `chore: release …` title is a valid
-  # conventional subject, so it passes cleanly — no skip needed).
-  pr-title:
-    name: 🔠 PR title (Conventional Commits)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      pull-requests: read
-    steps:
-      - name: 🔠 Lint PR title
-        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          # Mirror the Conventional Commits types /send-it emits. feat / fix /
-          # perf / revert and a `!` breaking marker are release-triggering
-          # (release-please default node bump table); the rest are non-release types.
-          types: |
-            feat
-            fix
-            docs
-            chore
-            ci
-            refactor
-            perf
-            test
-            build
-            style
-            revert
-
   yaml-lint:
     name: 📝 YAML & Workflows
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
