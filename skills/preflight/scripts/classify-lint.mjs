@@ -84,6 +84,12 @@ export function parseEslintJson(eslintJson) {
 
 /**
  * markdownlint-cli2 JSON: array of { fileName, lineNumber, ruleNames, ruleDescription, ... }
+ *
+ * NB: this is for the *optional* `markdownlint-cli2-formatter-json` output (a
+ * file artefact a consumer wires up via `outputFormatters`). markdownlint-cli2
+ * has **no `--format`/JSON CLI flag**, so the default command-line output is
+ * text — preflight parses that with {@link parseMarkdownlintText}. Kept here for
+ * repos that do configure the JSON formatter.
  * @param {string} mdJson
  * @returns {Violation[]}
  */
@@ -123,6 +129,59 @@ export function parseMarkdownlintJson(mdJson) {
         item.ruleDescription ??
         item.ruleInformation ??
         "markdownlint violation",
+      source: "markdownlint",
+    });
+  }
+
+  return violations;
+}
+
+/**
+ * Parse markdownlint-cli2's DEFAULT text output (the command-line format — it
+ * has no JSON CLI flag). Each violation prints as:
+ *
+ *   <file>:<line>[:<col>] [error|warning] <ruleNames> <description> [detail]
+ *
+ * e.g. `README.md:4:81 error MD013/line-length Line length [Expected: 80; …]`
+ * or   `README.md:1 error MD022/blanks-around-headings Headings should be …`
+ *
+ * The banner lines markdownlint-cli2 also emits (`markdownlint-cli2 vX`,
+ * `Finding:`, `Linting:`, `Summary:`) carry no `:<line>` token and so don't
+ * match. The severity word is optional — older markdownlint-cli2 omitted it.
+ * @param {string} text combined stdout + stderr
+ * @returns {Violation[]}
+ */
+export function parseMarkdownlintText(text) {
+  if (!text || !text.trim()) {
+    return [];
+  }
+
+  /** @type {Violation[]} */
+  const violations = [];
+  for (const raw of text.split("\n")) {
+    const match = raw.trimEnd().match(/^(.+?):(\d+)(?::(\d+))?\s+(.+)$/);
+    if (!match) {
+      continue;
+    }
+
+    // Strip an optional `error`/`warning` severity token, then split the rest
+    // into the rule name(s) and the human description.
+    let rest = match[4];
+    const severity = rest.match(/^(?:error|warning)\s+(.+)$/i);
+    if (severity) {
+      rest = severity[1];
+    }
+
+    const firstSpace = rest.indexOf(" ");
+    const ruleId = firstSpace === -1 ? rest : rest.slice(0, firstSpace);
+    const message = firstSpace === -1 ? "" : rest.slice(firstSpace + 1);
+
+    violations.push({
+      file: toRepoRelative(match[1]),
+      line: Number(match[2]),
+      ...(match[3] ? { column: Number(match[3]) } : {}),
+      ruleId,
+      message,
       source: "markdownlint",
     });
   }
