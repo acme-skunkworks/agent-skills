@@ -4,6 +4,12 @@ on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# The PR title is the release-please bump signal (SK-380); only the action
+# needs to read it. Least-privilege keeps CI's token read-only on PRs.
 permissions:
   pull-requests: read
 
@@ -11,18 +17,26 @@ jobs:
   validate:
     name: Validate PR title is a Conventional Commit
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
+      - name: 🔠 Lint PR title
+        uses: amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50 # v6.1.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          # Mirror the Conventional Commits types /send-it emits. feat / fix /
+          # perf / revert and a `!` breaking marker are release-triggering
+          # (release-please default node bump table); the rest are non-release types.
           types: |
             feat
             fix
+            docs
             chore
             ci
-            docs
             refactor
             perf
             test
+            build
+            style
+            revert
           requireScope: false

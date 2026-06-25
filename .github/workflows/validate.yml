@@ -2,10 +2,11 @@ name: Validate
 
 on:
   pull_request:
-    # `edited` is included so the conventional-PR-title lint (pr-title job) and
-    # the changelog-completeness gate re-run when a title is corrected — the PR
-    # title is the release-please bump signal (SK-380), so a stale pass on an
-    # old title would be unsafe. The default set is opened/synchronize/reopened.
+    # `edited` is included so the changelog-completeness gate re-runs when a
+    # title is corrected — the PR title is the release-please bump signal
+    # (SK-380), so a stale pass on an old title would be unsafe. (The
+    # Conventional-Commit title lint now lives in its own pr-title.yml.)
+    # The default set is opened/synchronize/reopened.
     types: [opened, edited, synchronize, reopened]
 
 concurrency:
