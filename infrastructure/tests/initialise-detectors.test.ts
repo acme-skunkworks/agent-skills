@@ -44,6 +44,11 @@ describe("parseWorkspaceGlobs / rootsFromGlobs", () => {
   it("returns [] when there is no packages: block", () => {
     expect(parseWorkspaceGlobs("name: thing\nversion: 1")).toEqual([]);
   });
+
+  it("keeps tab-indented list items inside the packages: block", () => {
+    const yaml = ["packages:", "\t- 'apps/*'", "\t- 'packages/*'", "other: 1"].join("\n");
+    expect(parseWorkspaceGlobs(yaml)).toEqual(["apps/*", "packages/*"]);
+  });
 });
 
 describe("globsFromWorkspacesField", () => {
