@@ -139,6 +139,20 @@ export function apply(root) {
   return { ...result, removed, failed };
 }
 
+// Refuse to operate unless `root` looks like a Git working tree — i.e. it holds
+// a `.git` entry (a directory in a primary worktree, a file in a linked one).
+// Defence in depth on a destructive tool: this prunes recursively-empty
+// directories and orphan `node_modules/`, so a mis-pointed root must never be
+// allowed to sweep arbitrary directories.
+export function assertGitRepo(root) {
+  if (!existsSync(join(root, ".git"))) {
+    throw new Error(
+      `Refusing to run: ${root} is not a Git repository root (no .git entry). ` +
+        "Pass the path from `git rev-parse --show-toplevel`.",
+    );
+  }
+}
+
 function parseArgs(argv) {
   const flags = new Set(argv.filter((a) => a.startsWith("--")));
   const positional = argv.filter((a) => !a.startsWith("--"));
@@ -285,6 +299,27 @@ function selfTest() {
     ok: threwOnFileRoot,
   });
 
+  // The git-repo guard refuses a root with no `.git` entry and accepts one with.
+  // buildFixture() created a `.git` at `root`, which apply() leaves untouched.
+  const nonGitRoot = mkdtempSync(join(tmpdir(), "cleanup-repo-fs-nongit-"));
+  let guardThrewOnNonGit = false;
+  try {
+    assertGitRepo(nonGitRoot);
+  } catch {
+    guardThrewOnNonGit = true;
+  }
+  let guardAcceptedGitRoot = true;
+  try {
+    assertGitRepo(root);
+  } catch {
+    guardAcceptedGitRoot = false;
+  }
+  rmSync(nonGitRoot, { recursive: true, force: true });
+  cases.push({
+    name: "git-repo guard refuses a non-git root and accepts a git root",
+    ok: guardThrewOnNonGit && guardAcceptedGitRoot,
+  });
+
   rmSync(root, { recursive: true, force: true });
 
   let failed = 0;
@@ -307,6 +342,12 @@ function main() {
     return;
   }
   const { flags, root } = parseArgs(argv);
+  try {
+    assertGitRepo(root);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
+  }
   const result = flags.has("--apply") ? apply(root) : detect(root);
   console.log(JSON.stringify(result, null, 2));
 }

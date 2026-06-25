@@ -15,7 +15,7 @@ compatibility: >-
   Linear MCP server; if it is unavailable, skip that step silently. The
   filesystem pass needs Node.js ≥22.
 metadata:
-  version: 0.1.1
+  version: 0.1.2
 allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
@@ -63,6 +63,10 @@ cleanup-repo --dry-run
 ```bash
 cleanup-repo
 ```
+
+These are skill invocations, not a standalone CLI: `cleanup-repo` is the skill and
+`--dry-run` is passed through `$ARGUMENTS` (the agent reads it from there), so a bare
+`cleanup-repo --dry-run` in a shell does nothing.
 
 There is one bulk confirmation gate (Step 8) covering both the branch/worktree
 pass and the filesystem pass. `--dry-run` short-circuits before that gate.
@@ -136,6 +140,15 @@ It is read-only without `--apply`:
 ```bash
 node scripts/filesystem-hygiene.mjs <repo-root> --json
 ```
+
+Two paths here point at different places, so resolve each deliberately:
+
+- `<repo-root>` is the **target repository** being cleaned — obtain it with
+  `git rev-parse --show-toplevel`. The script refuses to run against a root with no
+  `.git` entry, so a mis-pointed root can't sweep arbitrary directories.
+- `scripts/filesystem-hygiene.mjs` is **relative to this skill bundle** (where this
+  `SKILL.md` lives), not to `<repo-root>`. If your working directory is the target
+  repo, give the script its absolute bundle path.
 
 It prints `{ "emptyDirs": [...], "orphanNodeModules": [...] }`:
 
@@ -225,6 +238,10 @@ runs **after** worktree removal so a just-emptied worktree parent (e.g.
                                  # merged PR was confirmed via the GitHub API
    ```
 
+   The branch you are currently on — or one checked out in a worktree — cannot be
+   deleted: `git branch -d` fails by design. The per-item error handling catches it
+   and moves on, so it is auto-skipped; this is expected, not a failure.
+
 4. **Delete remote branches** that still exist:
 
    ```bash
@@ -238,8 +255,11 @@ runs **after** worktree removal so a just-emptied worktree parent (e.g.
    node scripts/filesystem-hygiene.mjs <repo-root> --apply
    ```
 
-   Removing an orphan `node_modules/` can leave its parent empty; that parent is
-   intentionally left for a follow-up run rather than swept in this snapshot.
+   `<repo-root>` and the bundle-relative `scripts/` path resolve exactly as in
+   Step 5 (`git rev-parse --show-toplevel` for the root; the script lives in this
+   skill bundle). Removing an orphan `node_modules/` can leave its parent empty;
+   that parent is intentionally left for a follow-up run rather than swept in this
+   snapshot.
 
 ### Step 10 — Optional Linear `Done` writeback
 
