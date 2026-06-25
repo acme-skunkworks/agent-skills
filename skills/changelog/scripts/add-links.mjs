@@ -29,6 +29,12 @@ const ISSUE_RE =
 const FENCE_RE = /```[\s\S]*?```/g;
 const INLINE_CODE_RE = /`[^`]*`/g;
 const ALREADY_LINKED_RE = /\[[^\]]*\]\([^)]*\)/g;
+// Reference-link definition lines — `[ASW-123]: <url>` at line-start, plus any
+// indented continuation lines. The label here is the definition's key, not prose,
+// so masking it stops `ISSUE_RE` rewriting it into `[[ASW-123](url)]: <url>` and
+// breaking the reference. Must run before `REFERENCE_LINKED_RE` so a definition
+// is never partially consumed as an in-text label.
+const REFERENCE_DEFINITION_RE = /^\[[^\]]+\]:[^\n]*(?:\n[ \t]+[^\n]*)*/gm;
 // Reference-style links — `[text][ref]` and the collapsed `[text][]` — also
 // already point at a definition, so mask them too. Without this, `ISSUE_RE`
 // rewrites inside the label (`[ASW-1][1]` -> `[[ASW-1](url)][1]`) and re-runs
@@ -58,6 +64,7 @@ export function rewriteBody(body) {
     .replace(FENCE_RE, mask)
     .replace(INLINE_CODE_RE, mask)
     .replace(ALREADY_LINKED_RE, mask)
+    .replace(REFERENCE_DEFINITION_RE, mask)
     .replace(REFERENCE_LINKED_RE, mask)
     .replace(ISSUE_RE, (id) => `[${id}](${buildUrl(id)})`);
 

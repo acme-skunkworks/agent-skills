@@ -45,6 +45,18 @@ describe("parseFrontmatter — block arrays (bug 2)", () => {
     const raw = "---\nitems:\n  - a\n  - b\n  - c\n---\nbody\n";
     expect(parseFrontmatter(raw).data.items).toEqual(["a", "b", "c"]);
   });
+
+  it("parses a block array whose first collected line is blank", () => {
+    const raw =
+      "---\n" +
+      "items:\n" +
+      "\n" +
+      "  - a\n" +
+      "  - b\n" +
+      "---\n" +
+      "body\n";
+    expect(parseFrontmatter(raw).data.items).toEqual(["a", "b"]);
+  });
 });
 
 describe("parseFrontmatter — block scalars (bug 3)", () => {

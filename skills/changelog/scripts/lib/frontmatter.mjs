@@ -197,19 +197,26 @@ function parseMapping(lines, startIndent) {
         // Could be a block array, a nested mapping, or a bare null.
         if (block.length === 0) {
           data[key] = null;
-        } else if (
-          block[0].trimStart().startsWith("- ") ||
-          block[0].trim() === "-"
-        ) {
-          // Drop interior blank lines before mapping: a block array with blank
-          // lines between items would otherwise yield spurious `null` entries
-          // (each blank line parses as the empty scalar -> `null`).
-          data[key] = block
-            .filter((l) => l.trim() !== "")
-            .map((l) => parseScalar(l.trimStart().replace(/^-\s?/, "")));
         } else {
-          const childIndent = indentOf(block[0]);
-          data[key] = parseMapping(block, childIndent);
+          // Decide array-vs-mapping from the first *non-blank* line: collectBlock
+          // preserves a blank line between `key:` and the first `- item`, so
+          // keying off `block[0]` would misroute such a block into parseMapping()
+          // and throw on the `- item` lines.
+          const firstContent = block.find((l) => l.trim() !== "");
+          if (
+            firstContent?.trimStart().startsWith("- ") ||
+            firstContent?.trim() === "-"
+          ) {
+            // Drop interior blank lines before mapping: a block array with blank
+            // lines between items would otherwise yield spurious `null` entries
+            // (each blank line parses as the empty scalar -> `null`).
+            data[key] = block
+              .filter((l) => l.trim() !== "")
+              .map((l) => parseScalar(l.trimStart().replace(/^-\s?/, "")));
+          } else {
+            const childIndent = indentOf(firstContent ?? block[0]);
+            data[key] = parseMapping(block, childIndent);
+          }
         }
       } else {
         data[key] = parseBlockScalar(rest, block);

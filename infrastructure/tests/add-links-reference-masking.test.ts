@@ -40,4 +40,26 @@ describe("rewriteBody — reference-style link masking (bug 4)", () => {
     expect(rewriteBody(body)).toBe(body);
     expect(rewriteBody(rewriteBody(body))).toBe(body);
   });
+
+  it("does not rewrite the companion reference definition line", () => {
+    const body =
+      "See [ASW-123][] for detail.\n\n[ASW-123]: https://example.com/whatever\n";
+    expect(rewriteBody(body)).toBe(body);
+  });
+
+  it("is idempotent across a collapsed reference usage and its definition", () => {
+    const body =
+      "See [ASW-123][] for detail.\n\n[ASW-123]: https://example.com/whatever\n";
+    const once = rewriteBody(body);
+    expect(once).toBe(body);
+    expect(rewriteBody(once)).toBe(once);
+  });
+
+  it("still links a bare ID in prose while leaving the definition intact", () => {
+    const body =
+      "Closes ASW-9.\n\n[ASW-123]: https://example.com/whatever\n";
+    expect(rewriteBody(body)).toBe(
+      "Closes [ASW-9](https://linear.app/goose-and-hobbes/issue/ASW-9).\n\n[ASW-123]: https://example.com/whatever\n",
+    );
+  });
 });
