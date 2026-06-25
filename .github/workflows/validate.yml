@@ -269,3 +269,22 @@ jobs:
           if [ "$found" -eq 0 ]; then
             echo "No skills with a SKILL.md found — nothing to validate."
           fi
+
+      - name: 🧪 Run skill self-tests
+        # Hard gate: any skills/*/scripts/*.mjs shipping a `--self-test` is
+        # exercised here, so a script regression can't ship green. Discovery is
+        # grep-based, so new self-testing scripts are picked up automatically.
+        # These scripts are zero-dependency (Node built-ins), so no install runs.
+        run: |
+          shopt -s nullglob
+          found=0
+          for script in skills/*/scripts/*.mjs; do
+            grep -q -- '--self-test' "$script" || continue
+            found=1
+            echo "::group::self-test ${script}"
+            node "$script" --self-test
+            echo "::endgroup::"
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "No skill self-tests found — nothing to run."
+          fi
