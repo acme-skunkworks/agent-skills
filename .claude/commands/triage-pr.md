@@ -16,10 +16,12 @@ unresolved AI review threads once it is ready), with the constraints below.
 2. Follow the skill's Steps 1–10: locate the PR and detect its phase, inspect and
    classify failing checks (in-scope vs base drift), fix in-scope failures one at
    a time **without weakening any gate**, re-watch CI (bounded by `maxCiRounds`),
-   then — once the PR is ready — fetch unresolved review threads
+   then — once the PR is ready — fetch review feedback
    (`node skills/triage-pr/scripts/review-threads.mjs <pr> --bots "<reviewBots>"`),
    validate each finding before changing code, fix the valid ones, decline the
-   invalid ones with technical reasoning, and loop until green.
+   invalid ones with technical reasoning. After each push, **loop back to the CI
+   phase** — a push re-fires both CI and AI review — until CI is green and no
+   unresolved AI threads remain.
 3. **Never flip the PR from draft to ready** — that is the human's call and the
    gate that turns AI review on.
 
@@ -34,6 +36,10 @@ unresolved AI review threads once it is ready), with the constraints below.
 - Run the bundled fetcher from the repo root:
   `node skills/triage-pr/scripts/review-threads.mjs`. The `--bots` value is
   `config.reviewBots` joined by commas.
+- The fetcher returns **three** groups: `unresolvedThreads` (the actionable
+  set), `humanThreads` (surface, never auto-action), and `aiSummaryComments` —
+  the sticky issue-level review summary. The summary has no `isResolved` and
+  never appears in `unresolvedThreads`, so surface it separately; don't skip it.
 - Only the configured `reviewBots` are actioned; human review comments are
   surfaced in the report but never auto-actioned.
 - This command complements `/send-it` (which **opens** the draft PR).
