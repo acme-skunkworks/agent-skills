@@ -188,7 +188,7 @@ These only matter when you're on a headless host (or have no passkey) and stuck 
 - Disabling org-level 2FA enforcement.
 - Generating a Granular token with bypass-2FA enabled — works for publish #2+, NOT publish #1.
 - `oathtool` for generating TOTP — only works if you have a TOTP secret, and **npm has phased TOTP out of new accounts** (only passkeys + recovery codes are offered now).
-- Disabling 2FA entirely — npm's policy _requires_ either 2FA or a bypass-2FA token; you can't disable both. And the bypass token doesn't help for publish #1 anyway.
+- Disabling 2FA entirely — npm's policy *requires* either 2FA or a bypass-2FA token; you can't disable both. And the bypass token doesn't help for publish #1 anyway.
 
 > **Don't disable `auth-type=web` reaching for a recovery code.** `auth-type=web` is the npm default and is precisely what lets a passkey satisfy the publish 2FA in the browser — it is the *primary* path (step 3), not a dead-end. Recovery codes only become "the answer" when no browser/passkey is in play.
 

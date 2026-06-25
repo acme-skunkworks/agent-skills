@@ -167,6 +167,49 @@ jobs:
         # the pinned binary if missing, then run. Tested via bats.
         run: bash infrastructure/scripts/ensure-actionlint.sh
 
+  markdown-lint:
+    name: 📑 Markdown
+    # Skipped on the release-please branch, like the other ancillary lint jobs:
+    # markdown style is not a release gate, and `changelog:finalise`-generated
+    # content shouldn't be able to block the release PR. markdownlint-cli2 is an
+    # npm devDep, so this job reuses the build-and-lint toolchain setup (pnpm +
+    # frozen-lockfile install) rather than the binary-bootstrap pattern above.
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HUSKY: 0
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: ⚙️ Load repo config
+        id: repo
+        uses: ./.github/actions/load-repo-config
+
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v4.4.0
+        with:
+          run_install: false
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: ${{ steps.repo.outputs.node_version_file }}
+          cache: pnpm
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 📑 Lint Markdown
+        # Config + globs live in .markdownlint-cli2.jsonc (extends the shared
+        # @acme-skunkworks/markdownlint-config). Same binary the preflight gate
+        # invokes (SK-393 / SK-406).
+        run: pnpm lint:md
+
   infra:
     name: 🧪 Infrastructure scripts
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}

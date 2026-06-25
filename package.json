@@ -28,6 +28,8 @@
   ],
   "scripts": {
     "changelog:finalise": "tsx infrastructure/scripts/finalise-changelog.ts",
+    "lint:md": "markdownlint-cli2",
+    "lint:md:fix": "markdownlint-cli2 --fix",
     "lint:sh": "bash -c 'if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh infrastructure/scripts/*.sh .husky/pre-commit .husky/pre-push .husky/commit-msg; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  shellcheck not installed — skipping. Install: brew install shellcheck\"; else echo \"⚠️  shellcheck not installed — skipping. Install: apt-get install shellcheck\"; fi'",
     "lint:workflows": "actionlint",
     "lint:yaml": "yamllint .",
@@ -41,6 +43,9 @@
     "validate:skills": "tsx infrastructure/scripts/validate-skills.ts"
   },
   "lint-staged": {
+    "**/*.{md,mdx}": [
+      "bash -c 'pnpm exec markdownlint-cli2 --fix \"$@\" || true' --"
+    ],
     "**/*.sh": [
       "bash -c 'if command -v shellcheck >/dev/null 2>&1; then shellcheck \"$@\"; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  shellcheck not installed — skipping. Install: brew install shellcheck\"; else echo \"⚠️  shellcheck not installed — skipping. Install: apt-get install shellcheck\"; fi' --"
     ],
@@ -55,10 +60,12 @@
     ]
   },
   "devDependencies": {
+    "@acme-skunkworks/markdownlint-config": "^2.0.0",
     "@types/node": "^25.6.0",
     "gray-matter": "^4.0.3",
     "husky": "^9.1.7",
     "lint-staged": "^16.3.2",
+    "markdownlint-cli2": "^0.22.1",
     "tsx": "^4.21.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"
