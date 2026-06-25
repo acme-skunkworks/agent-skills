@@ -16,6 +16,8 @@
 // The base ref is `origin/main` (falling back to `main`), overridable via the
 // BASE_REF env var. The pure functions are exported for vitest.
 
+import { pathToFileURL } from "node:url";
+
 import { readGitBranch, readGitCommits } from "./lib/git.mjs";
 
 const SLUG_MAX = 60;
@@ -83,6 +85,6 @@ function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }

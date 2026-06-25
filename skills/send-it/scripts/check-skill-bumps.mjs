@@ -28,6 +28,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { readGitCommits, resolveBaseRef } from "./lib/git.mjs";
 import { deriveBump } from "./derive-bump.mjs";
@@ -188,6 +189,6 @@ function main() {
   console.log(JSON.stringify({ bumped, configured: true, unbumped }, null, 2));
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }
