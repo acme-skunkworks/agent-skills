@@ -119,10 +119,11 @@ function runEslintFilter(filter, files, prefix) {
  * @param {ReturnType<typeof run>} result
  */
 function markdownlintMissing(result) {
-  if (result.error) {
-    return true;
-  }
-
+  // pnpm-specific signatures: when `pnpm exec` can't resolve markdownlint-cli2,
+  // pnpm itself still spawns cleanly and reports the miss on stderr. We do NOT
+  // key off `result.error` — spawnSync only sets that when pnpm fails to spawn
+  // (e.g. pnpm absent) or on a maxBuffer overrun, which are real environment
+  // failures that should surface as failedLinters, not be downgraded to a skip.
   const out = `${result.stderr ?? ""}\n${result.stdout ?? ""}`;
   return (
     /ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL/.test(out) ||
@@ -391,7 +392,7 @@ function main() {
   console.log("");
   console.log("preflight: summary");
   console.log(
-    `  categories: eslint=${scope.codeChanged ? "ran" : "skipped"} markdown=${scope.markdownChanged ? "ran" : "skipped"} actionlint=${actionlintStatus}`,
+    `  categories: eslint=${scope.codeChanged ? "ran" : "skipped"} markdown=${markdownlintStatus} actionlint=${actionlintStatus}`,
   );
   if (!dryRun) {
     console.log(
