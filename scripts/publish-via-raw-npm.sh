@@ -74,4 +74,33 @@ if [ "$view_status" -ne 0 ] && ! printf '%s' "$view_output" | grep -qiE 'E404|40
 fi
 
 echo "Publishing $NAME@$VERSION from $TARBALL via $PNPM_HOME/npm..."
-"$PNPM_HOME/npm" publish "$TARBALL" --access public --provenance
+set +e
+publish_output=$("$PNPM_HOME/npm" publish "$TARBALL" --access public --provenance 2>&1)
+publish_status=$?
+set -e
+printf '%s\n' "$publish_output"
+
+# npm masks an unauthorised write to an existing package as a 404 (and a missing
+# Trusted Publisher binding surfaces as E404/E403). The bare error gives no hint
+# at the real cause, so on a publish failure that looks like an auth/visibility
+# problem, point straight at the Trusted Publisher config. This is the ASW-174
+# learning applied to `npm publish` rather than the `npm view` probe.
+if [ "$publish_status" -ne 0 ]; then
+  if printf '%s' "$publish_output" | grep -qiE 'E404|404 Not Found|you do not have permission|E403|403'; then
+    cat >&2 <<EOF
+──────────────────────────────────────────────────────────────────────────────
+npm publish failed for $NAME@$VERSION with what looks like an auth/visibility
+error (E404/E403). For a package that already exists this almost always means
+the npm Trusted Publisher binding is missing or misconfigured — npm masks an
+unauthorised write as a 404.
+
+Check npmjs.com → $NAME → Settings → Trusted Publisher and confirm it lists:
+  • repository:  acme-skunkworks/agent-skills
+  • workflow:    release.yml
+  • environment: npm-release
+See CLAUDE.md "Flip-to-public checklist" / ASW-174.
+──────────────────────────────────────────────────────────────────────────────
+EOF
+  fi
+  exit "$publish_status"
+fi
