@@ -55,6 +55,13 @@ describe("rewriteBody — reference-style link masking (bug 4)", () => {
     expect(rewriteBody(once)).toBe(once);
   });
 
+  it("does not rewrite a reference definition indented up to three spaces", () => {
+    const body =
+      "See [ASW-123][] for detail.\n\n   [ASW-123]: https://example.com/whatever\n";
+    expect(rewriteBody(body)).toBe(body);
+    expect(rewriteBody(rewriteBody(body))).toBe(body);
+  });
+
   it("still links a bare ID in prose while leaving the definition intact", () => {
     const body =
       "Closes ASW-9.\n\n[ASW-123]: https://example.com/whatever\n";

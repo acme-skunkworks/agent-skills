@@ -44,9 +44,10 @@ stats:
 - **Reference-style Markdown links — and their definition lines — are masked in
   `add-links.mjs`.** The already-linked guard only matched inline links
   (`[text](url)`), so reference-style labels like `[ASW-123][1]` and `[ASW-123][]`,
-  and the companion definition line `[ASW-123]: <url>`, were rewritten inside,
-  corrupting on every re-run. All three are now masked alongside inline links,
-  keeping the linkifier idempotent.
+  and the companion definition line `[ASW-123]: <url>` (including the CommonMark
+  form indented up to three spaces), were rewritten inside, corrupting on every
+  re-run. All are now masked alongside inline links, keeping the linkifier
+  idempotent.
 - **`set-affected-packages.mjs` refuses a destructive overwrite.** When
   `parseFrontmatter` yields empty data (or data lacking the `branch` key) the script
   now throws before writing, rather than silently overwriting the entry with only
