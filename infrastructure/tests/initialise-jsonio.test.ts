@@ -24,6 +24,12 @@ describe("parseConfig", () => {
     expect(parsed.trailingNewline).toBe(false);
   });
 
+  it("preserves a tab indent as \"\\t\"", () => {
+    const raw = '{\n\t"a": 1\n}\n';
+    const parsed = parseConfig(raw);
+    expect(parsed.indent).toBe("\t");
+  });
+
   it("rejects a non-object root", () => {
     expect(() => parseConfig("[]")).toThrow(/JSON object/);
     expect(() => parseConfig("null")).toThrow(/JSON object/);
@@ -51,6 +57,12 @@ describe("serialiseConfig", () => {
 
   it("round-trips a file with no changes byte-for-byte (idempotency)", () => {
     const raw = '{\n  "issueKeys": [\n    "ASW"\n  ],\n  "baseBranch": "main"\n}\n';
+    const parsed = parseConfig(raw);
+    expect(serialiseConfig(parsed, parsed.data)).toBe(raw);
+  });
+
+  it("round-trips a tab-indented file byte-for-byte", () => {
+    const raw = '{\n\t"a": 1,\n\t"b": 2\n}\n';
     const parsed = parseConfig(raw);
     expect(serialiseConfig(parsed, parsed.data)).toBe(raw);
   });

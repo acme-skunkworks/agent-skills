@@ -23,6 +23,16 @@ import { mergeConfig } from "./lib/merge.mjs";
 import { serialiseConfig } from "./lib/jsonio.mjs";
 import { buildReport, formatHuman } from "./lib/report.mjs";
 
+/** A value-taking flag given as the last argument has no value — fail clearly
+ * rather than letting `undefined` flow into the detectors. */
+function requireValue(flag, value) {
+  if (value === undefined) {
+    console.error(`initialise-skills: ${flag} requires a value`);
+    process.exit(2);
+  }
+  return value;
+}
+
 function parseArgs(argv) {
   const opts = { write: false, json: false, repoRoot: process.cwd(), skillsDir: undefined };
   for (let i = 0; i < argv.length; i++) {
@@ -30,8 +40,8 @@ function parseArgs(argv) {
     if (arg === "--write") opts.write = true;
     else if (arg === "--dry-run") opts.write = false;
     else if (arg === "--json") opts.json = true;
-    else if (arg === "--repo-root") opts.repoRoot = argv[++i];
-    else if (arg === "--skills-dir") opts.skillsDir = argv[++i];
+    else if (arg === "--repo-root") opts.repoRoot = requireValue(arg, argv[++i]);
+    else if (arg === "--skills-dir") opts.skillsDir = requireValue(arg, argv[++i]);
     else if (arg === "--help" || arg === "-h") opts.help = true;
     else {
       console.error(`initialise-skills: unknown argument "${arg}"`);
@@ -110,7 +120,12 @@ function main() {
 
     if (opts.write && changed) {
       const text = serialiseConfig(skill.config, data, Object.keys(skill.example));
-      writeFileSync(skill.configPath, text);
+      try {
+        writeFileSync(skill.configPath, text);
+      } catch (err) {
+        console.error(`initialise-skills: could not write ${skill.configPath}: ${err.message}`);
+        process.exit(2);
+      }
     }
 
     skillReports.push({

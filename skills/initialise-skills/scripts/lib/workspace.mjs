@@ -33,8 +33,15 @@ export function parseWorkspaceGlobs(yaml) {
     if (!inPackages) {
       continue;
     }
-    // A new top-level key (non-indented, non-list) ends the packages block.
-    if (line.length > 0 && !line.startsWith(" ") && !line.startsWith("-")) {
+    // A new top-level key (non-indented, non-list) ends the packages block. A
+    // tab-indented list item also begins with neither a space nor a dash, so
+    // guard against tabs too or it would end the block prematurely.
+    if (
+      line.length > 0 &&
+      !line.startsWith(" ") &&
+      !line.startsWith("\t") &&
+      !line.startsWith("-")
+    ) {
       break;
     }
     if (trimmed.startsWith("-")) {

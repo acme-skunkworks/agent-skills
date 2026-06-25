@@ -107,8 +107,10 @@ export function createDetectors({ repoRoot, linearFacts = {} }) {
     packageRoots: () => ({ value: detectPackageRoots(repoRoot) }),
     fallbackPackage: () => ({ value: "infrastructure" }),
     protectedBranches: () => ({ value: ["main"] }),
+    // Reuse the memoised packageRoots detection rather than re-reading
+    // pnpm-workspace.yaml a second time.
     shippablePaths: () => ({
-      value: detectShippablePaths(repoRoot, detectPackageRoots(repoRoot)),
+      value: detectShippablePaths(repoRoot, detect("packageRoots").value),
     }),
     shippableManifestKeys: () => ({ value: [...SHIPPABLE_MANIFEST_KEYS] }),
     bundleVersioning: () => {

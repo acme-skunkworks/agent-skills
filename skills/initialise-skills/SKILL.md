@@ -106,6 +106,13 @@ an in-bundle `config.json` — so there is nothing for this skill to populate.
    `unchanged` (apart from drifts you chose to keep and any still-missing manual
    values). This proves the configs are stable and a future re-run is a no-op.
 
+6. **Multi-bundle repos — one manual step.** If this repo itself ships several
+   independently-versioned skill bundles, `send-it`'s `bundleVersioning` is **not**
+   auto-written (it isn't in `send-it`'s `config.example.json` key set, so detection
+   has nothing to populate). Add it to `send-it/config.json` by hand —
+   `{ "root": "<bundle-dir>", "manifest": "package.json", "skillFile": "SKILL.md" }`
+   — to enable the per-bundle version-bump check. Single-package repos skip this.
+
 ## Flags
 
 - `--dry-run` (default) — detect, merge and report; write nothing.

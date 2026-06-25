@@ -17,16 +17,19 @@ import { readFileSync } from "node:fs";
  *   exists: boolean,
  *   data: Record<string, unknown>,
  *   keyOrder: string[],
- *   indent: number,
+ *   indent: number | string,
  *   trailingNewline: boolean,
  * }} ParsedConfig
  */
 
 /**
- * Detect the indentation (in spaces) of the first indented line. Defaults to 2 —
- * the repo convention — when the object is empty or single-line.
+ * Detect the indentation of the first indented line, as the value `JSON.stringify`
+ * takes for its `space` argument: a space count, or `"\t"` for a tab indent.
+ * Preserving tabs keeps a tab-indented config byte-identical on a no-op write
+ * (the idempotency promise) instead of silently converting it to spaces. Defaults
+ * to 2 — the repo convention — when the object is empty or single-line.
  * @param {string} raw
- * @returns {number}
+ * @returns {number | string}
  */
 function detectIndent(raw) {
   const match = raw.match(/\n([ \t]+)\S/);
@@ -34,10 +37,7 @@ function detectIndent(raw) {
     return 2;
   }
   const ws = match[1];
-  // A tab indents at one level; spaces count the run. We re-emit with spaces
-  // either way (JSON.stringify only takes a space count or a string) — tabs are
-  // rare in these configs and not worth preserving exactly.
-  return ws.startsWith("\t") ? 2 : ws.length;
+  return ws.startsWith("\t") ? "\t" : ws.length;
 }
 
 /**

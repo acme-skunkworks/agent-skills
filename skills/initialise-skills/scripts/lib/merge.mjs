@@ -97,7 +97,10 @@ export function valuesEqual(key, a, b) {
  * @returns {KeyResult}
  */
 export function classifyKey(key, base, ours, theirs) {
-  const detected = theirs !== null && theirs !== undefined;
+  // `theirs` is `{ value } | null` by contract — null is the only "not detected"
+  // signal, so a bare null check is sufficient (and an accidental undefined
+  // surfaces loudly rather than being silently swallowed).
+  const detected = theirs !== null;
   const value = detected ? theirs.value : undefined;
   const hasOurs = ours !== undefined;
   const hasBase = base !== undefined;
