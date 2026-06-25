@@ -4,19 +4,42 @@
 // branch diff). Kept as one implementation so the `affected_packages` value
 // can't drift if a post-merge counterpart reuses the same rule.
 //
-// The rule (mirrors a conventional monorepo path→package mapping):
-//   apps/<x>/...      -> <x>
-//   packages/<x>/...  -> <x>
-//   services/<x>/...  -> <x>
-//   everything else   -> infrastructure
+// The rule (a conventional monorepo path→package mapping, all config-driven):
+//   <root>/<x>/...    -> <x>   for each root in `packageRoots`
+//   everything else   -> `fallbackPackage`
 // The changelog directory itself is skipped — it's touched by every entry and
-// would otherwise pin `infrastructure` onto every package list.
+// would otherwise pin `fallbackPackage` onto every package list.
+
+const DEFAULT_PACKAGE_ROOTS = ["apps", "packages", "services"];
+const DEFAULT_FALLBACK_PACKAGE = "infrastructure";
+const DEFAULT_CHANGELOG_DIR = "changelog";
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
  * @param {string[]} paths repo-relative changed paths
+ * @param {object} [options]
+ * @param {string[]} [options.packageRoots] dir prefixes mapping `<root>/<x>/…`→`<x>`
+ * @param {string} [options.fallbackPackage] package name for unmatched paths
+ * @param {string} [options.changelogDir] changelog dir to skip
  * @returns {string[]} sorted, de-duplicated package names
  */
-export function derivePackagesFromPaths(paths) {
+export function derivePackagesFromPaths(paths, options = {}) {
+  const {
+    packageRoots = DEFAULT_PACKAGE_ROOTS,
+    fallbackPackage = DEFAULT_FALLBACK_PACKAGE,
+    changelogDir = DEFAULT_CHANGELOG_DIR,
+  } = options;
+
+  // `<root>/<x>/` → captures `<x>`, for any configured root.
+  const rootRe =
+    packageRoots.length > 0
+      ? new RegExp(`^(?:${packageRoots.map(escapeRegex).join("|")})/([^/]+)/`)
+      : null;
+  const skipPrefix = `${changelogDir}/`;
+
   const out = new Set();
   for (const changedPath of paths) {
     const path = changedPath.trim();
@@ -24,15 +47,12 @@ export function derivePackagesFromPaths(paths) {
       continue;
     }
 
-    if (path.startsWith("changelog/")) {
+    if (path.startsWith(skipPrefix)) {
       continue;
     }
 
-    const m =
-      /^apps\/([^/]+)\//.exec(path) ??
-      /^packages\/([^/]+)\//.exec(path) ??
-      /^services\/([^/]+)\//.exec(path);
-    out.add(m ? m[1] : "infrastructure");
+    const m = rootRe ? rootRe.exec(path) : null;
+    out.add(m ? m[1] : fallbackPackage);
   }
 
   return [...out].toSorted();

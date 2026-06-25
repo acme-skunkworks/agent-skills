@@ -23,8 +23,8 @@ import { loadConfig } from "./lib/config.mjs";
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
-const BASE_REF =
-  process.env.BASE_REF?.trim() || `origin/${loadConfig().baseBranch}`;
+const config = loadConfig();
+const BASE_REF = process.env.BASE_REF?.trim() || `origin/${config.baseBranch}`;
 
 function git(args) {
   let out;
@@ -57,7 +57,7 @@ function changedPaths(base) {
 }
 
 const branch = currentBranch();
-const file = findEntryByBranch(branch);
+const file = findEntryByBranch(branch, config.changelogDir);
 if (!file) {
   console.log(
     `No changelog entry found for branch '${branch}'. Nothing to set.`,
@@ -65,7 +65,11 @@ if (!file) {
   process.exit(0);
 }
 
-const packages = derivePackagesFromPaths(changedPaths(BASE_REF));
+const packages = derivePackagesFromPaths(changedPaths(BASE_REF), {
+  packageRoots: config.packageRoots,
+  fallbackPackage: config.fallbackPackage,
+  changelogDir: config.changelogDir,
+});
 
 const raw = readFileSync(file, "utf8");
 const parsed = parseFrontmatter(raw);
