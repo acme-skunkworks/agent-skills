@@ -23,10 +23,11 @@ import { mergeConfig } from "./lib/merge.mjs";
 import { serialiseConfig } from "./lib/jsonio.mjs";
 import { buildReport, formatHuman } from "./lib/report.mjs";
 
-/** A value-taking flag given as the last argument has no value — fail clearly
- * rather than letting `undefined` flow into the detectors. */
+/** A value-taking flag needs a real value — fail clearly rather than letting
+ * `undefined` (trailing flag) or the next option (`--repo-root --json`) flow into
+ * the detectors as a path. */
 function requireValue(flag, value) {
-  if (value === undefined) {
+  if (value === undefined || value.startsWith("--")) {
     console.error(`initialise-skills: ${flag} requires a value`);
     process.exit(2);
   }
@@ -81,10 +82,19 @@ function readStdinPayload() {
   };
 }
 
-/** Drift keys accepted for a given skill: keyed by skill name or its config path. */
+/** Coerce an acceptDrift entry to a list of key names, tolerating malformed input
+ * (non-array, or array with non-string members) without throwing. */
+function asKeyList(value) {
+  return Array.isArray(value) ? value.filter((k) => typeof k === "string") : [];
+}
+
+/** Drift keys accepted for a given skill: keyed by skill name or its repo-relative
+ * config path. */
 function acceptedDriftFor(skill, acceptDrift, repoRoot) {
   const rel = relative(repoRoot, skill.configPath);
-  return [...new Set([...(acceptDrift[skill.name] ?? []), ...(acceptDrift[rel] ?? [])])];
+  return [
+    ...new Set([...asKeyList(acceptDrift[skill.name]), ...asKeyList(acceptDrift[rel])]),
+  ];
 }
 
 function main() {
@@ -144,4 +154,11 @@ function main() {
   }
 }
 
-main();
+try {
+  main();
+} catch (err) {
+  // The CLI contract documents exit 2 for usage/IO errors — funnel any unexpected
+  // throw (discovery, detection, write, output) into it instead of a raw crash.
+  console.error(`initialise-skills: ${err.message}`);
+  process.exit(2);
+}

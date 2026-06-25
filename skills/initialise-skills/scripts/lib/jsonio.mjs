@@ -18,9 +18,21 @@ import { readFileSync } from "node:fs";
  *   data: Record<string, unknown>,
  *   keyOrder: string[],
  *   indent: number | string,
+ *   newline: string,
  *   trailingNewline: boolean,
  * }} ParsedConfig
  */
+
+/**
+ * Detect the line-ending style so a CRLF file round-trips as CRLF. `JSON.stringify`
+ * always emits `\n`, so without this a Windows checkout would be rewritten with LF
+ * on the first write, breaking the byte-identical promise.
+ * @param {string} raw
+ * @returns {string}
+ */
+function detectNewline(raw) {
+  return raw.includes("\r\n") ? "\r\n" : "\n";
+}
 
 /**
  * Detect the indentation of the first indented line, as the value `JSON.stringify`
@@ -56,6 +68,7 @@ export function parseConfig(raw) {
     data,
     keyOrder: Object.keys(data),
     indent: detectIndent(raw),
+    newline: detectNewline(raw),
     trailingNewline: raw.endsWith("\n"),
   };
 }
@@ -77,6 +90,7 @@ export function readConfig(path) {
         data: {},
         keyOrder: [],
         indent: 2,
+        newline: "\n",
         trailingNewline: true,
       };
     }
@@ -114,6 +128,11 @@ export function serialiseConfig(parsed, data, appendOrder = []) {
     ordered[key] = data[key];
   }
 
-  const body = JSON.stringify(ordered, null, parsed.indent);
-  return parsed.trailingNewline ? `${body}\n` : body;
+  let body = JSON.stringify(ordered, null, parsed.indent);
+  // JSON.stringify always emits LF; reapply the source line-ending so a CRLF file
+  // stays CRLF (and the trailing newline matches too).
+  if (parsed.newline !== "\n") {
+    body = body.replace(/\n/g, parsed.newline);
+  }
+  return parsed.trailingNewline ? `${body}${parsed.newline}` : body;
 }

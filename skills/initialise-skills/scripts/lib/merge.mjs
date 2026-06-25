@@ -52,11 +52,23 @@ export function deepEqual(a, b) {
  * @returns {boolean}
  */
 export function sameSet(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
+  if (!Array.isArray(a) || !Array.isArray(b)) {
     return false;
   }
+  // Compare as true sets so duplicates don't mask a difference: ["ASW","ASW"]
+  // and ["ASW","SK"] are NOT equal (sizes 1 vs 2), so a duplicated issueKeys
+  // value isn't silently treated as unchanged.
+  const setA = new Set(a);
   const setB = new Set(b);
-  return a.every((item) => setB.has(item));
+  if (setA.size !== setB.size) {
+    return false;
+  }
+  for (const item of setA) {
+    if (!setB.has(item)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 // Keys whose array value is semantically a set: detecting ["ASW","SK"] when the

@@ -66,4 +66,11 @@ describe("serialiseConfig", () => {
     const parsed = parseConfig(raw);
     expect(serialiseConfig(parsed, parsed.data)).toBe(raw);
   });
+
+  it("round-trips a CRLF file with CRLF line endings preserved", () => {
+    const raw = '{\r\n  "a": 1,\r\n  "b": 2\r\n}\r\n';
+    const parsed = parseConfig(raw);
+    expect(parsed.newline).toBe("\r\n");
+    expect(serialiseConfig(parsed, parsed.data)).toBe(raw);
+  });
 });

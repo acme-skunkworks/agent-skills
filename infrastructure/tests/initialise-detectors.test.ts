@@ -34,6 +34,13 @@ describe("parseWorkspaceGlobs / rootsFromGlobs", () => {
     expect(rootsFromGlobs(["packages/ui", "packages/core", ".", "*"])).toEqual(["packages"]);
   });
 
+  it("ignores negated pnpm exclude globs", () => {
+    expect(rootsFromGlobs(["!packages/private/*", "apps/*", "packages/*"])).toEqual([
+      "apps",
+      "packages",
+    ]);
+  });
+
   it("returns [] when there is no packages: block", () => {
     expect(parseWorkspaceGlobs("name: thing\nversion: 1")).toEqual([]);
   });

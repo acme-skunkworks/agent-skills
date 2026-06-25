@@ -64,6 +64,11 @@ export function parseWorkspaceGlobs(yaml) {
 export function rootsFromGlobs(globs) {
   const roots = [];
   for (const glob of globs) {
+    // Skip pnpm exclude patterns (`!packages/private/*`) — a negated glob removes
+    // packages, it doesn't define a root, so it must not leak in as `!packages`.
+    if (glob.startsWith("!")) {
+      continue;
+    }
     const top = glob.split("/")[0].trim();
     if (!top || top === "." || top === "*" || top === "**") {
       continue;

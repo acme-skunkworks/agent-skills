@@ -35,14 +35,16 @@ function detectShippablePaths(repoRoot, packageRoots) {
     try {
       const pkg = JSON.parse(readFileSync(pkgFile, "utf8"));
       if (Array.isArray(pkg.files) && pkg.files.length > 0) {
-        return pkg.files
-          .filter((f) => typeof f === "string")
-          .map((f) => (f.endsWith("/") ? f : `${f}/`));
+        // Preserve explicit manifest entries verbatim — `files` lists what npm
+        // ships, which can be individual files (README.md) or globs
+        // (dist/**/*.js), not just directories. Appending "/" would mangle them.
+        return pkg.files.filter((f) => typeof f === "string");
       }
     } catch {
       // fall through
     }
   }
+  // Only the directory-based fallback gets a synthesised trailing slash.
   return packageRoots.map((r) => (r.endsWith("/") ? r : `${r}/`));
 }
 
@@ -106,7 +108,9 @@ export function createDetectors({ repoRoot, linearFacts = {} }) {
     changelogDir: () => ({ value: "changelog" }),
     packageRoots: () => ({ value: detectPackageRoots(repoRoot) }),
     fallbackPackage: () => ({ value: "infrastructure" }),
-    protectedBranches: () => ({ value: ["main"] }),
+    // Protect the detected default branch, not a hard-coded "main", so a
+    // master/develop repo gets a consistent result.
+    protectedBranches: () => ({ value: [detect("baseBranch").value] }),
     // Reuse the memoised packageRoots detection rather than re-reading
     // pnpm-workspace.yaml a second time.
     shippablePaths: () => ({

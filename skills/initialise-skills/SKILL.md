@@ -123,7 +123,9 @@ an in-bundle `config.json` — so there is nothing for this skill to populate.
 - `--skills-dir <path>` — where the sibling bundles live (default: auto-detected
   relative to this script).
 - **stdin JSON** — `{ "facts": { … }, "acceptDrift": { "<skill>": ["<key>"] } }`,
-  read when stdin is piped (not a TTY).
+  read when stdin is piped (not a TTY). Each `acceptDrift` key may be a **skill
+  name** (`"changelog"`) or the **repo-relative config path**
+  (`"skills/changelog/config.json"`); its value is an array of key names.
 
 ## Safety
 

@@ -35,8 +35,9 @@ invoke the bundled script directly:
 # Preview (writes nothing)
 node skills/initialise-skills/scripts/initialise.mjs --dry-run
 
-# Write, supplying the facts the script can't detect on its own
-echo '{"facts":{"linearTeamName":"Acme Co","linearWorkspaceSlug":"acme-co"}}' \
+# Write, supplying the facts the script can't detect on its own — and, optionally,
+# the drifted keys you've chosen to accept (keyed by skill name or config path)
+echo '{"facts":{"linearTeamName":"Acme Co","linearWorkspaceSlug":"acme-co"},"acceptDrift":{"changelog":["issueKeys"]}}' \
   | node skills/initialise-skills/scripts/initialise.mjs --write
 ```
 

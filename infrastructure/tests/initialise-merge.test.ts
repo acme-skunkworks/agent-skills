@@ -30,6 +30,11 @@ describe("sameSet / valuesEqual", () => {
     expect(valuesEqual("issueKeys", ["ASW", "SK"], ["SK", "ASW"])).toBe(true);
     expect(valuesEqual("packageRoots", ["apps", "packages"], ["packages", "apps"])).toBe(false);
   });
+
+  it("compares as true sets — duplicates don't mask a difference", () => {
+    expect(sameSet(["ASW", "ASW"], ["ASW", "SK"])).toBe(false);
+    expect(sameSet(["ASW", "SK"], ["SK", "ASW", "SK"])).toBe(true);
+  });
 });
 
 describe("classifyKey", () => {
