@@ -19,7 +19,8 @@ with the constraints below.
    read-only filesystem-hygiene detection
    (`node skills/cleanup-repo/scripts/filesystem-hygiene.mjs <repo-root> --json`),
    display everything to be deleted, gate on a single confirmation, then execute
-   (worktrees → branches → filesystem `--apply`).
+   in order (worktrees → branches → filesystem `--apply`, which re-runs detection
+   so parents emptied by removing worktrees are swept too).
 3. Branches in `protectedBranches` are never touched; uncommitted worktrees are
    never force-removed automatically.
 4. If the Linear MCP server is unavailable, skip the Linear status check and the
