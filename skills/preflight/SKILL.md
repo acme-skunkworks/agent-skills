@@ -15,11 +15,12 @@ compatibility: >-
   Requires Node.js ≥22 for the bundled scripts (no npm dependencies — Node
   built-ins only) and the `git` CLI for branch/diff analysis. ESLint,
   markdownlint-cli2, and actionlint are invoked from the consumer repo's own
-  toolchain (via `pnpm exec`); actionlint is optional — preflight warns and skips
-  workflow linting if its binary is absent. The optional Linear debt-issue step
-  needs the Linear MCP server; skip it silently if unavailable.
+  toolchain (via `pnpm exec`); markdownlint-cli2 and actionlint are optional —
+  preflight warns and skips that category if its binary is absent. The optional
+  Linear debt-issue step needs the Linear MCP server; skip it silently if
+  unavailable.
 metadata:
-  version: 0.1.0
+  version: 0.1.1
 allowed-tools: Read, Bash(git:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
@@ -79,7 +80,7 @@ narrower scope):
 | Category     | Runs when                                                                   | Skipped when                                                                                                        |
 | ------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | ESLint       | Branch diff includes lintable code or eslint/tsconfig config paths          | Markdown-only or non-lintable changes                                                                               |
-| markdownlint | Branch diff includes `.md` / `.mdx` (respecting repo ignores)               | No markdown changes                                                                                                 |
+| markdownlint | Branch diff includes `.md` / `.mdx` (respecting repo ignores)               | No markdown changes; warns and skips if the `markdownlint-cli2` binary is missing                                   |
 | actionlint   | Branch diff includes `.github/workflows/*.yml` or `.github/actionlint.yaml` | No workflow changes; config-only changes lint all tracked workflows; warns and skips if `actionlint` binary missing |
 
 ESLint runs per workspace (via `pnpm --filter`), plus a root/scripts bucket.
