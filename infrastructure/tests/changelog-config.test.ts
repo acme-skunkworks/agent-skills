@@ -35,6 +35,24 @@ describe("parseConfig", () => {
     expect(() => parseConfig("{ not json")).toThrow();
   });
 
+  it("rejects a non-object JSON root (null / array / primitive)", () => {
+    expect(() => parseConfig("null")).toThrow(/JSON object/);
+    expect(() => parseConfig("42")).toThrow(/JSON object/);
+    expect(() => parseConfig("[]")).toThrow(/JSON object/);
+  });
+
+  it("rejects blank (whitespace-only) string values", () => {
+    expect(() =>
+      parseConfig(raw({ issueKeys: ["ASW"], linearWorkspaceSlug: "   " })),
+    ).toThrow(/linearWorkspaceSlug/);
+    expect(() =>
+      parseConfig(raw({ ...VALID, issueKeys: ["ASW", "  "] })),
+    ).toThrow(/issueKeys/);
+    expect(() =>
+      parseConfig(raw({ ...VALID, packageRoots: ["apps", ""] })),
+    ).toThrow(/packageRoots/);
+  });
+
   it("fails loudly when issueKeys is missing", () => {
     expect(() => parseConfig(raw({ linearWorkspaceSlug: "x" }))).toThrow(
       /issueKeys/,

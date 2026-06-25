@@ -38,9 +38,8 @@ function fail(message, source) {
   );
 }
 
-const isNonEmptyString = (v) => typeof v === "string" && v.length > 0;
-const isStringArray = (v) =>
-  Array.isArray(v) && v.every((x) => typeof x === "string");
+const isNonEmptyString = (v) => typeof v === "string" && v.trim().length > 0;
+const isStringArray = (v) => Array.isArray(v) && v.every(isNonEmptyString);
 
 /**
  * Validate a raw config JSON string and merge it over the structural defaults.
@@ -63,6 +62,12 @@ export function parseConfig(raw, source = CONFIG_PATH) {
   } catch (err) {
     console.error(`Invalid JSON in ${source}: ${err.message}`);
     throw err;
+  }
+
+  // JSON.parse can return null/array/primitive; the field checks below would then
+  // throw a raw TypeError instead of the actionable config error this surfaces.
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    fail("config.json must contain a JSON object.", source);
   }
 
   // Required identity values — no default; fail loudly so a consuming repo can't
