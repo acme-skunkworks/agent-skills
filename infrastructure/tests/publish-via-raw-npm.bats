@@ -127,6 +127,20 @@ npm error 404 Not Found - PUT https://registry.npmjs.org/@test%2fpkg - Not found
   echo "$output" | grep -q "Trusted Publisher"
 }
 
+@test "publish E403: hint points at the Trusted Publisher config" {
+  # An unauthorised write to an existing package surfaces as E403 /
+  # "403 Forbidden - PUT" / "you do not have permission" — the auth branch the
+  # bare-403 tightening relies on. The hint must still fire on it.
+  write_fake_npm 1 1 'npm error code E404
+npm error 404 Not Found - GET https://registry.npmjs.org/@test%2fpkg' 'npm error code E403
+npm error 403 Forbidden - PUT https://registry.npmjs.org/@test%2fpkg - You do not have permission to publish "@test/pkg".'
+
+  run bash "$SCRIPT_DIR/publish-via-raw-npm.sh"
+  [ "$status" -ne 0 ]
+  grep -q "^npm publish ${TARBALL} --access public --provenance$" "$CALLS_LOG"
+  echo "$output" | grep -q "Trusted Publisher"
+}
+
 @test "non-404 view error: script aborts without publishing" {
   write_fake_npm 1 0 'npm error code E500
 npm error 500 Internal Server Error'

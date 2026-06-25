@@ -86,7 +86,7 @@ printf '%s\n' "$publish_output"
 # problem, point straight at the Trusted Publisher config. This is the ASW-174
 # learning applied to `npm publish` rather than the `npm view` probe.
 if [ "$publish_status" -ne 0 ]; then
-  if printf '%s' "$publish_output" | grep -qiE 'E404|404 Not Found|you do not have permission|E403|403'; then
+  if printf '%s' "$publish_output" | grep -qiE 'E404|404 Not Found|you do not have permission|E403|403 Forbidden'; then
     cat >&2 <<EOF
 ──────────────────────────────────────────────────────────────────────────────
 npm publish failed for $NAME@$VERSION with what looks like an auth/visibility
