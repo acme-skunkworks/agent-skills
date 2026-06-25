@@ -12,7 +12,7 @@ tests therefore live at the repo root and import the bundled `.mjs` modules
 directly:
 
 ```ts
-import { rewriteBody } from "../../skills/changelog/scripts/add-links.mjs";
+import { rewriteBody } from "../../../skills/changelog/scripts/add-links.mjs";
 ```
 
 Because the import path reaches straight into `skills/<name>/scripts/`, the

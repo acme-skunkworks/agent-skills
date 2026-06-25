@@ -84,4 +84,14 @@ describe("splitFrontmatter", () => {
     const raw = "## Added\n\n- A change\n";
     expect(splitFrontmatter(raw)).toEqual({ fm: "", body: raw });
   });
+
+  it("splits CRLF frontmatter from the body", () => {
+    // splitFrontmatter's fence regex accepts `\r?\n`, so a Windows-authored
+    // changelog file must split the same way as an LF one.
+    const raw = "---\r\ntitle: x\r\n---\r\n## Added\r\n";
+    expect(splitFrontmatter(raw)).toEqual({
+      fm: "---\r\ntitle: x\r\n---\r\n",
+      body: "## Added\r\n",
+    });
+  });
 });

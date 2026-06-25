@@ -53,6 +53,15 @@ describe("parseFrontmatter — scalar shapes", () => {
     expect(content).toBe(raw);
   });
 
+  it("strips a leading BOM before parsing", () => {
+    // parseFrontmatter drops a leading U+FEFF before looking for fences, so a
+    // BOM-prefixed file is not misread as having no frontmatter / stray bytes.
+    const raw = "﻿no frontmatter here\n";
+    const { data, content } = parseFrontmatter(raw);
+    expect(data).toEqual({});
+    expect(content).toBe("no frontmatter here\n");
+  });
+
   it("preserves the markdown body byte-for-byte", () => {
     const body = "## Added\n\n- A change\n\n## Fixed\n\n- A fix\n";
     const { content } = parseFrontmatter(`---\ntitle: x\n---\n${body}`);
