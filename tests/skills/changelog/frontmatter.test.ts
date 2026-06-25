@@ -105,7 +105,12 @@ describe("parseFrontmatter — block scalars", () => {
     expect(parseFrontmatter(raw).data.release_note).toBe("Tidied the parser.");
   });
 
-  it("keeps newlines in a `|` literal block", () => {
+  it("keeps interior newlines in a `|` literal block but strips the trailing one", () => {
+    // The bundle deliberately treats `|` like `|-` (clip → strip): per the
+    // comment in frontmatter.mjs `parseBlockScalar`, the changelog corpus only
+    // ever uses `>-`, so block scalars always drop the final newline. Interior
+    // newlines are preserved; the trailing one is not. This pins the bundle's
+    // actual, intended behaviour, not standard YAML `|` clip semantics.
     const raw = "---\nnote: |\n  line one\n  line two\n---\nbody\n";
     expect(parseFrontmatter(raw).data.note).toBe("line one\nline two");
   });
