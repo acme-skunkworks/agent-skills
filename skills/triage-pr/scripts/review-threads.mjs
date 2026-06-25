@@ -35,7 +35,7 @@ import { fileURLToPath } from "node:url";
 // the `[bot]` suffix (e.g. `claude`, `coderabbitai`), whereas the REST API and
 // many docs show the suffixed form (`claude[bot]`). `botMatches` normalises both
 // sides, so a consumer's config can use either form.
-const DEFAULT_BOTS = ["claude", "cursor", "coderabbitai", "github-actions"];
+const DEFAULT_BOTS = ["claude", "cursor", "coderabbitai"];
 
 // ---- pure transform (no network) ----------------------------------------
 

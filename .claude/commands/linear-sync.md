@@ -1,6 +1,6 @@
 ---
 description: Transition the Linear issue(s) linked to the current branch to a target workflow state (default In Progress).
-allowed-tools: Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
+allowed-tools: Read, Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
 Transition the Linear issue(s) linked to the current branch through their
