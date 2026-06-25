@@ -15,8 +15,8 @@ compatibility: >-
   Linear MCP server; if it is unavailable, skip that step silently. The
   filesystem pass needs Node.js ≥22.
 metadata:
-  version: 0.1.0
-allowed-tools: Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
+  version: 0.1.1
+allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
 # cleanup-repo

@@ -1,0 +1,68 @@
+// Shared git helpers for the send-it bundle's zero-dependency scripts
+// (derive-bump.mjs, check-skill-bumps.mjs). Node built-ins only — no build
+// step, no tsx.
+//
+// `git log --format` field/record separators: %x1f (unit) between fields,
+// %x1e (record) between commits. Kept here so both scripts agree on the
+// encoding they parse.
+
+import { execFileSync } from "node:child_process";
+
+export const UNIT_SEP = "\x1f";
+export const RECORD_SEP = "\x1e";
+
+/**
+ * Resolve the base ref to diff the branch against. BASE_REF (when set) is
+ * tried first, then the defaults — so an unresolvable override still falls
+ * back rather than silently yielding zero commits. Returns null when none of
+ * the candidates exist (e.g. a fresh repo with no `main`).
+ */
+export function resolveBaseRef() {
+  const candidates = [process.env.BASE_REF, "origin/main", "main"].filter(
+    Boolean,
+  );
+  for (const ref of candidates) {
+    try {
+      // execFileSync (no shell) — ref never reaches a shell, so a hostile
+      // BASE_REF can't inject.
+      execFileSync("git", ["rev-parse", "--verify", ref], { stdio: "ignore" });
+      return ref;
+    } catch {
+      // ref doesn't exist; try next
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Commits on HEAD not yet on the base ref, newest first, as
+ * `{ hash, subject, body }`. Empty array when there's no resolvable base.
+ */
+export function readGitCommits() {
+  const base = resolveBaseRef();
+  if (!base) {
+    return [];
+  }
+
+  const out = execFileSync(
+    "git",
+    ["log", `${base}..HEAD`, `--format=%H${UNIT_SEP}%s${UNIT_SEP}%b${RECORD_SEP}`],
+    { encoding: "utf8" },
+  );
+  return out
+    .split(RECORD_SEP)
+    .map((segment) => segment.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [hash, subject, body] = entry.split(UNIT_SEP);
+      return { body: body ?? "", hash, subject: subject ?? "" };
+    });
+}
+
+/** The current branch name (empty string in a detached HEAD). */
+export function readGitBranch() {
+  return execFileSync("git", ["branch", "--show-current"], {
+    encoding: "utf8",
+  }).trim();
+}

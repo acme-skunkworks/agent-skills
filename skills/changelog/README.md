@@ -18,17 +18,23 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill changelog
 
 ## Configure
 
-The shipped [`config.json`](config.json) carries **ACME Skunkworks defaults** —
-update them for your organisation on install, or issue-ID detection and Linear
-links will be wrong. A neutral [`config.example.json`](config.example.json) ships
-alongside it as a template — copy it over `config.json` or edit `config.json`
-directly.
+The shipped [`config.json`](config.json) carries **ACME Skunkworks values**.
+`issueKeys` and `linearWorkspaceSlug` are **required and have no default** — a
+missing `config.json`, or either key absent, makes the scripts **fail loudly**
+rather than silently inherit ACME's identity (which would emit wrong issue-ID
+detection and Linear links in a foreign repo). Copy
+[`config.example.json`](config.example.json) over `config.json` (or edit
+`config.json` directly) and set them for your organisation. The remaining keys
+are structural and keep generic, overridable defaults.
 
 | Key | Meaning | Default |
 | --- | --- | --- |
-| `issueKeys` | Team-key prefixes used to recognise issue IDs in the branch and body. Keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW"]` |
-| `linearWorkspaceSlug` | Linear workspace slug for issue links (`https://linear.app/<slug>/issue/<id>`). | `"goose-and-hobbes"` |
+| `issueKeys` | Team-key prefixes used to recognise issue IDs in the branch and body. Keep legacy keys so old branches still match. | **required** |
+| `linearWorkspaceSlug` | Linear workspace slug for issue links (`https://linear.app/<slug>/issue/<id>`). | **required** |
 | `baseBranch` | Trunk the branch diff is taken against (`origin/<baseBranch>`); `BASE_REF` env overrides per-run. | `"main"` |
+| `changelogDir` | Directory the dated entries live in (scanned and validated). | `"changelog"` |
+| `packageRoots` | Monorepo dir prefixes mapping `<root>/<x>/…` → package `<x>` for `affected_packages`. | `["apps", "packages", "services"]` |
+| `fallbackPackage` | Package name for changed paths matching no `packageRoots` prefix. | `"infrastructure"` |
 
 ## Requirements
 

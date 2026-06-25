@@ -2,8 +2,8 @@
 name: triage-pr
 description: >-
   Drive a pull request from draft with failing CI to merge-ready. While the PR
-  is a draft, inspect and fix in-scope CI failures (lint, changeset status,
-  manifest-lint, build, tests) using the gh CLI and GitHub Actions logs — never
+  is a draft, inspect and fix in-scope CI failures (lint, manifest-lint, build,
+  tests) using the gh CLI and GitHub Actions logs — never
   weakening CI config to greenwash. After the PR is marked ready-for-review,
   fetch the unresolved AI review threads (Claude Code Review, Bugbot), validate
   each finding against the codebase before changing anything, fix the valid
@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.1.0
+  version: 0.1.1
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
 ---
 
@@ -138,7 +138,7 @@ git diff --name-only origin/<base>...HEAD   # files this PR actually touches
 
 - Apply the smallest fix that addresses the **root cause** within the PR's scope.
 - Re-run the **specific** failing command locally and read its exit code before
-  claiming it fixed (e.g. `pnpm lint`, `pnpm changeset status`,
+  claiming it fixed (e.g. `pnpm lint`,
   `npx skills-ref validate ./skills/<name>`, the failing test). Evidence before
   claims — never assert a fix on "should" or "probably".
 - Commit with a Conventional Commit subject, then push. One fix → one

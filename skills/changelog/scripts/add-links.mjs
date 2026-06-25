@@ -3,8 +3,11 @@ import { loadConfig } from "./lib/config.mjs";
 import { readdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const CHANGELOG_DIR = "changelog";
-const { linearWorkspaceSlug: WORKSPACE, issueKeys: TEAM_KEYS } = loadConfig();
+const {
+  linearWorkspaceSlug: WORKSPACE,
+  issueKeys: TEAM_KEYS,
+  changelogDir: CHANGELOG_DIR,
+} = loadConfig();
 
 /**
  * Escape regex metacharacters so a configured key such as `C++` or `MY.KEY`

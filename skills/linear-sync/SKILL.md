@@ -15,8 +15,8 @@ compatibility: >-
   read needs the `git` CLI. If the Linear MCP server is unavailable the skill
   cannot run — it has no non-MCP fallback.
 metadata:
-  version: 0.1.1
-allowed-tools: Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
+  version: 0.1.3
+allowed-tools: Read, Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
 # linear-sync
@@ -37,7 +37,7 @@ match the consuming repo:
 | Key | Meaning | Default |
 | --- | --- | --- |
 | `linearTeamName` | Linear team **name** used to resolve the live state IDs. Use the name, not the key — the key is renamed over time but the name is stable. | `"ACME Skunkworks"` |
-| `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. Keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW"]` |
+| `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. Keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW", "SK"]` |
 
 A neutral [`config.example.json`](config.example.json) ships alongside it as a
 template — copy it over `config.json` and fill in your values, or edit
@@ -74,11 +74,11 @@ state, then apply the rule for the target transition. All transitions are
 **idempotent** — an issue already at or past the target state is skipped
 silently.
 
-| Target          | Apply when current state is …              | Skip when current state is …                                | Fired by                            |
-| --------------- | ------------------------------------------ | ----------------------------------------------------------- | ----------------------------------- |
-| **In Progress** | `Triage`, `Backlog`, `Todo`                | `In Progress`, `In Review`, `Done`, `Canceled`, `Duplicate` | Starting work on an issue           |
-| **In Review**   | `Triage`, `Backlog`, `Todo`, `In Progress` | `In Review`, `Done`, `Canceled`, `Duplicate`                | PR open/update (a ship flow)        |
-| **Done**        | `Triage`, `Backlog`, `Todo`, `In Progress`, `In Review` | `Done`, `Canceled`, `Duplicate`                             | Branch cleanup                      |
+| Target          | Apply when current state is …                           | Skip when current state is …                                | Fired by                     |
+| --------------- | ------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------- |
+| **In Progress** | `Triage`, `Backlog`, `Todo`                             | `In Progress`, `In Review`, `Done`, `Canceled`, `Duplicate` | Starting work on an issue    |
+| **In Review**   | `Triage`, `Backlog`, `Todo`, `In Progress`              | `In Review`, `Done`, `Canceled`, `Duplicate`                | PR open/update (a ship flow) |
+| **Done**        | `Triage`, `Backlog`, `Todo`, `In Progress`, `In Review` | `Done`, `Canceled`, `Duplicate`                             | Branch cleanup               |
 
 Apply a transition by calling `mcp__linear-server__save_issue` with
 `state: "<target>"` (or the resolved state ID).

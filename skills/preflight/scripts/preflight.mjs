@@ -11,7 +11,7 @@ import {
   classifyViolations,
   parseActionlintText,
   parseEslintJson,
-  parseMarkdownlintJson,
+  parseMarkdownlintText,
 } from "./classify-lint.mjs";
 
 const ROOT = process.cwd();
@@ -28,9 +28,9 @@ function run(cmd, args, opts = {}) {
     cwd: ROOT,
     encoding: opts.encoding ?? "utf8",
     input: opts.input,
-    // ESLint/markdownlint `--format json` can exceed Node's 1 MiB default on a
-    // sizeable codebase; truncated output fails JSON.parse and is swallowed as
-    // "zero violations", so the run falsely passes. Raise the buffer well clear.
+    // ESLint `-f json` can exceed Node's 1 MiB default on a sizeable codebase;
+    // truncated output fails JSON.parse and is swallowed as "zero violations",
+    // so the run falsely passes. Raise the buffer well clear.
     maxBuffer: 20 * 1024 * 1024,
     stdio: ["pipe", "pipe", "pipe"],
   });
@@ -109,34 +109,70 @@ function runEslintFilter(filter, files, prefix) {
 }
 
 /**
+ * Detect markdownlint-cli2 being absent (not installed) as opposed to having
+ * run and found violations. `pnpm exec` surfaces a recognisable signature when
+ * the bin can't be resolved; treat that as a graceful skip (the same posture as
+ * actionlint), not a "linter failed to run". Without this, an uninstalled
+ * markdownlint exits non-zero with no parseable output and gets misreported as
+ * `failedLinters` — indistinguishable from a real run whose violations the gate
+ * silently swallowed.
+ * @param {ReturnType<typeof run>} result
+ */
+function markdownlintMissing(result) {
+  // pnpm-specific signatures: when `pnpm exec` can't resolve markdownlint-cli2,
+  // pnpm itself still spawns cleanly and reports the miss on stderr. We do NOT
+  // key off `result.error` — spawnSync only sets that when pnpm fails to spawn
+  // (e.g. pnpm absent) or on a maxBuffer overrun, which are real environment
+  // failures that should surface as failedLinters, not be downgraded to a skip.
+  const out = `${result.stderr ?? ""}\n${result.stdout ?? ""}`;
+  return (
+    /ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL/.test(out) ||
+    /command\s+"?markdownlint-cli2"?\s+not found/i.test(out)
+  );
+}
+
+/**
  * @param {string[]} files
  */
 function runMarkdownlint(files) {
   if (files.length === 0) {
-    return { ok: true, violations: [], skipped: true };
+    return { ok: true, violations: [], skipped: true, markdownlint: "skipped" };
   }
 
   if (dryRun) {
     console.log(
       `preflight: [dry-run] would run markdownlint on ${files.length} file(s)`,
     );
-    return { ok: true, violations: [], files, dryRun: true };
+    return {
+      ok: true,
+      violations: [],
+      files,
+      dryRun: true,
+      markdownlint: "would-run",
+    };
   }
 
-  const result = run("pnpm", [
-    "exec",
-    "markdownlint-cli2",
-    "--format",
-    "json",
-    ...files,
-  ]);
-  const violations = parseMarkdownlintJson(result.stdout || result.stderr);
+  // markdownlint-cli2 has NO `--format`/JSON CLI flag (JSON output needs a
+  // configured outputFormatter). It prints violations as text and exits 1 when
+  // any are found; parse that text — mirroring runActionlint.
+  const result = run("pnpm", ["exec", "markdownlint-cli2", ...files]);
+
+  if (markdownlintMissing(result)) {
+    console.warn(
+      "preflight: markdownlint-cli2 not installed — skipping markdown lint (install it locally or rely on CI)",
+    );
+    return { ok: true, violations: [], files, markdownlint: "warn-skipped" };
+  }
+
+  const violations = parseMarkdownlintText(
+    `${result.stdout ?? ""}\n${result.stderr ?? ""}`,
+  );
   const passed = result.status === 0 && violations.length === 0;
-  if (!passed && result.stderr && !result.stdout) {
+  if (!passed && violations.length === 0 && result.stderr) {
     console.error(result.stderr);
   }
 
-  return { ok: passed, violations, files };
+  return { ok: passed, violations, files, markdownlint: "ran" };
 }
 
 /**
@@ -202,6 +238,9 @@ function buildSummary(scope, results, classified) {
     results: {
       eslintRan: scope.codeChanged,
       markdownRan: scope.markdownChanged,
+      markdownlint:
+        results.markdownlintStatus ??
+        (scope.markdownChanged ? "ran" : "skipped"),
       actionlint: results.actionlintStatus,
       failedLinters,
     },
@@ -291,10 +330,12 @@ function main() {
   }
 
   let actionlintStatus = "skipped";
+  let markdownlintStatus = "skipped";
   if (scope.markdownChanged) {
     console.log("preflight: running scoped markdownlint");
     const md = runMarkdownlint(scope.markdown);
-    if (!md.skipped && !md.dryRun) {
+    markdownlintStatus = md.markdownlint ?? "ran";
+    if (!md.skipped && !md.dryRun && md.markdownlint !== "warn-skipped") {
       allViolations.push(...md.violations);
       if (md.ok) {
         console.log("preflight: markdownlint passed");
@@ -343,7 +384,7 @@ function main() {
 
   const summary = buildSummary(
     scope,
-    { actionlintStatus, failedLinters },
+    { actionlintStatus, markdownlintStatus, failedLinters },
     classified,
   );
   writeFileSync(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
@@ -351,7 +392,7 @@ function main() {
   console.log("");
   console.log("preflight: summary");
   console.log(
-    `  categories: eslint=${scope.codeChanged ? "ran" : "skipped"} markdown=${scope.markdownChanged ? "ran" : "skipped"} actionlint=${actionlintStatus}`,
+    `  categories: eslint=${scope.codeChanged ? "ran" : "skipped"} markdown=${markdownlintStatus} actionlint=${actionlintStatus}`,
   );
   if (!dryRun) {
     console.log(

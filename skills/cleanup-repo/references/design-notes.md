@@ -44,7 +44,7 @@ Per-repo slash-command names are a consumer choice. A consumer can expose this a
 
 ## Future extensions (out of scope, enabled by the name)
 
-Each would be a follow-up issue and a Changeset minor bump:
+Each would be a follow-up issue and a minor version bump:
 
 - Pruning stale local tags (`git tag --merged main` style).
 - An optional reflog / garbage-collection trigger after large cleanups.

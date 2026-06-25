@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { parseFrontmatter } from "./lib/frontmatter.mjs";
+import { loadConfig } from "./lib/config.mjs";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, basename } from "node:path";
 
-const CHANGELOG_DIR = "changelog";
+const CHANGELOG_DIR = loadConfig().changelogDir;
 const FILENAME_RE = /^(\d{8})-(\d{6})-([a-z0-9-]+)\.md$/;
 const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 const SHA7_RE = /^[0-9a-f]{7}$/;
