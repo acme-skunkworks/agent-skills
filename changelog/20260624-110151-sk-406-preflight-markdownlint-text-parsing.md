@@ -4,7 +4,7 @@ release_note: The preflight markdown gate now parses markdownlint-cli2's real ou
 created_at: '2026-06-24T11:01:51Z'
 merged_at:
 branch: sk-406-preflight-markdownlint-format-json-fix
-pr:
+pr: 31
 commit:
 merge_strategy:
 author: rob@acmeskunkworks.io
