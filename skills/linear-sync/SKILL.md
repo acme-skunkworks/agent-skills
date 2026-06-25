@@ -74,11 +74,11 @@ state, then apply the rule for the target transition. All transitions are
 **idempotent** — an issue already at or past the target state is skipped
 silently.
 
-| Target          | Apply when current state is …              | Skip when current state is …                                | Fired by                            |
-| --------------- | ------------------------------------------ | ----------------------------------------------------------- | ----------------------------------- |
-| **In Progress** | `Triage`, `Backlog`, `Todo`                | `In Progress`, `In Review`, `Done`, `Canceled`, `Duplicate` | Starting work on an issue           |
-| **In Review**   | `Triage`, `Backlog`, `Todo`, `In Progress` | `In Review`, `Done`, `Canceled`, `Duplicate`                | PR open/update (a ship flow)        |
-| **Done**        | `Triage`, `Backlog`, `Todo`, `In Progress`, `In Review` | `Done`, `Canceled`, `Duplicate`                             | Branch cleanup                      |
+| Target          | Apply when current state is …                           | Skip when current state is …                                | Fired by                     |
+| --------------- | ------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------- |
+| **In Progress** | `Triage`, `Backlog`, `Todo`                             | `In Progress`, `In Review`, `Done`, `Canceled`, `Duplicate` | Starting work on an issue    |
+| **In Review**   | `Triage`, `Backlog`, `Todo`, `In Progress`              | `In Review`, `Done`, `Canceled`, `Duplicate`                | PR open/update (a ship flow) |
+| **Done**        | `Triage`, `Backlog`, `Todo`, `In Progress`, `In Review` | `Done`, `Canceled`, `Duplicate`                             | Branch cleanup               |
 
 Apply a transition by calling `mcp__linear-server__save_issue` with
 `state: "<target>"` (or the resolved state ID).
