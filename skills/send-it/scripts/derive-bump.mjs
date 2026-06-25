@@ -16,13 +16,11 @@
 // The base ref is `origin/main` (falling back to `main`), overridable via the
 // BASE_REF env var. The pure functions are exported for vitest.
 
-import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
+
+import { readGitBranch, readGitCommits } from "./lib/git.mjs";
 
 const SLUG_MAX = 60;
-
-// Git --format field/record separators (%x1f unit, %x1e record).
-const UNIT_SEP = "";
-const RECORD_SEP = "";
 
 export function deriveSlug(branch) {
   const cleaned = branch
@@ -71,53 +69,6 @@ export function deriveBody(commits) {
   return subject.replace(/^[a-z]+(\([^)]+\))?!?:\s*/, "");
 }
 
-function resolveBaseRef() {
-  // BASE_REF (if set) is tried first, then the defaults — so an unresolvable
-  // override still falls back rather than silently yielding zero commits.
-  const candidates = [process.env.BASE_REF, "origin/main", "main"].filter(
-    Boolean,
-  );
-  for (const ref of candidates) {
-    try {
-      // execFileSync (no shell) — ref never reaches a shell, so a hostile
-      // BASE_REF can't inject.
-      execFileSync("git", ["rev-parse", "--verify", ref], { stdio: "ignore" });
-      return ref;
-    } catch {
-      // ref doesn't exist; try next
-    }
-  }
-
-  return null;
-}
-
-function readGitCommits() {
-  const base = resolveBaseRef();
-  if (!base) {
-    return [];
-  }
-
-  const out = execFileSync(
-    "git",
-    ["log", `${base}..HEAD`, "--format=%H%x1f%s%x1f%b%x1e"],
-    { encoding: "utf8" },
-  );
-  return out
-    .split(RECORD_SEP)
-    .map((segment) => segment.trim())
-    .filter(Boolean)
-    .map((entry) => {
-      const [hash, subject, body] = entry.split(UNIT_SEP);
-      return { body: body ?? "", hash, subject: subject ?? "" };
-    });
-}
-
-function readGitBranch() {
-  return execFileSync("git", ["branch", "--show-current"], {
-    encoding: "utf8",
-  }).trim();
-}
-
 function main() {
   const branch = readGitBranch();
   const commits = readGitCommits();
@@ -134,6 +85,6 @@ function main() {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }

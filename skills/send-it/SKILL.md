@@ -15,12 +15,13 @@ description: >-
 license: MIT
 compatibility: >-
   Requires the `git` and `gh` CLIs (`gh` authenticated). Node.js ≥22 for the
-  bundled `derive-bump.mjs` helper (Node built-ins only — no npm dependencies, no
-  build step, no tsx). Delegates to the `preflight`, `changelog`, and
+  bundled `derive-bump.mjs` / `check-skill-bumps.mjs` helpers (Node built-ins only —
+  no npm dependencies, no build step, no tsx). Delegates to the `preflight`,
+  `changelog`, and
   `linear-sync` skills — install them alongside this one. The In Review writeback
   needs the Linear MCP server (via `linear-sync`); it is skipped if unavailable.
 metadata:
-  version: 0.1.0
+  version: 0.2.0
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
@@ -64,6 +65,7 @@ copied `config.json` to match the consuming repo (a neutral
 | `baseBranch` | The trunk the branch diff is taken against (`origin/<baseBranch>`) and the PR base. | `"main"` |
 | `shippablePaths` | Path prefixes whose changes reach consumers. A change touching any makes the PR **shippable**. | `["skills/"]` |
 | `shippableManifestKeys` | `package.json` keys whose change is itself shippable (the published-`files` surface). | `["name", "version", "files", "publishConfig"]` |
+| `bundleVersioning` *(optional)* | Enables the per-bundle version-bump check (Step 6) for repos that ship many independently-versioned skill bundles. An object `{ root, manifest, skillFile }` naming the bundle parent dir and the manifest / skill-manifest filenames each bundle carries. **Omit it entirely in single-package repos** — the check then no-ops. | unset (disabled) |
 
 The team name, issue-ID prefixes, and workspace slug are **not** configured here —
 they live in the `linear-sync` and `changelog` skills' own `config.json` files,
@@ -195,6 +197,10 @@ branch. Nothing to ship."
 
 ### Step 5: Lint gate — delegate to the `preflight` skill
 
+> **`--skip-preflight`** bypasses this whole step. Print a clear
+> `⚠️ lint gate bypassed (--skip-preflight)` warning and jump to Step 6. Use it only
+> when the gate misfires; CI still runs the repo's real linting.
+
 Run the change-gated lint preflight, following the [`preflight`](../preflight/SKILL.md)
 skill:
 
@@ -260,8 +266,37 @@ changes) writes the dated changelog entry. It does **not** bump versions, write 
    ADRs, the dated `changelog/` itself, release-please config, or a lone
    `chore: update lockfile` — is **non-shippable**.
 
-3. **Compose the PR title** as a single Conventional Commits subject — this is the
-   release-please bump signal and is enforced by CI's PR-title lint:
+3. **Check per-bundle version bumps** — only when `config.json` sets
+   `bundleVersioning` (multi-artefact repos; skip this step entirely when it's
+   unset). Each skill bundle carries its own version in its `package.json` +
+   `SKILL.md metadata.version`, bumped by hand and decoupled from the repo release.
+   CI enforces that the two **agree**, but nothing enforces they were **bumped** when
+   the bundle's content changed — so an edited bundle can ship with a stale version
+   label. Close that gap:
+
+   ```bash
+   node skills/send-it/scripts/check-skill-bumps.mjs
+   ```
+
+   It prints `{ "configured", "unbumped": [{ name, currentVersion, suggestedBump,
+   suggestedVersion, manifestPath, skillPath }], "bumped" }`. For **each** `unbumped`
+   entry, surface the proposal and apply it on confirmation:
+
+   > `skills/<name>` changed but its version is still `<currentVersion>`. Suggested
+   > bump: `<suggestedBump>` → `<suggestedVersion>` (matches the PR-title bump).
+   > Apply? (yes / no / patch / minor / major)
+
+   On `yes` (or an explicit level), edit **both** `manifestPath` (`version`) and
+   `skillPath` (`metadata.version`) to the chosen version — in lockstep, so the
+   parity invariant CI checks still holds — then stage and commit just those two
+   files: `git commit -m "chore(<name>): release <name>@<version>"`. On `no`, leave
+   it and continue. Under `--dry-run`, print the proposal and edit nothing.
+
+4. **Compose the PR title** as a single Conventional Commits subject — this is the
+   release-please bump signal and is enforced by CI's PR-title lint. If `--title` was
+   passed, use it verbatim (still run the shippability decision above for the
+   changelog gate, and **warn** — don't block — if its type contradicts that
+   decision). Otherwise:
    - **Shippable** → a **release-triggering** type from the bump: `major` →
      `feat!: <body>`; `minor` → `feat: <body>`; `patch` → `fix: <body>`. Add a scope
      when one is obvious (`feat(<scope>): …`).
@@ -360,18 +395,33 @@ Skip silently if `linear-sync` or the Linear MCP server is unavailable.
 ## Flags
 
 - `--dry-run` — print what would be written/submitted (changelog preview, branch,
-  conventional PR title), make no commits, no push, no `gh` calls. Exit 0.
+  conventional PR title, any version-bump proposals), make no commits, no push, no
+  `gh` calls. Exit 0.
 - `--branch=<name>` — override the auto-derived branch name when running on the base
   branch with uncommitted changes.
 - `--issue=<ID>` — prefix the auto-derived slug with a Linear issue ID (e.g.
   `--issue=ASW-7` → `asw-7-<slug>`, lower-cased). Ignored if `--branch` is given.
+- `--base=<branch>` — override `config.json`'s `baseBranch` for this run. Applies
+  everywhere the base is used: the `git fetch`, the branch diff
+  (`origin/<base>...HEAD`), the PR `--base`, and the `BASE_REF=origin/<branch>` env
+  passed to `derive-bump.mjs` / `check-skill-bumps.mjs`. Use it for stacked PRs or a
+  non-`main` target.
+- `--title="<conventional subject>"` — set the PR title verbatim instead of deriving
+  it (escape hatch for when derivation picks the wrong type). It must still be a valid
+  Conventional Commits subject (CI lints it). The shippability decision still runs for
+  the changelog gate; send-it **warns** if the supplied type contradicts it.
+- `--skip-preflight` — skip the Step 5 lint gate entirely, printing a bypass warning.
 - `--ready` — open the PR ready-for-review instead of draft (default is draft).
 - `--merge-when-ready` — after create/update, enable `gh pr merge --auto --squash`.
 - `--worktree=<branch-or-path>` — `cd` into a worktree before running (Step 0).
 
 ## Notes
 
-- **Trunk-based:** PRs target the base branch (`config.json` `baseBranch`).
+- **Trunk-based:** PRs target the base branch (`config.json` `baseBranch`, or
+  `--base` for this run).
+- **send-it bumps only per-bundle versions, never the repo version.** The optional
+  Step 6 bundle-version check moves a changed skill's own `metadata.version`; the
+  repo-level npm release stays owned by release-please via the PR title.
 - **Idempotent:** re-running send-it updates the existing PR title and changelog
   entry; the Linear writeback skips issues already In Review or beyond.
 - **send-it does not bump versions or write any `CHANGELOG.md`.** release-please

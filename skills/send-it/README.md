@@ -44,6 +44,7 @@ or edit `config.json` directly.
 | `baseBranch` | The trunk the branch diff is taken against (`origin/<baseBranch>`) and the PR base. | `"main"` |
 | `shippablePaths` | Path prefixes whose changes reach consumers. A change touching any of these makes the PR **shippable** → a release-triggering `feat`/`fix`/`feat!` title. | `["skills/"]` |
 | `shippableManifestKeys` | `package.json` keys whose change is itself shippable (the published-`files` surface). A `package.json` diff touching any of these is shippable. | `["name", "version", "files", "publishConfig"]` |
+| `bundleVersioning` *(optional)* | For repos that ship many independently-versioned skill bundles. An object `{ root, manifest, skillFile }` that turns on the per-bundle version-bump check: when a bundle's content changed but its version didn't, send-it offers to bump its `manifest` `version` + `skillFile` `metadata.version` in lockstep. **Omit it in single-package repos** — the check no-ops. | unset (disabled) |
 
 A change is **shippable** iff the branch diff touches a `shippablePaths` prefix
 **or** the `package.json` diff touches a `shippableManifestKeys` key. Everything
@@ -57,8 +58,8 @@ which send-it's delegated steps read.
 ## Requirements
 
 - `git` and `gh` CLIs (`gh` authenticated — `gh auth status`).
-- Node.js ≥22 for the bundled `derive-bump.mjs` helper (Node built-ins only — no
-  npm dependencies, no build step, no `tsx`).
+- Node.js ≥22 for the bundled `derive-bump.mjs` / `check-skill-bumps.mjs` helpers
+  (Node built-ins only — no npm dependencies, no build step, no `tsx`).
 - The sibling skills `preflight` and `changelog` installed in the consumer repo;
   `linear-sync` is recommended but optional — the In Review writeback is skipped
   if it (or the Linear MCP server) is unavailable.
@@ -69,7 +70,9 @@ which send-it's delegated steps read.
 
 - It does **not** run typecheck, tests, or format checks — CI handles those. The
   only gate it runs is the change-gated `preflight` lint.
-- It does **not** bump versions or write any root `CHANGELOG.md` — release-please
-  does that from the merged Conventional-Commit PR title. send-it only writes the
-  dated `changelog/<ts>-<slug>.md` entry (the curated per-change record), which the
-  release step finalises.
+- It does **not** bump the repo/npm version or write any root `CHANGELOG.md` —
+  release-please does that from the merged Conventional-Commit PR title. send-it only
+  writes the dated `changelog/<ts>-<slug>.md` entry (the curated per-change record),
+  which the release step finalises. (With `bundleVersioning` configured it *does*
+  offer to bump a changed skill bundle's own `metadata.version` — a per-bundle label,
+  separate from the repo release.)
