@@ -299,25 +299,38 @@ function selfTest() {
     ok: threwOnFileRoot,
   });
 
-  // The git-repo guard refuses a root with no `.git` entry and accepts one with.
-  // buildFixture() created a `.git` at `root`, which apply() leaves untouched.
+  // The git-repo guard refuses a root with no `.git` entry and accepts both
+  // shapes a real root takes: buildFixture() created a `.git` directory at
+  // `root` (primary worktree), and a linked worktree carries a `.git` *file*.
   const nonGitRoot = mkdtempSync(join(tmpdir(), "cleanup-repo-fs-nongit-"));
+  const linkedWorktreeRoot = mkdtempSync(join(tmpdir(), "cleanup-repo-fs-linked-"));
+  writeFileSync(
+    join(linkedWorktreeRoot, ".git"),
+    "gitdir: /tmp/cleanup-repo-linked-worktree\n",
+  );
   let guardThrewOnNonGit = false;
   try {
     assertGitRepo(nonGitRoot);
   } catch {
     guardThrewOnNonGit = true;
   }
-  let guardAcceptedGitRoot = true;
+  let guardAcceptedGitDir = true;
   try {
     assertGitRepo(root);
   } catch {
-    guardAcceptedGitRoot = false;
+    guardAcceptedGitDir = false;
+  }
+  let guardAcceptedLinkedWorktree = true;
+  try {
+    assertGitRepo(linkedWorktreeRoot);
+  } catch {
+    guardAcceptedLinkedWorktree = false;
   }
   rmSync(nonGitRoot, { recursive: true, force: true });
+  rmSync(linkedWorktreeRoot, { recursive: true, force: true });
   cases.push({
-    name: "git-repo guard refuses a non-git root and accepts a git root",
-    ok: guardThrewOnNonGit && guardAcceptedGitRoot,
+    name: "git-repo guard refuses a non-git root, accepts a .git dir and a linked-worktree .git file",
+    ok: guardThrewOnNonGit && guardAcceptedGitDir && guardAcceptedLinkedWorktree,
   });
 
   rmSync(root, { recursive: true, force: true });
