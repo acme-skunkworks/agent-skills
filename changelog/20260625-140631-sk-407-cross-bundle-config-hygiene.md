@@ -14,7 +14,11 @@ breaking: false
 issues:
   - SK-407
 affected_packages:
+  - changelog
+  - cleanup-repo
   - infrastructure
+  - linear-sync
+  - triage-pr
 stats:
   files_changed:
   loc_added:

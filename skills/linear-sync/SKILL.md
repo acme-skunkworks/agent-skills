@@ -37,7 +37,7 @@ match the consuming repo:
 | Key | Meaning | Default |
 | --- | --- | --- |
 | `linearTeamName` | Linear team **name** used to resolve the live state IDs. Use the name, not the key — the key is renamed over time but the name is stable. | `"ACME Skunkworks"` |
-| `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. Keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW"]` |
+| `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. Keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW", "SK"]` |
 
 A neutral [`config.example.json`](config.example.json) ships alongside it as a
 template — copy it over `config.json` and fill in your values, or edit

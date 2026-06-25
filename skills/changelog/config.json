@@ -3,6 +3,6 @@
   "linearWorkspaceSlug": "goose-and-hobbes",
   "baseBranch": "main",
   "changelogDir": "changelog",
-  "packageRoots": ["apps", "packages", "services"],
+  "packageRoots": ["skills"],
   "fallbackPackage": "infrastructure"
 }
