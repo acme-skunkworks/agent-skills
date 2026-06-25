@@ -1,5 +1,8 @@
 {
   "issueKeys": ["ASW", "AKW", "SKW", "SK"],
   "linearWorkspaceSlug": "goose-and-hobbes",
-  "baseBranch": "main"
+  "baseBranch": "main",
+  "changelogDir": "changelog",
+  "packageRoots": ["apps", "packages", "services"],
+  "fallbackPackage": "infrastructure"
 }
