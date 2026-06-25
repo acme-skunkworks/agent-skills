@@ -10,6 +10,8 @@
 // The changelog directory itself is skipped — it's touched by every entry and
 // would otherwise pin `fallbackPackage` onto every package list.
 
+// Mirror config.mjs's DEFAULTS so this function works standalone (e.g. in unit
+// tests) without loading config; keep the two in sync if the defaults change.
 const DEFAULT_PACKAGE_ROOTS = ["apps", "packages", "services"];
 const DEFAULT_FALLBACK_PACKAGE = "infrastructure";
 const DEFAULT_CHANGELOG_DIR = "changelog";
@@ -38,7 +40,8 @@ export function derivePackagesFromPaths(paths, options = {}) {
     packageRoots.length > 0
       ? new RegExp(`^(?:${packageRoots.map(escapeRegex).join("|")})/([^/]+)/`)
       : null;
-  const skipPrefix = `${changelogDir}/`;
+  // Normalise a trailing slash so `changelogDir: "changelog/"` still skips.
+  const skipPrefix = `${changelogDir.replace(/\/+$/, "")}/`;
 
   const out = new Set();
   for (const changedPath of paths) {

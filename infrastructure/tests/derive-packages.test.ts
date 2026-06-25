@@ -49,6 +49,14 @@ describe("derivePackagesFromPaths", () => {
     ).toEqual(["web"]);
   });
 
+  it("tolerates a trailing slash in changelogDir", () => {
+    expect(
+      derivePackagesFromPaths(["changelog/x.md", "apps/web/y.ts"], {
+        changelogDir: "changelog/",
+      }),
+    ).toEqual(["web"]);
+  });
+
   it("with no packageRoots, everything collapses to the fallback", () => {
     expect(
       derivePackagesFromPaths(["apps/web/x.ts", "anything/else.ts"], {
