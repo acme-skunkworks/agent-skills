@@ -1,6 +1,6 @@
 ---
 description: Clean up merged Git branches and worktrees, then prune filesystem cruft — behind a single confirmation gate, with a --dry-run preview.
-allowed-tools: Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
+allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
 Clean up the repository's merged branches and worktrees, then sweep filesystem
