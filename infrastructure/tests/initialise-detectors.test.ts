@@ -5,7 +5,7 @@ import {
   parseWorkspaceGlobs,
   rootsFromGlobs,
 } from "../../skills/initialise-skills/scripts/lib/workspace.mjs";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -116,18 +116,32 @@ describe("changelog detector", () => {
     });
     expect(detect("changelog")).toEqual({ value: false });
   });
+
+  it("is false when 'changelog' is a plain file rather than a directory", () => {
+    writeFileSync(join(repoRoot, "changelog"), "not a dir\n");
+    const { detect } = createDetectors({
+      installedSkills: new Set(["send-it"]),
+      repoRoot,
+    });
+    expect(detect("changelog")).toEqual({ value: false });
+  });
 });
 
 describe("mainBranch detector", () => {
+  let repoRoot: string;
+
+  beforeEach(() => {
+    repoRoot = mkdtempSync(join(tmpdir(), "init-detect-"));
+  });
+
+  afterEach(() => {
+    rmSync(repoRoot, { force: true, recursive: true });
+  });
+
   it("mirrors the detected base branch (falls back to main with no git)", () => {
-    const repoRoot = mkdtempSync(join(tmpdir(), "init-detect-"));
-    try {
-      const { detect } = createDetectors({ repoRoot });
-      expect(detect("mainBranch")).toEqual(detect("baseBranch"));
-      expect(detect("mainBranch")).toEqual({ value: "main" });
-    } finally {
-      rmSync(repoRoot, { force: true, recursive: true });
-    }
+    const { detect } = createDetectors({ repoRoot });
+    expect(detect("mainBranch")).toEqual(detect("baseBranch"));
+    expect(detect("mainBranch")).toEqual({ value: "main" });
   });
 });
 

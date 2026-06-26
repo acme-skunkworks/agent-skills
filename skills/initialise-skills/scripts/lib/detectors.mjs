@@ -13,7 +13,7 @@
 
 import { detectBaseBranch, detectIssueKeys } from "./git.mjs";
 import { detectPackageRoots } from "./workspace.mjs";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -115,10 +115,20 @@ export function createDetectors({
     // directory already exists. A repo with neither (e.g. a private repo with no
     // release pipeline) gets `false` so send-it skips authoring entirely rather
     // than trying to follow an uninstalled skill.
+    //
+    // Like `changelogDir` / `fallbackPackage`, this always emits a value (never
+    // `null`): `false` is a real detected signal, not "couldn't detect", so the
+    // merge writes it. Contrast `bundleVersioning`, which returns `null` when
+    // disabled so the key is left untouched.
     changelog: () => ({
       value:
         installedSkills.has("changelog") ||
-        existsSync(join(repoRoot, "changelog")),
+        // A directory specifically — a plain file named `changelog` must not
+        // enable the flow. throwIfNoEntry:false returns undefined when absent.
+        (statSync(join(repoRoot, "changelog"), {
+          throwIfNoEntry: false,
+        })?.isDirectory() ??
+          false),
     }),
     // changelogDir / fallbackPackage are structural conventions with sound
     // generic defaults (mirroring the changelog bundle's own DEFAULTS) — emit
