@@ -92,6 +92,14 @@ function splitInlineItems(inner) {
       current += ch;
     }
   }
+
+  // A non-null `quote` here means the closing quote was never seen — the array
+  // body ended mid-string. Pushing `current` would fold the dangling opening
+  // quote into the parsed value; fail loudly instead.
+  if (quote !== null) {
+    throw new Error(`Unterminated quoted item in inline array: ${inner}`);
+  }
+
   items.push(current);
   return items;
 }
@@ -139,13 +147,15 @@ function collectBlock(lines, start, parentIndent) {
 // `|` keeps them; a trailing `-` strips the final newline, which we always do
 // here since the corpus only ever uses `>-`).
 function parseBlockScalar(indicator, block) {
-  if (block.length === 0) {
+  // An empty block — or one whose lines are all whitespace — has no content to
+  // dedent. `Math.min(...[])` is `Infinity`, which would slice every line down
+  // to "" and silently collapse the block, so treat both cases as empty.
+  const nonBlank = block.filter((l) => l.trim() !== "");
+  if (nonBlank.length === 0) {
     return "";
   }
 
-  const minIndent = Math.min(
-    ...block.filter((l) => l.trim() !== "").map((l) => indentOf(l)),
-  );
+  const minIndent = Math.min(...nonBlank.map((l) => indentOf(l)));
   const dedented = block.map((l) => l.slice(minIndent));
   const folded = indicator.startsWith(">");
   return folded
@@ -187,16 +197,26 @@ function parseMapping(lines, startIndent) {
         // Could be a block array, a nested mapping, or a bare null.
         if (block.length === 0) {
           data[key] = null;
-        } else if (
-          block[0].trimStart().startsWith("- ") ||
-          block[0].trim() === "-"
-        ) {
-          data[key] = block.map((l) =>
-            parseScalar(l.trimStart().replace(/^-\s?/, "")),
-          );
         } else {
-          const childIndent = indentOf(block[0]);
-          data[key] = parseMapping(block, childIndent);
+          // Decide array-vs-mapping from the first *non-blank* line: collectBlock
+          // preserves a blank line between `key:` and the first `- item`, so
+          // keying off `block[0]` would misroute such a block into parseMapping()
+          // and throw on the `- item` lines.
+          const firstContent = block.find((l) => l.trim() !== "");
+          if (
+            firstContent?.trimStart().startsWith("- ") ||
+            firstContent?.trim() === "-"
+          ) {
+            // Drop interior blank lines before mapping: a block array with blank
+            // lines between items would otherwise yield spurious `null` entries
+            // (each blank line parses as the empty scalar -> `null`).
+            data[key] = block
+              .filter((l) => l.trim() !== "")
+              .map((l) => parseScalar(l.trimStart().replace(/^-\s?/, "")));
+          } else {
+            const childIndent = indentOf(firstContent ?? block[0]);
+            data[key] = parseMapping(block, childIndent);
+          }
         }
       } else {
         data[key] = parseBlockScalar(rest, block);

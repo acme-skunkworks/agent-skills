@@ -36,7 +36,16 @@ export function findEntryByBranch(
     .filter((n) => n.endsWith(".md") && n !== "README.md")
     .map((n) => join(changelogDir, n));
   for (const entryPath of files) {
-    const { data } = parseFrontmatter(readFileSync(entryPath, "utf8"));
+    let data;
+    try {
+      ({ data } = parseFrontmatter(readFileSync(entryPath, "utf8")));
+    } catch (err) {
+      // Rethrow with the offending file named — the raw parser error carries no
+      // filename, so a malformed entry anywhere in the corpus is hard to locate.
+      throw new Error(
+        `Failed to parse changelog frontmatter in ${entryPath}: ${err.message}`,
+      );
+    }
     if (data?.branch === branch) {
       return entryPath;
     }
