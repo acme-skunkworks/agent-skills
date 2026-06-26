@@ -21,7 +21,7 @@ compatibility: >-
   `linear-sync` skills — install them alongside this one. The In Review writeback
   needs the Linear MCP server (via `linear-sync`); it is skipped if unavailable.
 metadata:
-  version: 0.2.1
+  version: 0.3.0
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
@@ -43,7 +43,7 @@ composition, push, and the PR — and delegates the rest:
 - **Lint gate** → the `preflight` skill (change-gated; no-ops when nothing
   lint-relevant changed).
 - **Changelog** → the `changelog` skill (author/update + validate; gated on
-  shippability).
+  shippability, and skipped entirely when `config.json` sets `changelog: false`).
 - **Linear In Review** → the `linear-sync` skill (resolve state by team name,
   idempotent transition).
 
@@ -56,7 +56,7 @@ handles those. The only gate it runs is the change-gated `preflight` lint.
 
 ## Configuration
 
-Three knobs live in [`config.json`](config.json) beside this file; edit your
+A few knobs live in [`config.json`](config.json) beside this file; edit your
 copied `config.json` to match the consuming repo (a neutral
 [`config.example.json`](config.example.json) ships as a template):
 
@@ -65,6 +65,7 @@ copied `config.json` to match the consuming repo (a neutral
 | `baseBranch` | The trunk the branch diff is taken against (`origin/<baseBranch>`) and the PR base. | `"main"` |
 | `shippablePaths` | Path prefixes whose changes reach consumers. A change touching any makes the PR **shippable**. | `["skills/"]` |
 | `shippableManifestKeys` | `package.json` keys whose change is itself shippable (the published-`files` surface). | `["name", "version", "files", "publishConfig"]` |
+| `changelog` *(optional)* | Whether to author a dated `changelog/` entry at all (Steps 7–8). Set `false` for repos with **no changelog flow** — no `changelog/` directory and no `changelog` skill installed (e.g. a `private` repo with no release pipeline). When `false`, send-it skips changelog authoring entirely regardless of shippability, and the shippability decision continues to drive only the PR title. **Omit it (or set `true`) whenever the `changelog` skill is installed** — the default path stays shippability-gated. | `true` |
 | `bundleVersioning` *(optional)* | Enables the per-bundle version-bump check (Step 6) for repos that ship many independently-versioned skill bundles. An object `{ root, manifest, skillFile }` naming the bundle parent dir and the manifest / skill-manifest filenames each bundle carries. **Omit it entirely in single-package repos** — the check then no-ops. | unset (disabled) |
 
 The team name, issue-ID prefixes, and workspace slug are **not** configured here —
@@ -314,6 +315,14 @@ changes) writes the dated changelog entry. It does **not** bump versions, write 
 
 ### Step 7: Author or update the dated changelog entry — delegate to the `changelog` skill
 
+> **Disabled entirely?** If `config.json` sets `changelog: false`, **skip Steps 7
+> and 8 completely** — author nothing, run no `changelog` scripts, make no
+> `docs(changelog)` commit — and note "changelog step disabled (no changelog flow in
+> this repo)" in the run summary. This is for repos with no `changelog/` directory and
+> no `changelog` skill installed; the shippability decision from Step 6 still drives
+> the PR title. When `changelog` is unset or `true`, follow the shippability gate
+> below as normal.
+>
 > **Gated on shippability.** Author a `changelog/` entry **only when the change is
 > shippable** (you composed a release-triggering `feat`/`fix`/breaking title). Skip
 > it for non-shippable changes — the dated changelog mirrors the published-change
@@ -417,6 +426,11 @@ Skip silently if `linear-sync` or the Linear MCP server is unavailable.
 
 ## Notes
 
+- **Prose follows the host repo's language convention.** Author the PR title, PR
+  body, and commit messages in the consuming repo's documented prose language. Across
+  this estate that is **British English** (`colour`, `behaviour`, `-ise`/`-yse`); the
+  `changelog` skill applies the same rule to the entry it writes. This governs prose
+  only — never identifiers, dependency names, or upstream API field names.
 - **Trunk-based:** PRs target the base branch (`config.json` `baseBranch`, or
   `--base` for this run).
 - **send-it bumps only per-bundle versions, never the repo version.** The optional

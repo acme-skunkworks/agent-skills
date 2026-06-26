@@ -10,9 +10,11 @@ detector serves every skill that uses a key. A key found in a skill's
 | `issueKeys` | changelog, cleanup-repo, linear-sync | Leading `<KEY>-<num>` parsed from `git branch -a` (2+ letters, uppercased, de-duplicated); or supplied facts | `needs-manual-input` when no branches match |
 | `linearTeamName` | cleanup-repo, linear-sync | Supplied via stdin `facts` (Linear MCP `list_teams`) | `needs-manual-input` |
 | `linearWorkspaceSlug` | changelog | Supplied via stdin `facts` (Linear MCP) | `needs-manual-input` |
+| `changelog` | send-it | `true` when the `changelog` skill is installed alongside or a `changelog/` directory exists; `false` when the repo has neither (no changelog flow) | `true` |
 | `changelogDir` | changelog | Structural default | `changelog` |
 | `packageRoots` | changelog | `pnpm-workspace.yaml` `packages:` globs → top dirs; else root `package.json` `workspaces` field | `["apps", "packages", "services"]` |
 | `fallbackPackage` | changelog | Structural default | `infrastructure` |
+| `mainBranch` | cleanup-repo | Same as `baseBranch` (the detected default branch) | `main` |
 | `protectedBranches` | cleanup-repo | Structural default | `["main"]` |
 | `shippablePaths` | send-it | Root `package.json` `files` field (paths npm ships), else detected package roots | `[]` |
 | `shippableManifestKeys` | send-it | Fixed | `["name", "version", "files", "publishConfig"]` |

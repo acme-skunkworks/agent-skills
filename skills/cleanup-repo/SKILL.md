@@ -15,7 +15,7 @@ compatibility: >-
   Linear MCP server; if it is unavailable, skip that step silently. The
   filesystem pass needs Node.js ≥22.
 metadata:
-  version: 0.1.3
+  version: 0.2.0
 allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
@@ -32,7 +32,7 @@ rationale and the deliberately-deferred future extensions.
 
 ## Configuration
 
-Three knobs live in [`config.json`](config.json) beside this file. Read it at the
+Four knobs live in [`config.json`](config.json) beside this file. Read it at the
 start of a run and use its values throughout. Edit your copied `config.json` to
 match the consuming repo:
 
@@ -40,6 +40,7 @@ match the consuming repo:
 | --- | --- | --- |
 | `linearTeamName` | Linear team **name** used to resolve the live `Done` state. Use the name, not the key — the key is renamed over time but the name is stable. | `"ACME Skunkworks"` |
 | `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. Keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW"]` |
+| `mainBranch` | The trunk a branch must be merged into to count as merged — both passes diff against `origin/<mainBranch>`. Set it for repos whose trunk is `master`, `develop`, or similar. | `"main"` |
 | `protectedBranches` | Branches that are **never** deleted, locally or remotely. | `["main"]` |
 
 Build the issue-ID regex by joining `issueKeys` with `|`:
@@ -87,7 +88,8 @@ git worktree list
 
 - List all worktrees except the main repository directory (the primary working
   directory is never removed).
-- Identify worktrees whose branch is fully merged into `main`.
+- Identify worktrees whose branch is fully merged into the trunk
+  (`origin/<mainBranch>`, default `origin/main`).
 - Identify worktrees in detached-HEAD state — treat as abandoned, safe to remove.
 - Identify worktrees with uncommitted changes: `git -C <path> status --porcelain`
   non-empty. These are surfaced separately in Step 6 and **never removed
@@ -100,15 +102,16 @@ git worktree list
 
 **Pass 1 — Git-merged branches:**
 
-- Find local branches merged into `main`: `git branch --merged origin/main`.
+- Find local branches merged into the trunk:
+  `git branch --merged origin/<mainBranch>` (default `origin/main`).
 - Exclude every branch in `protectedBranches`.
 - Determine which of those branches also still exist on the remote.
 
 **Pass 2 — Squash-merged branches:**
 
-A squash merge lands a single new commit on `main`, so the branch's own commits
-are never ancestors of `main` and `git branch --merged` misses it. For each local
-branch **not** caught in Pass 1 (and not protected):
+A squash merge lands a single new commit on the trunk, so the branch's own commits
+are never ancestors of `origin/<mainBranch>` and `git branch --merged` misses it.
+For each local branch **not** caught in Pass 1 (and not protected):
 
 ```bash
 gh pr list --head <branch-name> --state merged --json number,title --limit 1
@@ -289,8 +292,8 @@ set to `Done` (if any). List the names of deleted items.
 - **Dry-run** previews without deleting (`--dry-run`).
 - **Confirmation required** before any deletion (single bulk gate).
 - **Protected branches** (`protectedBranches`) are never touched.
-- **Merged only**: a branch is deleted only if merged into `main` via git
-  ancestry **or** a merged GitHub PR (squash merges).
+- **Merged only**: a branch is deleted only if merged into the trunk
+  (`origin/<mainBranch>`) via git ancestry **or** a merged GitHub PR (squash merges).
 - **Worktrees first**, then branches; filesystem pass last.
 - **Uncommitted worktrees** are never force-removed automatically.
 - **`.git/` and the main worktree** are never touched.

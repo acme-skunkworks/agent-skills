@@ -16,7 +16,7 @@ compatibility: >-
   `preflight-changelog-ci.mjs` step assumes the consumer repo uses pnpm with a
   committed lockfile; skip it if yours does not.
 metadata:
-  version: 0.2.5
+  version: 0.2.6
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(node:*), Bash(pnpm:*)
 ---
 
@@ -121,6 +121,11 @@ Only include headings that have entries. For multi-package changes use
 
 If `breaking: true`, the body MUST start with a `## Breaking` section describing
 the change and the migration path.
+
+Write the `title`, `release_note`, and body prose in the consuming repo's documented
+prose language. Across this estate that is **British English** (`colour`, `behaviour`,
+`-ise`/`-yse`) — prose only, never identifiers, dependency names, or upstream API
+field names.
 
 ### Step 5 — Write or update the file
 

@@ -141,6 +141,7 @@ function main() {
   const { acceptDrift, facts } = readStdinPayload();
   const skills = discoverSkills(options.skillsDir);
   const { detect } = createDetectors({
+    installedSkills: new Set(skills.map((skill) => skill.name)),
     linearFacts: facts,
     repoRoot: options.repoRoot,
   });

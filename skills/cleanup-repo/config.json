@@ -1,5 +1,6 @@
 {
   "linearTeamName": "ACME Skunkworks",
   "issueKeys": ["ASW", "AKW", "SKW", "SK"],
+  "mainBranch": "main",
   "protectedBranches": ["main"]
 }
