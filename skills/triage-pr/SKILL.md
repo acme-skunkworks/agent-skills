@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.3.0
+  version: 0.3.1
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
 ---
 
@@ -272,6 +272,10 @@ node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision accept --s
 # declined finding:
 node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision decline --reason "<technical reasoning>" --bots "claude,cursor,coderabbitai"
 ```
+
+`respond-threads.mjs --help` prints the full subcommand/flag usage, and
+`respond-threads.mjs --self-test` runs the bundled offline assertions (no
+network, no `gh`) — a quick way to confirm the script is healthy after install.
 
 Resolving uses GitHub's GraphQL `resolveReviewThread` — the only per-thread
 programmatic resolve, idempotent on an already-resolved thread. Do **not** use the

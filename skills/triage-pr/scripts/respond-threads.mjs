@@ -804,11 +804,32 @@ function selfTest() {
 /**
  * CLI entry: dispatch to a subcommand.
  */
+const USAGE = `respond-threads — reply to and resolve AI review threads on a PR
+
+Usage:
+  respond-threads thread  --thread <PRRT_id> --decision <accept|decline|outdated> [--sha <sha>] [--reason <text>] [--reply-on-accept <true|false>] [--bots <csv>] [--dry-run]
+  respond-threads summary --pr <number> --findings <json> [--repo <owner/name>] [--dry-run]
+  respond-threads --self-test
+  respond-threads --help
+
+Subcommands:
+  thread     Reply to and resolve a single review thread by its decision.
+  summary    Upsert the consolidated issue-level acknowledgement comment.
+
+Other:
+  --dry-run    Print the planned gh calls and change nothing (no replies, no resolves).
+  --self-test  Run the built-in offline assertions (no network).
+  --help, -h   Show this message.`;
+
 function main() {
   const argv = process.argv.slice(2);
   const command = argv[0];
   if (command === "--self-test") {
     selfTest();
+    return;
+  }
+  if (command === "--help" || command === "-h") {
+    console.log(USAGE);
     return;
   }
 
@@ -819,7 +840,7 @@ function main() {
       runSummary(parseArgs(argv.slice(1), SUMMARY_FLAGS));
     } else {
       throw new Error(
-        `unknown command: ${command ?? "(none)"} — expected thread | summary | --self-test`,
+        `unknown command: ${command ?? "(none)"} — expected thread | summary | --self-test | --help`,
       );
     }
   } catch (error) {
