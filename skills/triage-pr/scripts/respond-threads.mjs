@@ -44,7 +44,25 @@ export const SUMMARY_MARKER = "<!-- triage-pr:summary-ack -->";
 const DECISIONS = new Set(["accept", "decline", "outdated"]);
 const STATUSES = new Set(["accepted", "declined", "out-of-scope"]);
 
+// Mirrors review-threads.mjs: GraphQL returns bot logins WITHOUT the `[bot]`
+// suffix, so config written either way still matches.
+const DEFAULT_BOTS = ["claude", "cursor", "coderabbitai"];
+
 // ---- pure transform (no network) ----------------------------------------
+
+/**
+ * True when a thread's author is one of the configured review bots (suffix-
+ * insensitive). The `thread` CLI derives human-vs-bot from this so a human
+ * thread is never auto-actioned even if its id reaches the mutating path.
+ */
+function normaliseBot(value) {
+  return String(value ?? "").replace(/\[bot\]$/, "");
+}
+
+export function isReviewBotAuthor(login, bots = DEFAULT_BOTS) {
+  const set = new Set(bots.map(normaliseBot));
+  return set.has(normaliseBot(login));
+}
 
 /**
  * True when a comment/reply body carries one of our acknowledgement markers.
@@ -267,7 +285,14 @@ export function parseArgs(argv, allowed) {
 
 // The flags each subcommand accepts (camelCased), passed to parseArgs so an
 // unrecognised flag throws rather than being silently ignored.
-const THREAD_FLAGS = ["thread", "decision", "sha", "reason", "replyOnAccept"];
+const THREAD_FLAGS = [
+  "thread",
+  "decision",
+  "sha",
+  "reason",
+  "replyOnAccept",
+  "bots",
+];
 const SUMMARY_FLAGS = ["pr", "repo", "findings"];
 
 /**
@@ -439,16 +464,28 @@ function runThread(options) {
   }
 
   const replyOnAccept = parseReplyOnAccept(options.replyOnAccept);
+  const bots = options.bots
+    ? options.bots
+        .split(",")
+        .map((bot) => bot.trim())
+        .filter(Boolean)
+    : DEFAULT_BOTS;
 
   // On a real run, feed the thread's existing comments into the planner so a
   // retry (e.g. the reply landed but a prior resolve failed) is recognised as
   // already-handled and doesn't double-post. Dry-run stays network-free.
   const comments = options.dryRun ? undefined : fetchThreadComments(threadId);
+  // Defence in depth: classify the thread from its author against the configured
+  // review bots, so a human thread id reaching this CLI path is skipped, never
+  // auto-actioned. Only derivable on a real run (comments fetched).
+  const isHuman =
+    comments !== undefined && !isReviewBotAuthor(comments[0]?.author, bots);
   const [action] = planThreadResponses(
     [
       {
         comments,
         decision,
+        isHuman,
         reason: options.reason,
         sha: options.sha,
         threadId,
@@ -738,6 +775,13 @@ function selfTest() {
           return true;
         }
       })(),
+    },
+    {
+      name: "isReviewBotAuthor matches bots (suffix-insensitive), rejects humans",
+      ok:
+        isReviewBotAuthor("coderabbitai", ["coderabbitai"]) === true &&
+        isReviewBotAuthor("claude[bot]", ["claude"]) === true &&
+        isReviewBotAuthor("RobEasthope", ["claude", "coderabbitai"]) === false,
     },
   ];
 

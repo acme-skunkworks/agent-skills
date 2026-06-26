@@ -12,6 +12,7 @@ import {
   buildReplyBody,
   findExistingAckComment,
   hasMarker,
+  isReviewBotAuthor,
   parseArgs,
   parseReplyOnAccept,
   planThreadResponses,
@@ -181,6 +182,24 @@ describe("findExistingAckComment — upsert detection", () => {
     expect(
       findExistingAckComment([{ body: THREAD_MARKER, id: 9, user: "me" }]),
     ).toBeNull();
+  });
+});
+
+describe("isReviewBotAuthor — CLI human/bot guardrail", () => {
+  it("matches a configured bot login", () => {
+    expect(isReviewBotAuthor("coderabbitai", ["coderabbitai"])).toBe(true);
+  });
+
+  it("normalises the [bot] suffix on either side", () => {
+    expect(isReviewBotAuthor("claude[bot]", ["claude"])).toBe(true);
+    expect(isReviewBotAuthor("claude", ["claude[bot]"])).toBe(true);
+  });
+
+  it("rejects a human author so the thread is treated as human", () => {
+    expect(isReviewBotAuthor("RobEasthope", ["claude", "coderabbitai"])).toBe(
+      false,
+    );
+    expect(isReviewBotAuthor(undefined, ["claude"])).toBe(false);
   });
 });
 

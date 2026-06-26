@@ -224,15 +224,17 @@ Apply the six-step reception (full rules in
 
 The bundled `respond-threads.mjs` is the write side (its path is **relative to
 this skill's directory**, like `review-threads.mjs`). It builds the reply body
-(carrying a hidden idempotency marker), honours `replyOnAccept`, never actions a
-human thread, and skips any thread already bearing our marker, then runs the
-reply + resolve mutations. Add `--dry-run` to preview without writing:
+(carrying a hidden idempotency marker), honours `replyOnAccept`, and skips any
+thread already bearing our marker, then runs the reply + resolve mutations. Pass
+`--bots` (the same `config.reviewBots` list) so it classifies the thread's author
+and **refuses to action a human thread** even if its id is passed by mistake. Add
+`--dry-run` to preview without writing:
 
 ```bash
 # accepted finding, after its fix is pushed and proven/green:
-node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision accept --sha <sha>
+node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision accept --sha <sha> --bots "claude,cursor,coderabbitai"
 # declined finding:
-node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision decline --reason "<technical reasoning>"
+node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision decline --reason "<technical reasoning>" --bots "claude,cursor,coderabbitai"
 ```
 
 Resolving uses GitHub's GraphQL `resolveReviewThread` — the only per-thread
