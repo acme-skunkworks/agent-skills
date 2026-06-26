@@ -88,6 +88,13 @@ export function splitFrontmatter(raw) {
 }
 
 function main() {
+  // --check (alias --dry-run): report which files would be rewritten and write
+  // nothing. Exit 0 when nothing would change, 1 when a rewrite is needed —
+  // prettier-style, so CI can gate on it.
+  const check = argv
+    .slice(2)
+    .some((argument) => argument === "--check" || argument === "--dry-run");
+
   let stat;
   try {
     stat = statSync(CHANGELOG_DIR);
@@ -111,10 +118,19 @@ function main() {
     const { body, fm } = splitFrontmatter(raw);
     const next = rewriteBody(body);
     if (next !== body) {
-      writeFileSync(file, fm + next);
+      if (!check) {
+        writeFileSync(file, fm + next);
+      }
       touched++;
-      console.log(`rewrote: ${file}`);
+      console.log(check ? `[check] would rewrite: ${file}` : `rewrote: ${file}`);
     }
+  }
+
+  if (check) {
+    console.log(
+      `[check] Linear link rewriting: ${touched} file(s) would be updated.`,
+    );
+    process.exit(touched > 0 ? 1 : 0);
   }
 
   console.log(`Linear link rewriting complete. ${touched} file(s) updated.`);
