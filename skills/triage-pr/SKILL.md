@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.1.2
+  version: 0.2.0
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
 ---
 
@@ -44,7 +44,7 @@ for the full review-reception and verification rules folded into Phase B.
 
 ## Configuration
 
-Two knobs live in [`config.json`](config.json) beside this file. Read it at the
+Three knobs live in [`config.json`](config.json) beside this file. Read it at the
 start of a run and use its values throughout. Edit your copied `config.json` to
 match the consuming repo's review bots.
 
@@ -52,6 +52,7 @@ match the consuming repo's review bots.
 | --- | --- | --- |
 | `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback. Matched against `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match (the GraphQL API returns the bare form). Edit to match your install — review-bot logins vary per repo. `github-actions` is deliberately excluded by default: it posts CI status and release-PR comments, not code review, so Phase B would otherwise action them as findings; add it only if your install genuinely posts review-type comments via the Actions bot. | `["claude", "cursor", "coderabbitai"]` |
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers. Bounds the fix-and-watch loop so it can't spin forever. | `5` |
+| `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before the thread is resolved (the audit trail). `false` resolves accepted threads silently for maintainers who dislike bot-reply noise — declines always reply with reasoning regardless. | `true` |
 
 Only the configured `reviewBots` are actioned in Phase B. Human review comments
 are surfaced in the final report but never auto-actioned, replied to, or
@@ -195,7 +196,7 @@ It prints minimal JSON with three groups:
 
 Resolved threads are filtered out so the context stays small. Empty
 `unresolvedThreads` **and** no AI summary → report "no actionable AI review
-feedback" and skip to Step 10.
+feedback" and skip to Step 11.
 
 ### Step 8 — Phase B: validate each finding before touching code
 
@@ -208,16 +209,37 @@ Apply the six-step reception (full rules in
    the issue is real and not already handled. Never trust the bot's framing.
 4. **EVALUATE** — is it correct, in-scope, and not a YAGNI or architecture
    violation?
-5. **RESPOND** — for a decline, reply on the thread with concise **technical
-   reasoning** and resolve it; for an accepted finding, note the planned fix. No
-   sycophancy ("You're absolutely right!", "Great point!") — state facts.
-6. **IMPLEMENT** accepted findings one at a time (Step 9).
+5. **RESPOND** symmetrically — every actioned thread ends **replied-to and
+   resolved**, so nothing is resolved silently:
+   - **Decline** → reply with concise **technical reasoning**, then resolve.
+   - **Accept** → resolve only **after** the fix is pushed and its proving
+     command passes (and, when the PR is ready, that fix's CI round is green —
+     see Step 9), with a factual reply referencing the fixing commit
+     (`Addressed in <sha>.`). When `replyOnAccept` is `false`, resolve without the
+     reply.
+   - **Outdated** (cited code is gone) → resolve without a reply.
 
-Reply and resolve:
+   No sycophancy ("You're absolutely right!", "Great point!") — state facts.
+6. **IMPLEMENT** accepted findings one at a time (Step 9), then reply+resolve.
+
+The bundled `respond-threads.mjs` is the write side (its path is **relative to
+this skill's directory**, like `review-threads.mjs`). It builds the reply body
+(carrying a hidden idempotency marker), honours `replyOnAccept`, never actions a
+human thread, and skips any thread already bearing our marker, then runs the
+reply + resolve mutations. Add `--dry-run` to preview without writing:
 
 ```bash
-gh api graphql -f query='mutation($id:ID!){ resolveReviewThread(input:{threadId:$id}){ thread { isResolved } } }' -f id='<threadId>'
+# accepted finding, after its fix is pushed and proven/green:
+node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision accept --sha <sha>
+# declined finding:
+node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision decline --reason "<technical reasoning>"
 ```
+
+Resolving uses GitHub's GraphQL `resolveReviewThread` — the only per-thread
+programmatic resolve, idempotent on an already-resolved thread. Do **not** use the
+bulk `@coderabbitai resolve`: it resolves *every* CodeRabbit thread at once,
+including declined or not-yet-handled ones (see
+[`references/review-discipline.md`](references/review-discipline.md)).
 
 ### Step 9 — Phase B: apply accepted fixes, then re-run Phase A
 
@@ -226,16 +248,44 @@ gh api graphql -f query='mutation($id:ID!){ resolveReviewThread(input:{threadId:
 - Commit and push, then **return to Step 2** — a new push re-fires CI, and AI
   review re-fires too (the PR is ready), producing fresh threads and an updated
   sticky comment.
-- Loop Phase B ↔ Phase A until CI is green **and** no unresolved AI threads
-  remain (or every remaining one has been declined with reasoning and resolved).
+- **Resolve an accepted thread only once that fix's CI round is green** (Step 6),
+  not optimistically on push — a fix that regresses in CI must not leave a
+  resolved thread behind. Decline/outdated threads resolve immediately (no code
+  rides on them).
+- **Convergence.** Loop Phase B ↔ Phase A until CI is green **and** every bot
+  thread is *handled* — resolved-by-us (accept, post-CI-green), declined+resolved,
+  or a human thread (never auto-actioned) — with **no accepted fix still awaiting
+  CI-green**. Because each push re-triggers review, the idempotency marker is what
+  makes this terminate: already-handled threads are skipped on the next pass, so
+  only genuinely new findings are actioned. The whole loop stays bounded by
+  `maxCiRounds`.
 
-### Step 10 — Report
+### Step 10 — Phase B: acknowledge issue-level review comments
+
+Findings that arrive as **issue-level comments** — Claude's whole-review comment,
+CodeRabbit's sticky summary (`aiSummaryComments` from Step 7) — have no resolvable
+per-finding thread, so the thread machinery above never touches them. Once the
+thread loop has converged, acknowledge them on the PR with **one consolidated
+comment** mapping each finding → `accepted (<sha>)` / `declined (<reason>)` /
+`out-of-scope (<ticket>)`:
+
+```bash
+node scripts/respond-threads.mjs summary --pr <pr> --findings '[{"title":"…","status":"accepted","reference":"<sha>"}]'
+```
+
+It carries a hidden marker and is **upserted in place** — a re-run edits the same
+comment rather than posting a duplicate. Acknowledge each issue-level finding only
+once here (not per sub-point of a checklist review — that is noise). Skip this step
+entirely when there were no issue-level findings to map.
+
+### Step 11 — Report
 
 Summarise:
 
 - Checks fixed, each with the failing command it addressed.
-- Findings accepted and fixed.
+- Findings accepted and fixed (with the resolving commit).
 - Findings declined, each with the technical reasoning given.
+- Issue-level findings acknowledged in the consolidated comment.
 - Base merges/rebases performed.
 - Remaining blockers (if `maxCiRounds` was exhausted).
 - Final CI state, with the proving command's output.
@@ -282,9 +332,13 @@ Summarise:
   error) → report it and fall back to `gh pr view <pr> --json reviews,comments`.
   Never treat "couldn't fetch" as "no findings".
 - A finding cites a file or line that no longer exists (outdated thread) → note it
-  as outdated and resolve it without a code change.
-- `resolveReviewThread` fails on permissions → fall back to a plain reply with the
-  reasoning rather than aborting.
+  as outdated and resolve it without a code change (`--decision outdated`).
+- `respond-threads.mjs` exits non-zero (reply or resolve mutation fails on
+  permissions) → fall back to a manual `gh api graphql` reply with the reasoning
+  rather than aborting; the marker convention still applies so a later run skips it.
+- The consolidated `summary` upsert can't find prior comments (REST page cap, ~100)
+  → it posts a fresh comment; harmless, just avoid hand-deleting the marker so the
+  next run can find and edit it.
 
 ## Arguments
 
