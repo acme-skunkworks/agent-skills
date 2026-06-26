@@ -193,7 +193,9 @@ gh pr checks <pr> --watch
      and require `humanThreads` empty. (On a draft, `unresolvedThreads` is empty
      anyway — AI review hasn't run — so this gate is specifically about humans who
      reviewed the draft.)
-  3. **No unresolved base drift** — `mergeStateStatus` is not `BEHIND` / `DIRTY`
+  3. **No unresolved base drift** — re-fetch `mergeStateStatus` **fresh** right before
+     the flip (`gh pr view <pr> --json mergeStateStatus`), not the Step 1 snapshot: an
+     intervening Phase A push can have changed it. Require it not `BEHIND` / `DIRTY`
      (Phase A's Step 5 resolves in-scope drift; if it persists, do **not** promote —
      report it as a blocker).
 
