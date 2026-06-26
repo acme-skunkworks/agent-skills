@@ -32,7 +32,7 @@ rationale and the deliberately-deferred future extensions.
 
 ## Configuration
 
-Three knobs live in [`config.json`](config.json) beside this file. Read it at the
+Four knobs live in [`config.json`](config.json) beside this file. Read it at the
 start of a run and use its values throughout. Edit your copied `config.json` to
 match the consuming repo:
 
