@@ -307,11 +307,12 @@ function main() {
   const failedLinters = [];
 
   if (scope.codeChanged) {
-    console.log(
-      dryRun
-        ? "preflight: [dry-run] would run scoped ESLint (code changed on branch)"
-        : "preflight: running scoped ESLint (code changed on branch)",
-    );
+    // Like markdownlint/actionlint below, suppress this outer header under
+    // --dry-run — the per-group "[dry-run] would run ESLint (label)" lines say it.
+    if (!dryRun) {
+      console.log("preflight: running scoped ESLint (code changed on branch)");
+    }
+
     const groups = [
       runEslintGroup("scripts", scope.eslint.scripts),
       runEslintGroup("root", scope.eslint.root),

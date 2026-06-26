@@ -163,9 +163,16 @@ entry is already up to date and `1` when a rewrite is needed (prettier-`--check`
 style, so CI can gate on it):
 
 ```bash
-node skills/changelog/scripts/set-affected-packages.mjs --check
-node skills/changelog/scripts/add-links.mjs --check
+node skills/changelog/scripts/set-affected-packages.mjs --check   # current branch's entry only
+node skills/changelog/scripts/add-links.mjs --check               # ALL entries in the changelog dir
 ```
+
+Mind the scope difference: `set-affected-packages.mjs` is branch-scoped (it
+derives from the current branch diff), whereas `add-links.mjs` enriches **every**
+entry in the changelog directory in all modes — so its `--check` validates a
+full-repo enrichment pass and can exit `1` on a historical entry. Use it to
+confirm the directory is fully enriched, not as a per-PR gate for one branch's
+entry.
 
 ### Step 6 — Validate against the contract
 
