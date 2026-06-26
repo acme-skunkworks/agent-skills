@@ -98,6 +98,13 @@ function changedPaths(base) {
 }
 
 function main() {
+  // --check (alias --dry-run): report what would change and write nothing.
+  // Exit 0 when already up to date, 1 when a rewrite is needed — prettier-style,
+  // so CI can gate on it.
+  const check = process.argv
+    .slice(2)
+    .some((argument) => argument === "--check" || argument === "--dry-run");
+
   const config = loadConfig();
   const BASE_REF =
     process.env.BASE_REF?.trim() || `origin/${config.baseBranch}`;
@@ -125,8 +132,22 @@ function main() {
   // Rebuild in canonical field order via the guarded helper, which refuses to
   // write when the parse yielded empty/branch-less data (a destructive overwrite).
   const fm = buildAffectedPackagesFrontmatter(parsed.data, packages);
+  const next = stringifyFrontmatter(parsed.content, fm);
 
-  writeFileSync(file, stringifyFrontmatter(parsed.content, fm));
+  if (check) {
+    if (next === raw) {
+      console.log(`affected_packages already up to date on ${file}`);
+      console.log(`  affected_packages=${JSON.stringify(packages)}`);
+      process.exit(0);
+    }
+
+    console.log(`[check] would set affected_packages on ${file}`);
+    console.log(`  branch=${branch} base=${BASE_REF}`);
+    console.log(`  affected_packages=${JSON.stringify(packages)}`);
+    process.exit(1);
+  }
+
+  writeFileSync(file, next);
 
   console.log(`Set affected_packages on ${file}`);
   console.log(`  branch=${branch} base=${BASE_REF}`);

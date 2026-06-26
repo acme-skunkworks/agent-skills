@@ -15,7 +15,7 @@ compatibility: >-
   read needs the `git` CLI. If the Linear MCP server is unavailable the skill
   cannot run — it has no non-MCP fallback.
 metadata:
-  version: 0.1.3
+  version: 0.2.0
 allowed-tools: Read, Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
@@ -42,6 +42,30 @@ match the consuming repo:
 A neutral [`config.example.json`](config.example.json) ships alongside it as a
 template — copy it over `config.json` and fill in your values, or edit
 `config.json` directly.
+
+## Usage modes
+
+`--dry-run` is passed through `$ARGUMENTS` (the agent reads it), matching the
+`--dry-run` "preview, change nothing" convention used across the other skills.
+
+**Normal** — resolve state IDs, extract the branch's issue IDs, apply the
+transition, and report what moved:
+
+```bash
+linear-sync
+```
+
+**Dry run** — resolve state IDs and each issue's current state, report the
+intended transition (or skip reason) per issue, and exit **without any
+`save_issue` call**:
+
+```bash
+linear-sync --dry-run
+```
+
+Under `--dry-run` the resolve + read steps still run (they are read-only), so the
+preview is accurate; only the `save_issue` write in the transition step is
+skipped. End the report with `DRY RUN — no issues were changed.`
 
 ## Resolving state IDs (do this once per run)
 
@@ -82,6 +106,11 @@ silently.
 
 Apply a transition by calling `mcp__linear-server__save_issue` with
 `state: "<target>"` (or the resolved state ID).
+
+**Under `--dry-run`, skip this `save_issue` call.** Still read each issue's
+current state with `get_issue` and decide whether it _would_ transition, but
+report the intended move (e.g. `ASW-7: Todo → In Progress (would apply)` /
+`ASW-9: In Review (would skip — already at/past target)`) instead of writing it.
 
 > `Canceled` is the Linear API's own US spelling — keep it as-is when referenced
 > in code or config.

@@ -267,15 +267,18 @@ function main() {
     console.log(
       `preflight: no files changed vs origin/${baseBranch} — skipping lint preflight`,
     );
-    const earlySummary = buildSummary(
-      scope,
-      { actionlintStatus: "skipped" },
-      {
-        introduced: [],
-        preExisting: [],
-      },
-    );
-    writeFileSync(SUMMARY_PATH, `${JSON.stringify(earlySummary, null, 2)}\n`);
+    if (!dryRun) {
+      const earlySummary = buildSummary(
+        scope,
+        { actionlintStatus: "skipped" },
+        {
+          introduced: [],
+          preExisting: [],
+        },
+      );
+      writeFileSync(SUMMARY_PATH, `${JSON.stringify(earlySummary, null, 2)}\n`);
+    }
+
     process.exit(0);
   }
 
@@ -283,15 +286,18 @@ function main() {
     console.log(
       "preflight: no lintable changes (code/markdown/workflows) — skipping lint preflight",
     );
-    const earlySummary = buildSummary(
-      scope,
-      { actionlintStatus: "skipped" },
-      {
-        introduced: [],
-        preExisting: [],
-      },
-    );
-    writeFileSync(SUMMARY_PATH, `${JSON.stringify(earlySummary, null, 2)}\n`);
+    if (!dryRun) {
+      const earlySummary = buildSummary(
+        scope,
+        { actionlintStatus: "skipped" },
+        {
+          introduced: [],
+          preExisting: [],
+        },
+      );
+      writeFileSync(SUMMARY_PATH, `${JSON.stringify(earlySummary, null, 2)}\n`);
+    }
+
     process.exit(0);
   }
 
@@ -301,7 +307,12 @@ function main() {
   const failedLinters = [];
 
   if (scope.codeChanged) {
-    console.log("preflight: running scoped ESLint (code changed on branch)");
+    // Like markdownlint/actionlint below, suppress this outer header under
+    // --dry-run — the per-group "[dry-run] would run ESLint (label)" lines say it.
+    if (!dryRun) {
+      console.log("preflight: running scoped ESLint (code changed on branch)");
+    }
+
     const groups = [
       runEslintGroup("scripts", scope.eslint.scripts),
       runEslintGroup("root", scope.eslint.root),
@@ -331,7 +342,10 @@ function main() {
   let actionlintStatus = "skipped";
   let markdownlintStatus = "skipped";
   if (scope.markdownChanged) {
-    console.log("preflight: running scoped markdownlint");
+    if (!dryRun) {
+      console.log("preflight: running scoped markdownlint");
+    }
+
     const md = runMarkdownlint(scope.markdown);
     markdownlintStatus = md.markdownlint ?? "ran";
     if (!md.skipped && !md.dryRun && md.markdownlint !== "warn-skipped") {
@@ -353,7 +367,12 @@ function main() {
 
   if (scope.workflowsChanged) {
     const targetCount = scope.actionlintTargets.length;
-    console.log(`preflight: running actionlint on ${targetCount} workflow(s)`);
+    if (!dryRun) {
+      console.log(
+        `preflight: running actionlint on ${targetCount} workflow(s)`,
+      );
+    }
+
     const wf = runActionlint(scope.actionlintTargets);
     actionlintStatus = wf.actionlint ?? "ran";
     if (!wf.skipped && !wf.dryRun && wf.actionlint !== "warn-skipped") {
@@ -382,12 +401,15 @@ function main() {
     { actionlintStatus, failedLinters, markdownlintStatus },
     classified,
   );
-  writeFileSync(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
+  // --dry-run is a true preview: skip the summary write the ship flow reads.
+  if (!dryRun) {
+    writeFileSync(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
+  }
 
   console.log("");
   console.log("preflight: summary");
   console.log(
-    `  categories: eslint=${scope.codeChanged ? "ran" : "skipped"} markdown=${markdownlintStatus} actionlint=${actionlintStatus}`,
+    `  categories: eslint=${scope.codeChanged ? (dryRun ? "would-run" : "ran") : "skipped"} markdown=${markdownlintStatus} actionlint=${actionlintStatus}`,
   );
   if (!dryRun) {
     console.log(

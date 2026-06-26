@@ -16,7 +16,7 @@ compatibility: >-
   `preflight-changelog-ci.mjs` step assumes the consumer repo uses pnpm with a
   committed lockfile; skip it if yours does not.
 metadata:
-  version: 0.2.6
+  version: 0.3.0
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(node:*), Bash(pnpm:*)
 ---
 
@@ -156,6 +156,23 @@ node skills/changelog/scripts/add-links.mjs               # rewrites bare issue 
 ```
 
 Adjust the path prefix if you installed the skill to a different location.
+
+Both enrichment scripts also accept `--check` (alias `--dry-run`) — a read-only
+preview that reports what would change and writes nothing, exiting `0` when the
+entry is already up to date and `1` when a rewrite is needed (prettier-`--check`
+style, so CI can gate on it):
+
+```bash
+node skills/changelog/scripts/set-affected-packages.mjs --check   # current branch's entry only
+node skills/changelog/scripts/add-links.mjs --check               # ALL entries in the changelog dir
+```
+
+Mind the scope difference: `set-affected-packages.mjs` is branch-scoped (it
+derives from the current branch diff), whereas `add-links.mjs` enriches **every**
+entry in the changelog directory in all modes — so its `--check` validates a
+full-repo enrichment pass and can exit `1` on a historical entry. Use it to
+confirm the directory is fully enriched, not as a per-PR gate for one branch's
+entry.
 
 ### Step 6 — Validate against the contract
 

@@ -155,9 +155,13 @@ export function createDetectors({
     mainBranch: () => ({ value: detect("baseBranch").value }),
     maxCiRounds: () => ({ value: MAX_CI_ROUNDS }),
     packageRoots: () => ({ value: detectPackageRoots(repoRoot) }),
+    // No repo signal; emit triage-pr's opt-in-off default (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
+    promoteOnGreen: () => ({ value: false }),
     // Protect the detected default branch, not a hard-coded "main", so a
     // master/develop repo gets a consistent result.
     protectedBranches: () => ({ value: [detect("baseBranch").value] }),
+    // No repo signal; emit triage-pr's own default (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
+    replyOnAccept: () => ({ value: true }),
     reviewBots: () => ({ value: [...REVIEW_BOTS] }),
     shippableManifestKeys: () => ({ value: [...SHIPPABLE_MANIFEST_KEYS] }),
     // Reuse the memoised packageRoots detection rather than re-reading
