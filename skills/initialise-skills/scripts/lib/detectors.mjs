@@ -155,17 +155,12 @@ export function createDetectors({
     mainBranch: () => ({ value: detect("baseBranch").value }),
     maxCiRounds: () => ({ value: MAX_CI_ROUNDS }),
     packageRoots: () => ({ value: detectPackageRoots(repoRoot) }),
-    // triage-pr's two boolean knobs have no repo signal to detect, but they DO
-    // have safe, well-defined defaults that mirror the skill's own config.example
-    // — so emit those rather than flagging `needs-manual-input` on every run. Both
-    // always return a value (never `null`), exactly like `maxCiRounds` /
-    // `reviewBots`: a deliberate edit later reads as `drift` and is kept.
-    // `promoteOnGreen` defaults off — auto-promotion is opt-in.
+    // No repo signal; emit triage-pr's opt-in-off default (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
     promoteOnGreen: () => ({ value: false }),
     // Protect the detected default branch, not a hard-coded "main", so a
     // master/develop repo gets a consistent result.
     protectedBranches: () => ({ value: [detect("baseBranch").value] }),
-    // `replyOnAccept` defaults on — matching triage-pr's own default.
+    // No repo signal; emit triage-pr's own default (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
     replyOnAccept: () => ({ value: true }),
     reviewBots: () => ({ value: [...REVIEW_BOTS] }),
     shippableManifestKeys: () => ({ value: [...SHIPPABLE_MANIFEST_KEYS] }),

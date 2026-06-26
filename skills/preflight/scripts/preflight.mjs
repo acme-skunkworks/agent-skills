@@ -400,9 +400,7 @@ function main() {
     { actionlintStatus, failedLinters, markdownlintStatus },
     classified,
   );
-  // --dry-run is a true preview: report categories, write nothing. The summary
-  // file is the ship flow's input — under dry-run there's no ship flow to read
-  // it, so leaving it unwritten keeps the run side-effect-free.
+  // --dry-run is a true preview: skip the summary write the ship flow reads.
   if (!dryRun) {
     writeFileSync(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
   }
