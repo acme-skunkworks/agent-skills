@@ -33,6 +33,17 @@ export default defineConfig([
       "import/no-extraneous-dependencies": ["error", { devDependencies: true }],
     },
   },
+  // The shareable skill helpers under skills/**/*.mjs are zero-dependency ESM
+  // CLIs and validators. As with the infrastructure validators above, a few are
+  // inherently branchy flat schema checks (validate-changelog's per-field
+  // validation, preflight's main orchestrator), so the default complexity
+  // ceiling doesn't fit — scope it off here, mirroring that override.
+  {
+    files: ["skills/**/*.mjs"],
+    rules: {
+      complexity: "off",
+    },
+  },
   // Some tests assert on object KEY ORDER (changelog-frontmatter:
   // buildAffectedPackagesFrontmatter inserts affected_packages immediately
   // before stats) or deliberately pass differently-ordered objects to prove an
