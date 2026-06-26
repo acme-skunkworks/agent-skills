@@ -21,7 +21,7 @@ compatibility: >-
   config.example.json for its key set, so newly-added skills are picked up with no
   change here.
 metadata:
-  version: 0.1.1
+  version: 0.2.0
 allowed-tools: Read, Bash(node:*), Bash(git:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---
 

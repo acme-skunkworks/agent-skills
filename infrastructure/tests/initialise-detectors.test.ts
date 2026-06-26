@@ -1,10 +1,14 @@
+import { createDetectors } from "../../skills/initialise-skills/scripts/lib/detectors.mjs";
 import { parseIssueKeysFromBranches } from "../../skills/initialise-skills/scripts/lib/git.mjs";
 import {
   globsFromWorkspacesField,
   parseWorkspaceGlobs,
   rootsFromGlobs,
 } from "../../skills/initialise-skills/scripts/lib/workspace.mjs";
-import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 describe("parseIssueKeysFromBranches", () => {
   it("extracts and uppercases leading issue keys, de-duplicated and sorted", () => {
@@ -74,6 +78,56 @@ describe("parseWorkspaceGlobs / rootsFromGlobs", () => {
       "other: 1",
     ].join("\n");
     expect(parseWorkspaceGlobs(yaml)).toEqual(["apps/*", "packages/*"]);
+  });
+});
+
+describe("changelog detector", () => {
+  let repoRoot: string;
+
+  beforeEach(() => {
+    repoRoot = mkdtempSync(join(tmpdir(), "init-detect-"));
+  });
+
+  afterEach(() => {
+    rmSync(repoRoot, { force: true, recursive: true });
+  });
+
+  it("is true when the changelog skill is installed alongside", () => {
+    const { detect } = createDetectors({
+      installedSkills: new Set(["changelog", "send-it"]),
+      repoRoot,
+    });
+    expect(detect("changelog")).toEqual({ value: true });
+  });
+
+  it("is true when a changelog/ directory exists even with no changelog skill", () => {
+    mkdirSync(join(repoRoot, "changelog"));
+    const { detect } = createDetectors({
+      installedSkills: new Set(["send-it"]),
+      repoRoot,
+    });
+    expect(detect("changelog")).toEqual({ value: true });
+  });
+
+  it("is false when the repo has neither a changelog skill nor a changelog/ dir", () => {
+    const { detect } = createDetectors({
+      installedSkills: new Set(["preflight", "send-it"]),
+      repoRoot,
+    });
+    expect(detect("changelog")).toEqual({ value: false });
+  });
+});
+
+describe("mainBranch detector", () => {
+  it("mirrors the detected base branch (falls back to main with no git)", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "init-detect-"));
+    try {
+      const { detect } = createDetectors({ repoRoot });
+      expect(detect("mainBranch")).toEqual(detect("baseBranch"));
+      expect(detect("mainBranch")).toEqual({ value: "main" });
+    } finally {
+      rmSync(repoRoot, { force: true, recursive: true });
+    }
   });
 });
 

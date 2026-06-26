@@ -90,9 +90,16 @@ function detectBundleRoot(repoRoot) {
  * @param {string} params.repoRoot host repo root the detectors scan
  * @param {{ linearTeamName?: string, linearWorkspaceSlug?: string, issueKeys?: string[] }} [params.linearFacts]
  *   facts the script cannot derive from git/fs (supplied by Claude via the Linear MCP)
+ * @param {Set<string>} [params.installedSkills] names of the sibling skill bundles
+ *   discovered alongside this one — lets a detector gate on whether a companion
+ *   skill (e.g. `changelog`) is actually installed.
  * @returns {{ detect: (key: string) => ({ value: unknown } | null), has: (key: string) => boolean }}
  */
-export function createDetectors({ linearFacts = {}, repoRoot }) {
+export function createDetectors({
+  installedSkills = new Set(),
+  linearFacts = {},
+  repoRoot,
+}) {
   const cache = new Map();
 
   const registry = {
@@ -103,6 +110,16 @@ export function createDetectors({ linearFacts = {}, repoRoot }) {
         ? { value: { manifest: "package.json", root, skillFile: "SKILL.md" } }
         : null;
     },
+    // send-it's changelog step is enabled when the repo has a changelog flow —
+    // either the companion `changelog` skill is installed or a `changelog/`
+    // directory already exists. A repo with neither (e.g. a private repo with no
+    // release pipeline) gets `false` so send-it skips authoring entirely rather
+    // than trying to follow an uninstalled skill.
+    changelog: () => ({
+      value:
+        installedSkills.has("changelog") ||
+        existsSync(join(repoRoot, "changelog")),
+    }),
     // changelogDir / fallbackPackage are structural conventions with sound
     // generic defaults (mirroring the changelog bundle's own DEFAULTS) — emit
     // them confidently rather than flagging for manual input.
@@ -123,6 +140,9 @@ export function createDetectors({ linearFacts = {}, repoRoot }) {
       linearFacts.linearWorkspaceSlug
         ? { value: linearFacts.linearWorkspaceSlug }
         : null,
+    // cleanup-repo's merge-detection trunk: the same branch the rest of the
+    // tooling treats as the base, so a master/develop repo cleans up correctly.
+    mainBranch: () => ({ value: detect("baseBranch").value }),
     maxCiRounds: () => ({ value: MAX_CI_ROUNDS }),
     packageRoots: () => ({ value: detectPackageRoots(repoRoot) }),
     // Protect the detected default branch, not a hard-coded "main", so a
