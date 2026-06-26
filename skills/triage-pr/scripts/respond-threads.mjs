@@ -179,7 +179,13 @@ const STATUS_LABELS = {
  * findings: [{ title, status: accepted|declined|out-of-scope, reference }].
  */
 export function buildConsolidatedComment(findings) {
-  const rows = (findings ?? []).map((finding) => {
+  if (!findings || findings.length === 0) {
+    // The caller is told (SKILL.md Step 10) to skip the summary step when there
+    // are no issue-level findings; fail loudly rather than post a bare table.
+    throw new Error("buildConsolidatedComment requires at least one finding");
+  }
+
+  const rows = findings.map((finding) => {
     if (!STATUSES.has(finding.status)) {
       throw new Error(`unknown finding status: ${finding.status}`);
     }
@@ -221,9 +227,13 @@ export function findExistingAckComment(comments) {
 
 /**
  * Parse a subcommand's flags into an options object. Throws on a flag missing
- * its value or an unknown flag.
+ * its value, a stray positional, or — when `allowed` is given — an unknown flag.
+ * `allowed` is the camelCased keys a subcommand accepts (e.g. `["thread",
+ * "decision"]`); `--dry-run` is always permitted. Passing it makes an operator
+ * typo (`--reply-on-accep`) fail fast instead of being silently stored.
  */
-export function parseArgs(argv) {
+export function parseArgs(argv, allowed) {
+  const allow = allowed ? new Set([...allowed, "dryRun"]) : null;
   const options = { dryRun: false };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -245,11 +255,20 @@ export function parseArgs(argv) {
     const key = argument
       .slice(2)
       .replaceAll(/-([a-z])/g, (_, char) => char.toUpperCase());
+    if (allow && !allow.has(key)) {
+      throw new Error(`unknown option: ${argument}`);
+    }
+
     options[key] = value;
   }
 
   return options;
 }
+
+// The flags each subcommand accepts (camelCased), passed to parseArgs so an
+// unrecognised flag throws rather than being silently ignored.
+const THREAD_FLAGS = ["thread", "decision", "sha", "reason", "replyOnAccept"];
+const SUMMARY_FLAGS = ["pr", "repo", "findings"];
 
 /**
  * Coerce a --reply-on-accept string to a boolean (default true).
@@ -322,6 +341,27 @@ const REPLY_MUTATION = `mutation($threadId:ID!,$body:String!){
 const RESOLVE_MUTATION = `mutation($threadId:ID!){
   resolveReviewThread(input:{threadId:$threadId}){ thread{ isResolved } }
 }`;
+
+const THREAD_COMMENTS_QUERY = `query($threadId:ID!){
+  node(id:$threadId){
+    ... on PullRequestReviewThread {
+      comments(first:100){ nodes{ author{ login } body } }
+    }
+  }
+}`;
+
+/**
+ * Fetch a single review thread's existing comments as `{ author, body }`, so the
+ * marker check in planThreadResponses can skip a thread we already replied to.
+ */
+function fetchThreadComments(threadId) {
+  const data = ghGraphQL(THREAD_COMMENTS_QUERY, { threadId });
+  const nodes = data.data?.node?.comments?.nodes ?? [];
+  return nodes.map((commentNode) => ({
+    author: commentNode.author?.login ?? "unknown",
+    body: commentNode.body ?? "",
+  }));
+}
 
 /**
  * Post a reply on a review thread.
@@ -399,9 +439,15 @@ function runThread(options) {
   }
 
   const replyOnAccept = parseReplyOnAccept(options.replyOnAccept);
+
+  // On a real run, feed the thread's existing comments into the planner so a
+  // retry (e.g. the reply landed but a prior resolve failed) is recognised as
+  // already-handled and doesn't double-post. Dry-run stays network-free.
+  const comments = options.dryRun ? undefined : fetchThreadComments(threadId);
   const [action] = planThreadResponses(
     [
       {
+        comments,
         decision,
         reason: options.reason,
         sha: options.sha,
@@ -413,6 +459,14 @@ function runThread(options) {
 
   if (options.dryRun) {
     console.log(JSON.stringify(action, null, 2));
+    return;
+  }
+
+  // A human thread is never auto-actioned — not even resolved. Every other
+  // outcome (reply-resolve, resolve-only, or an already-handled skip from a
+  // half-finished prior run) ends resolved; only reply-resolve posts a reply.
+  if (action.kind === "skip" && action.why === "human") {
+    console.log(JSON.stringify({ ...action, done: false }, null, 2));
     return;
   }
 
@@ -639,6 +693,52 @@ function selfTest() {
         }
       })(),
     },
+    {
+      name: "parseArgs rejects an unknown flag when given an allow-list",
+      ok: (() => {
+        try {
+          parseArgs(["--reply-on-accep", "false"], ["replyOnAccept"]);
+          return false;
+        } catch {
+          return true;
+        }
+      })(),
+    },
+    {
+      name: "parseArgs accepts an allowed flag (and --dry-run) with a list",
+      ok: (() => {
+        const parsed = parseArgs(
+          ["--reply-on-accept", "false", "--dry-run"],
+          ["replyOnAccept"],
+        );
+        return parsed.replyOnAccept === "false" && parsed.dryRun === true;
+      })(),
+    },
+    {
+      name: "already-handled thread (with comments) skips, not reply",
+      ok: (() => {
+        const [action] = planThreadResponses([
+          {
+            comments: [{ author: "me", body: `x\n\n${THREAD_MARKER}` }],
+            decision: "accept",
+            sha: "abc",
+            threadId: "T_retry",
+          },
+        ]);
+        return action.kind === "skip" && action.why === "already-handled";
+      })(),
+    },
+    {
+      name: "buildConsolidatedComment throws on no findings",
+      ok: (() => {
+        try {
+          buildConsolidatedComment([]);
+          return false;
+        } catch {
+          return true;
+        }
+      })(),
+    },
   ];
 
   let failed = 0;
@@ -669,11 +769,10 @@ function main() {
   }
 
   try {
-    const options = parseArgs(argv.slice(1));
     if (command === "thread") {
-      runThread(options);
+      runThread(parseArgs(argv.slice(1), THREAD_FLAGS));
     } else if (command === "summary") {
-      runSummary(options);
+      runSummary(parseArgs(argv.slice(1), SUMMARY_FLAGS));
     } else {
       throw new Error(
         `unknown command: ${command ?? "(none)"} — expected thread | summary | --self-test`,

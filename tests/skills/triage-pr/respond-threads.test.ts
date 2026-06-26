@@ -156,6 +156,10 @@ describe("buildConsolidatedComment — issue-level acknowledgement", () => {
       buildConsolidatedComment([{ status: "dunno", title: "x" }]),
     ).toThrow(/unknown finding status/);
   });
+
+  it("throws on no findings (caller must skip the step instead)", () => {
+    expect(() => buildConsolidatedComment([])).toThrow(/at least one finding/);
+  });
 });
 
 describe("findExistingAckComment — upsert detection", () => {
@@ -206,6 +210,19 @@ describe("arg parsing", () => {
 
   it("throws when a flag lacks a value", () => {
     expect(() => parseArgs(["--thread"])).toThrow(/requires a value/);
+  });
+
+  it("rejects an unknown flag when given an allow-list (operator typo)", () => {
+    expect(() =>
+      parseArgs(["--reply-on-accep", "false"], ["replyOnAccept"]),
+    ).toThrow(/unknown option/);
+  });
+
+  it("accepts an allowed flag and --dry-run with an allow-list", () => {
+    expect(parseArgs(["--sha", "abc", "--dry-run"], ["sha"])).toMatchObject({
+      dryRun: true,
+      sha: "abc",
+    });
   });
 
   it("parseReplyOnAccept defaults true and rejects non-booleans", () => {
