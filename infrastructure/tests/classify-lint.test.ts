@@ -1,8 +1,5 @@
+import { parseMarkdownlintText } from "../../skills/preflight/scripts/classify-lint.mjs";
 import { describe, expect, it } from "vitest";
-
-import {
-  parseMarkdownlintText,
-} from "../../skills/preflight/scripts/classify-lint.mjs";
 
 // Real markdownlint-cli2 v0.22.1 default output (the format preflight parses).
 // Banner lines are interleaved with the violation lines and must be ignored.
@@ -19,7 +16,9 @@ describe("parseMarkdownlintText", () => {
     const violations = parseMarkdownlintText(SAMPLE);
     expect(violations).toHaveLength(3);
     // None of `markdownlint-cli2 vX`, `Finding:`, `Linting:`, `Summary:` parsed.
-    expect(violations.every((v) => v.source === "markdownlint")).toBe(true);
+    expect(
+      violations.every((violation) => violation.source === "markdownlint"),
+    ).toBe(true);
   });
 
   it("captures file, line, rule and message for a column-less violation", () => {
@@ -36,12 +35,12 @@ describe("parseMarkdownlintText", () => {
 
   it("captures the column when present", () => {
     const md013 = parseMarkdownlintText(SAMPLE).find(
-      (v) => v.ruleId === "MD013/line-length",
+      (violation) => violation.ruleId === "MD013/line-length",
     );
     expect(md013).toMatchObject({
+      column: 81,
       file: "bad.md",
       line: 4,
-      column: 81,
       message: "Line length [Expected: 80; Actual: 132]",
     });
   });
@@ -52,11 +51,11 @@ describe("parseMarkdownlintText", () => {
     );
     expect(violations).toEqual([
       {
+        column: 81,
         file: "README.md",
         line: 4,
-        column: 81,
-        ruleId: "MD013/line-length",
         message: "Line length [Expected: 80; Actual: 90]",
+        ruleId: "MD013/line-length",
         source: "markdownlint",
       },
     ]);
@@ -85,9 +84,9 @@ some-pkg@1.2.3: deprecated do not use`;
     );
     expect(violations).toHaveLength(1);
     expect(violations[0]).toMatchObject({
+      column: 5,
       file: "docs/v1:2/notes.md",
       line: 10,
-      column: 5,
       ruleId: "MD009/no-trailing-spaces",
     });
   });

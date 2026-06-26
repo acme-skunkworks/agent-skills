@@ -1,9 +1,8 @@
-import { describe, expect, it } from "vitest";
-
 import {
   rewriteBody,
   splitFrontmatter,
 } from "../scripts/add-links-changelog.js";
+import { describe, expect, it } from "vitest";
 
 describe("rewriteBody", () => {
   it("links bare ASW and AKW issue IDs", () => {
@@ -49,13 +48,13 @@ describe("rewriteBody", () => {
 describe("splitFrontmatter", () => {
   it("splits leading frontmatter from the body", () => {
     const raw = '---\ntitle: "x"\n---\n\n## Added\n\n- y\n';
-    const { fm, body } = splitFrontmatter(raw);
+    const { body, fm } = splitFrontmatter(raw);
     expect(fm).toBe('---\ntitle: "x"\n---\n');
     expect(body).toBe("\n## Added\n\n- y\n");
   });
 
   it("returns the whole string as body when there's no frontmatter", () => {
-    const { fm, body } = splitFrontmatter("no frontmatter here");
+    const { body, fm } = splitFrontmatter("no frontmatter here");
     expect(fm).toBe("");
     expect(body).toBe("no frontmatter here");
   });

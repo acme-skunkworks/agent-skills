@@ -1,8 +1,7 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`), not an
 // infrastructure twin — derive-packages has no infra counterpart.
 import { derivePackagesFromPaths } from "../../skills/changelog/scripts/lib/derive-packages.mjs";
+import { describe, expect, it } from "vitest";
 
 describe("derivePackagesFromPaths", () => {
   it("maps default roots to package names and everything else to the fallback", () => {
@@ -17,9 +16,9 @@ describe("derivePackagesFromPaths", () => {
   });
 
   it("skips the (default) changelog dir so it doesn't pin the fallback everywhere", () => {
-    expect(
-      derivePackagesFromPaths(["changelog/20260101-000000-x.md"]),
-    ).toEqual([]);
+    expect(derivePackagesFromPaths(["changelog/20260101-000000-x.md"])).toEqual(
+      [],
+    );
   });
 
   it("de-duplicates and sorts", () => {
@@ -35,8 +34,8 @@ describe("derivePackagesFromPaths", () => {
   it("honours custom packageRoots and fallbackPackage", () => {
     expect(
       derivePackagesFromPaths(["modules/auth/x.ts", "README.md"], {
-        packageRoots: ["modules"],
         fallbackPackage: "root",
+        packageRoots: ["modules"],
       }),
     ).toEqual(["auth", "root"]);
   });
@@ -60,8 +59,8 @@ describe("derivePackagesFromPaths", () => {
   it("with no packageRoots, everything collapses to the fallback", () => {
     expect(
       derivePackagesFromPaths(["apps/web/x.ts", "anything/else.ts"], {
-        packageRoots: [],
         fallbackPackage: "pkg",
+        packageRoots: [],
       }),
     ).toEqual(["pkg"]);
   });

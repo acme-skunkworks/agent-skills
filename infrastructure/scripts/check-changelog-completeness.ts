@@ -33,10 +33,10 @@ export function hasChangelogEntry(changedFiles: readonly string[]): boolean {
   );
 }
 
-export interface CompletenessResult {
+export type CompletenessResult = {
   ok: boolean;
   reason: string;
-}
+};
 
 export function checkCompleteness(
   prTitle: string,

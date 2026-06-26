@@ -1,11 +1,10 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE module directly (the distributed `.mjs`), mirroring the
 // changelog-config test wiring.
 import {
   parseConfig,
   serialiseConfig,
 } from "../../skills/initialise-skills/scripts/lib/jsonio.mjs";
+import { describe, expect, it } from "vitest";
 
 describe("parseConfig", () => {
   it("captures key order, indent and trailing newline", () => {
@@ -14,7 +13,7 @@ describe("parseConfig", () => {
     expect(parsed.keyOrder).toEqual(["b", "a"]);
     expect(parsed.indent).toBe(2);
     expect(parsed.trailingNewline).toBe(true);
-    expect(parsed.data).toEqual({ b: 1, a: 2 });
+    expect(parsed.data).toEqual({ a: 2, b: 1 });
   });
 
   it("detects a 4-space indent", () => {
@@ -24,7 +23,7 @@ describe("parseConfig", () => {
     expect(parsed.trailingNewline).toBe(false);
   });
 
-  it("preserves a tab indent as \"\\t\"", () => {
+  it('preserves a tab indent as "\\t"', () => {
     const raw = '{\n\t"a": 1\n}\n';
     const parsed = parseConfig(raw);
     expect(parsed.indent).toBe("\t");
@@ -39,14 +38,14 @@ describe("parseConfig", () => {
 describe("serialiseConfig", () => {
   it("preserves existing key order and appends new keys at the end", () => {
     const parsed = parseConfig('{\n  "b": 1,\n  "a": 2\n}\n');
-    const out = serialiseConfig(parsed, { b: 1, a: 2, c: 3 });
-    expect(out).toBe('{\n  "b": 1,\n  "a": 2,\n  "c": 3\n}\n');
+    const out = serialiseConfig(parsed, { a: 2, b: 1, cc: 3 });
+    expect(out).toBe('{\n  "b": 1,\n  "a": 2,\n  "cc": 3\n}\n');
   });
 
   it("honours appendOrder for keys new to the file", () => {
     const parsed = parseConfig('{\n  "a": 1\n}\n');
-    const out = serialiseConfig(parsed, { a: 1, z: 2, m: 3 }, ["m", "z"]);
-    expect(out).toBe('{\n  "a": 1,\n  "m": 3,\n  "z": 2\n}\n');
+    const out = serialiseConfig(parsed, { a: 1, mm: 3, z: 2 }, ["mm", "z"]);
+    expect(out).toBe('{\n  "a": 1,\n  "mm": 3,\n  "z": 2\n}\n');
   });
 
   it("preserves indent and trailing-newline style", () => {
@@ -56,7 +55,8 @@ describe("serialiseConfig", () => {
   });
 
   it("round-trips a file with no changes byte-for-byte (idempotency)", () => {
-    const raw = '{\n  "issueKeys": [\n    "ASW"\n  ],\n  "baseBranch": "main"\n}\n';
+    const raw =
+      '{\n  "issueKeys": [\n    "ASW"\n  ],\n  "baseBranch": "main"\n}\n';
     const parsed = parseConfig(raw);
     expect(serialiseConfig(parsed, parsed.data)).toBe(raw);
   });
