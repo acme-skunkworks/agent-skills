@@ -12,15 +12,15 @@ const ROOT = process.cwd();
 function parseVersion(raw) {
   // Accept full and partial versions: a bare `22` or `22.5` (common in
   // `.nvmrc`, which is what `nvm use` writes) pads the missing parts with 0.
-  const m = String(raw)
+  const match = String(raw)
     .trim()
     .replace(/^v/, "")
     .match(/^(\d+)(?:\.(\d+))?(?:\.(\d+))?/);
-  if (!m) {
+  if (!match) {
     return null;
   }
 
-  return [Number(m[1]), Number(m[2] ?? 0), Number(m[3] ?? 0)];
+  return [Number(match[1]), Number(match[2] ?? 0), Number(match[3] ?? 0)];
 }
 
 // Extract the minimum concrete version from any common `engines.node` range
@@ -28,22 +28,25 @@ function parseVersion(raw) {
 // `>=22 <23`, or a bare `22`. We take the first version-like token (the lower
 // bound for the ranges we emit) and treat `x`/`*`/missing parts as 0.
 function coerceMinVersion(spec) {
-  const m = String(spec).match(/(\d+)(?:\.(\d+|[xX*]))?(?:\.(\d+|[xX*]))?/);
-  if (!m) {
+  const match = String(spec).match(/(\d+)(?:\.(\d+|[xX*]))?(?:\.(\d+|[xX*]))?/);
+  if (!match) {
     return null;
   }
 
-  const part = (s) => (s === undefined || /[xX*]/.test(s) ? 0 : Number(s));
-  return [Number(m[1]), part(m[2]), part(m[3])];
+  function part(value) {
+    return value === undefined || /[xX*]/.test(value) ? 0 : Number(value);
+  }
+
+  return [Number(match[1]), part(match[2]), part(match[3])];
 }
 
 function compareVersions(a, b) {
-  for (let i = 0; i < 3; i++) {
-    if (a[i] > b[i]) {
+  for (let index = 0; index < 3; index++) {
+    if (a[index] > b[index]) {
       return 1;
     }
 
-    if (a[i] < b[i]) {
+    if (a[index] < b[index]) {
       return -1;
     }
   }
@@ -94,15 +97,15 @@ function readNvmrc() {
     throw error;
   }
 
-  const v = parseVersion(raw);
-  if (!v) {
+  const version = parseVersion(raw);
+  if (!version) {
     console.error(
       `preflight-changelog-ci: could not parse .nvmrc version "${raw}"`,
     );
     process.exit(1);
   }
 
-  return v;
+  return version;
 }
 
 const active = parseVersion(process.version);
@@ -136,8 +139,8 @@ if (!satisfiesGte(active, nvmrc)) {
 
 const install = spawnSync("pnpm", ["install", "--frozen-lockfile"], {
   cwd: ROOT,
-  stdio: "inherit",
   shell: process.platform === "win32",
+  stdio: "inherit",
 });
 
 if (install.error) {

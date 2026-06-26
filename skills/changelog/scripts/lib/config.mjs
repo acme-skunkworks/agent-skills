@@ -26,8 +26,8 @@ const CONFIG_PATH = fileURLToPath(CONFIG_URL);
 const DEFAULTS = {
   baseBranch: "main",
   changelogDir: "changelog",
-  packageRoots: ["apps", "packages", "services"],
   fallbackPackage: "infrastructure",
+  packageRoots: ["apps", "packages", "services"],
 };
 
 let cached;
@@ -38,8 +38,13 @@ function fail(message, source) {
   );
 }
 
-const isNonEmptyString = (v) => typeof v === "string" && v.trim().length > 0;
-const isStringArray = (v) => Array.isArray(v) && v.every(isNonEmptyString);
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isStringArray(value) {
+  return Array.isArray(value) && value.every(isNonEmptyString);
+}
 
 /**
  * Validate a raw config JSON string and merge it over the structural defaults.
@@ -59,9 +64,9 @@ export function parseConfig(raw, source = CONFIG_PATH) {
   let parsed;
   try {
     parsed = JSON.parse(raw);
-  } catch (err) {
-    console.error(`Invalid JSON in ${source}: ${err.message}`);
-    throw err;
+  } catch (error) {
+    console.error(`Invalid JSON in ${source}: ${error.message}`);
+    throw error;
   }
 
   // JSON.parse can return null/array/primitive; the field checks below would then
@@ -79,6 +84,7 @@ export function parseConfig(raw, source = CONFIG_PATH) {
   ) {
     fail("`issueKeys` must be a non-empty array of strings.", source);
   }
+
   if (!isNonEmptyString(parsed.linearWorkspaceSlug)) {
     fail("`linearWorkspaceSlug` must be a non-empty string.", source);
   }
@@ -88,20 +94,28 @@ export function parseConfig(raw, source = CONFIG_PATH) {
   if ("baseBranch" in parsed && !isNonEmptyString(parsed.baseBranch)) {
     fail("`baseBranch`, when set, must be a non-empty string.", source);
   }
+
   if ("changelogDir" in parsed && !isNonEmptyString(parsed.changelogDir)) {
     fail("`changelogDir`, when set, must be a non-empty string.", source);
   }
+
   if ("packageRoots" in parsed && !isStringArray(parsed.packageRoots)) {
     fail("`packageRoots`, when set, must be an array of strings.", source);
   }
-  if ("fallbackPackage" in parsed && !isNonEmptyString(parsed.fallbackPackage)) {
+
+  if (
+    "fallbackPackage" in parsed &&
+    !isNonEmptyString(parsed.fallbackPackage)
+  ) {
     fail("`fallbackPackage`, when set, must be a non-empty string.", source);
   }
 
   return { ...DEFAULTS, ...parsed };
 }
 
-/** @returns {ReturnType<typeof parseConfig>} */
+/**
+ * @returns {ReturnType<typeof parseConfig>}
+ */
 export function loadConfig() {
   if (cached) {
     return cached;
@@ -110,14 +124,15 @@ export function loadConfig() {
   let raw;
   try {
     raw = readFileSync(CONFIG_URL, "utf8");
-  } catch (err) {
+  } catch (error) {
     // A missing config.json used to fall back to ACME defaults silently. The
     // identity keys have no safe default, so a foreign repo must be told to
     // create one rather than inherit ACME's values.
-    if (err.code === "ENOENT") {
+    if (error.code === "ENOENT") {
       fail("config.json not found.", CONFIG_PATH);
     }
-    throw err;
+
+    throw error;
   }
 
   cached = parseConfig(raw, CONFIG_PATH);

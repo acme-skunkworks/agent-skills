@@ -19,8 +19,8 @@ export function toRepoRelative(filePath) {
   const rel = relative(ROOT, abs);
 
   if (rel.startsWith("..")) {
-    return filePath.replace(/^\//, "").replace(/\\/g, "/");
+    return filePath.replace(/^\//, "").replaceAll("\\", "/");
   }
 
-  return rel.replace(/\\/g, "/");
+  return rel.replaceAll("\\", "/");
 }

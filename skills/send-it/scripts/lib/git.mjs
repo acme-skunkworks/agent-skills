@@ -8,8 +8,8 @@
 
 import { execFileSync } from "node:child_process";
 
-export const UNIT_SEP = "\x1f";
-export const RECORD_SEP = "\x1e";
+export const UNIT_SEP = "\u001F";
+export const RECORD_SEP = "\u001E";
 
 /**
  * Resolve the base ref to diff the branch against. BASE_REF (when set) is
@@ -47,7 +47,11 @@ export function readGitCommits() {
 
   const out = execFileSync(
     "git",
-    ["log", `${base}..HEAD`, `--format=%H${UNIT_SEP}%s${UNIT_SEP}%b${RECORD_SEP}`],
+    [
+      "log",
+      `${base}..HEAD`,
+      `--format=%H${UNIT_SEP}%s${UNIT_SEP}%b${RECORD_SEP}`,
+    ],
     { encoding: "utf8" },
   );
   return out
@@ -60,7 +64,9 @@ export function readGitCommits() {
     });
 }
 
-/** The current branch name (empty string in a detached HEAD). */
+/**
+ * The current branch name (empty string in a detached HEAD).
+ */
 export function readGitBranch() {
   return execFileSync("git", ["branch", "--show-current"], {
     encoding: "utf8",

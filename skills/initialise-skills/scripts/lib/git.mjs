@@ -28,6 +28,7 @@ export function detectBaseBranch(root) {
   if (result.status === 0 && result.stdout.trim()) {
     return result.stdout.trim().replace(/^refs\/remotes\/origin\//, "");
   }
+
   return DEFAULT_BASE_BRANCH;
 }
 
@@ -47,14 +48,17 @@ export function listBranchNames(root) {
   if (result.status !== 0) {
     return [];
   }
-  return result.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    // Drop the symbolic `origin/HEAD -> origin/main` style entries.
-    .filter((name) => !name.includes("->"))
-    // Strip a leading remote name so `origin/asw-1-foo` is read as `asw-1-foo`.
-    .map((name) => name.replace(/^[^/]+\//, ""));
+
+  return (
+    result.stdout
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      // Drop the symbolic `origin/HEAD -> origin/main` style entries.
+      .filter((name) => !name.includes("->"))
+      // Strip a leading remote name so `origin/asw-1-foo` is read as `asw-1-foo`.
+      .map((name) => name.replace(/^[^/]+\//, ""))
+  );
 }
 
 /**
@@ -73,7 +77,8 @@ export function parseIssueKeysFromBranches(branches) {
       keys.add(match[1].toUpperCase());
     }
   }
-  return [...keys].sort();
+
+  return [...keys].toSorted();
 }
 
 /**

@@ -27,64 +27,69 @@
 //   node filesystem-hygiene.mjs --self-test       # run built-in fixtures
 
 import {
-  readdirSync,
   existsSync,
-  statSync,
-  rmSync,
-  mkdtempSync,
   mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
-import { join, dirname, resolve, sep } from "node:path";
 import { tmpdir } from "node:os";
-import { fileURLToPath } from "node:url";
+import { dirname, join, resolve, sep } from "node:path";
 
 // Recurse a directory. Returns true when the directory is recursively empty
 // (its subtree contains no files). Side effects: pushes top-most empty
 // directories into `emptyDirs` and every node_modules path into `nodeModulesDirs`.
-function scan(dir, emptyDirs, nodeModulesDirs) {
+function scan(directory, emptyDirectories, nodeModulesDirectories) {
   let entries;
   try {
-    entries = readdirSync(dir, { withFileTypes: true });
+    entries = readdirSync(directory, { withFileTypes: true });
   } catch {
     // Unreadable directory — treat as content so we never remove it.
     return false;
   }
 
   let hasContent = false;
-  const emptyChildDirs = [];
+  const emptyChildDirectories = [];
 
   for (const entry of entries) {
-    const full = join(dir, entry.name);
+    const full = join(directory, entry.name);
 
     if (entry.isSymbolicLink()) {
       // Never follow or remove through symlinks.
       hasContent = true;
       continue;
     }
+
     if (entry.isFile()) {
       // Any file — placeholders included — counts as content.
       hasContent = true;
       continue;
     }
+
     if (entry.isDirectory()) {
       if (entry.name === ".git") {
         hasContent = true; // protect working trees / nested repos
         continue;
       }
+
       if (entry.name === "node_modules") {
-        nodeModulesDirs.push(full);
+        nodeModulesDirectories.push(full);
         hasContent = true; // not traversed; handled by the orphan check
         continue;
       }
-      const childEmpty = scan(full, emptyDirs, nodeModulesDirs);
+
+      const childEmpty = scan(full, emptyDirectories, nodeModulesDirectories);
       if (childEmpty) {
-        emptyChildDirs.push(full);
+        emptyChildDirectories.push(full);
       } else {
         hasContent = true;
       }
+
       continue;
     }
+
     // Sockets, FIFOs, devices — treat as content.
     hasContent = true;
   }
@@ -92,9 +97,13 @@ function scan(dir, emptyDirs, nodeModulesDirs) {
   if (hasContent) {
     // This directory stays; its recursively-empty children are the top-most
     // empties (their parent has content), so they are the ones to remove.
-    for (const child of emptyChildDirs) emptyDirs.push(child);
+    for (const child of emptyChildDirectories) {
+      emptyDirectories.push(child);
+    }
+
     return false;
   }
+
   // No content anywhere in this subtree: this whole directory is removable.
   // Don't record its children — the parent records this directory instead.
   return true;
@@ -104,21 +113,23 @@ export function detect(root) {
   if (!existsSync(root)) {
     throw new Error(`Root path does not exist: ${root}`);
   }
+
   if (!statSync(root).isDirectory()) {
     throw new Error(`Root path is not a directory: ${root}`);
   }
-  const emptyDirs = [];
-  const nodeModulesDirs = [];
-  // The root itself is never a removal candidate.
-  scan(root, emptyDirs, nodeModulesDirs);
 
-  const orphanNodeModules = nodeModulesDirs.filter(
+  const emptyDirectories = [];
+  const nodeModulesDirectories = [];
+  // The root itself is never a removal candidate.
+  scan(root, emptyDirectories, nodeModulesDirectories);
+
+  const orphanNodeModules = nodeModulesDirectories.filter(
     (nm) => !existsSync(join(dirname(nm), "package.json")),
   );
 
   return {
-    emptyDirs: emptyDirs.sort(),
-    orphanNodeModules: orphanNodeModules.sort(),
+    emptyDirs: emptyDirectories.toSorted(),
+    orphanNodeModules: orphanNodeModules.toSorted(),
   };
 }
 
@@ -130,13 +141,14 @@ export function apply(root) {
   // must not abort the rest. Report what was removed and what wasn't.
   for (const path of [...result.orphanNodeModules, ...result.emptyDirs]) {
     try {
-      rmSync(path, { recursive: true, force: true });
+      rmSync(path, { force: true, recursive: true });
       removed.push(path);
-    } catch (err) {
-      failed.push({ path, error: err.message });
+    } catch (error) {
+      failed.push({ error: error.message, path });
     }
   }
-  return { ...result, removed, failed };
+
+  return { ...result, failed, removed };
 }
 
 // Refuse to operate unless `root` looks like a Git working tree — i.e. it holds
@@ -155,46 +167,49 @@ export function assertGitRepo(root) {
 
 function parseArgs(argv) {
   const flags = new Set(argv.filter((a) => a.startsWith("--")));
-  const positional = argv.filter((a) => !a.startsWith("--"));
-  return { flags, root: positional[0] ?? process.cwd() };
+  const positional = argv.find((a) => !a.startsWith("--"));
+  return { flags, root: positional ?? process.cwd() };
 }
 
 // ---- self-test ----------------------------------------------------------
 
 function buildFixture() {
   const root = mkdtempSync(join(tmpdir(), "cleanup-repo-fs-"));
-  const d = (...p) => {
-    const full = join(root, ...p);
+  function makeDirectory(...segments) {
+    const full = join(root, ...segments);
     mkdirSync(full, { recursive: true });
     return full;
-  };
-  const f = (rel, body = "") => writeFileSync(join(root, rel), body);
+  }
+
+  function makeFile(rel, body = "") {
+    return writeFileSync(join(root, rel), body);
+  }
 
   // A repo-like root marker so the root always has content.
-  d(".git");
-  f(".git/HEAD", "ref: refs/heads/main\n");
+  makeDirectory(".git");
+  makeFile(".git/HEAD", "ref: refs/heads/main\n");
 
   // 1. A recursively-empty directory (nested, no files) → top-most reported.
-  d("empty-top", "a", "b");
+  makeDirectory("empty-top", "a", "b");
 
   // 2. A directory whose subtree holds only a placeholder → left alone.
-  d("placeholder-only");
-  f("placeholder-only/.gitkeep");
+  makeDirectory("placeholder-only");
+  makeFile("placeholder-only/.gitkeep");
 
   // 3. A directory with a real file → left alone.
-  d("has-file");
-  f("has-file/index.ts", "export {};\n");
+  makeDirectory("has-file");
+  makeFile("has-file/index.ts", "export {};\n");
 
   // 4. Orphan node_modules (parent has no package.json).
-  d("orphan-pkg", "node_modules", "left-pad");
+  makeDirectory("orphan-pkg", "node_modules", "left-pad");
 
   // 5. Legitimate node_modules (parent has package.json) → not orphan.
-  d("real-pkg", "node_modules", "left-pad");
-  f("real-pkg/package.json", "{}\n");
+  makeDirectory("real-pkg", "node_modules", "left-pad");
+  makeFile("real-pkg/package.json", "{}\n");
 
   // 6. A nested .git (sub working tree) inside an otherwise file-free dir →
   //    must NOT be reported as empty.
-  d("nested-repo", ".git");
+  makeDirectory("nested-repo", ".git");
 
   return root;
 }
@@ -205,12 +220,15 @@ function selfTest() {
   let result;
   try {
     result = detect(root);
-  } catch (e) {
-    console.log(`  FAIL  detect threw (${e.message})`);
+  } catch (error) {
+    console.log(`  FAIL  detect threw (${error.message})`);
     process.exit(1);
   }
 
-  const rel = (p) => p.slice(root.length).split(sep).filter(Boolean).join("/");
+  function rel(path) {
+    return path.slice(root.length).split(sep).filter(Boolean).join("/");
+  }
+
   const empties = result.emptyDirs.map(rel);
   const orphans = result.orphanNodeModules.map(rel);
 
@@ -240,7 +258,7 @@ function selfTest() {
   });
   cases.push({
     name: "node_modules never appears in emptyDirs",
-    ok: !empties.some((p) => p.split("/").includes("node_modules")),
+    ok: !empties.some((path) => path.split("/").includes("node_modules")),
   });
   cases.push({
     name: "directory holding a nested .git is not reported empty",
@@ -249,8 +267,8 @@ function selfTest() {
   cases.push({
     name: ".git is never reported or traversed",
     ok:
-      !empties.some((p) => p.split("/").includes(".git")) &&
-      !orphans.some((p) => p.split("/").includes(".git")),
+      !empties.some((path) => path.split("/").includes(".git")) &&
+      !orphans.some((path) => path.split("/").includes(".git")),
   });
 
   // apply() removes exactly the detected snapshot and nothing else.
@@ -260,8 +278,8 @@ function selfTest() {
   cases.push({
     name: "apply removed the originally detected paths",
     ok:
-      before.emptyDirs.every((p) => !existsSync(p)) &&
-      before.orphanNodeModules.every((p) => !existsSync(p)),
+      before.emptyDirs.every((path) => !existsSync(path)) &&
+      before.orphanNodeModules.every((path) => !existsSync(path)),
   });
   cases.push({
     name: "apply reports every removed path and no failures on a clean run",
@@ -272,7 +290,9 @@ function selfTest() {
   });
   cases.push({
     name: "apply preserves placeholder-only and file-bearing directories",
-    ok: existsSync(join(root, "placeholder-only")) && existsSync(join(root, "has-file")),
+    ok:
+      existsSync(join(root, "placeholder-only")) &&
+      existsSync(join(root, "has-file")),
   });
   // Removing orphan-pkg/node_modules empties its parent — a deliberate cascade
   // that a *subsequent* run sweeps, never the same snapshot.
@@ -293,6 +313,7 @@ function selfTest() {
   } catch {
     threwOnFileRoot = true;
   }
+
   rmSync(fileRoot, { force: true });
   cases.push({
     name: "detect throws on a non-directory root",
@@ -303,7 +324,9 @@ function selfTest() {
   // shapes a real root takes: buildFixture() created a `.git` directory at
   // `root` (primary worktree), and a linked worktree carries a `.git` *file*.
   const nonGitRoot = mkdtempSync(join(tmpdir(), "cleanup-repo-fs-nongit-"));
-  const linkedWorktreeRoot = mkdtempSync(join(tmpdir(), "cleanup-repo-fs-linked-"));
+  const linkedWorktreeRoot = mkdtempSync(
+    join(tmpdir(), "cleanup-repo-fs-linked-"),
+  );
   writeFileSync(
     join(linkedWorktreeRoot, ".git"),
     "gitdir: /tmp/cleanup-repo-linked-worktree\n",
@@ -314,26 +337,32 @@ function selfTest() {
   } catch {
     guardThrewOnNonGit = true;
   }
-  let guardAcceptedGitDir = true;
+
+  let guardAcceptedGitDirectory = true;
   try {
     assertGitRepo(root);
   } catch {
-    guardAcceptedGitDir = false;
+    guardAcceptedGitDirectory = false;
   }
+
   let guardAcceptedLinkedWorktree = true;
   try {
     assertGitRepo(linkedWorktreeRoot);
   } catch {
     guardAcceptedLinkedWorktree = false;
   }
-  rmSync(nonGitRoot, { recursive: true, force: true });
-  rmSync(linkedWorktreeRoot, { recursive: true, force: true });
+
+  rmSync(nonGitRoot, { force: true, recursive: true });
+  rmSync(linkedWorktreeRoot, { force: true, recursive: true });
   cases.push({
     name: "git-repo guard refuses a non-git root, accepts a .git dir and a linked-worktree .git file",
-    ok: guardThrewOnNonGit && guardAcceptedGitDir && guardAcceptedLinkedWorktree,
+    ok:
+      guardThrewOnNonGit &&
+      guardAcceptedGitDirectory &&
+      guardAcceptedLinkedWorktree,
   });
 
-  rmSync(root, { recursive: true, force: true });
+  rmSync(root, { force: true, recursive: true });
 
   let failed = 0;
   for (const { name, ok } of cases) {
@@ -344,6 +373,7 @@ function selfTest() {
       console.log(`  FAIL  ${name}`);
     }
   }
+
   console.log(`\n${cases.length - failed}/${cases.length} passed`);
   process.exit(failed === 0 ? 0 : 1);
 }
@@ -354,17 +384,19 @@ function main() {
     selfTest();
     return;
   }
+
   const { flags, root } = parseArgs(argv);
   try {
     assertGitRepo(root);
-  } catch (err) {
-    console.error(err.message);
+  } catch (error) {
+    console.error(error.message);
     process.exit(1);
   }
+
   const result = flags.has("--apply") ? apply(root) : detect(root);
   console.log(JSON.stringify(result, null, 2));
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+if (process.argv[1] && import.meta.filename === resolve(process.argv[1])) {
   main();
 }

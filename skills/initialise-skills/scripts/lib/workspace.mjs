@@ -9,7 +9,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Generic fallback when no workspace layout is detectable. */
+/**
+ * Generic fallback when no workspace layout is detectable.
+ */
 export const DEFAULT_PACKAGE_ROOTS = ["apps", "packages", "services"];
 
 /**
@@ -30,9 +32,11 @@ export function parseWorkspaceGlobs(yaml) {
       inPackages = true;
       continue;
     }
+
     if (!inPackages) {
       continue;
     }
+
     // A new top-level key (non-indented, non-list) ends the packages block. A
     // tab-indented list item also begins with neither a space nor a dash, so
     // guard against tabs too or it would end the block prematurely.
@@ -44,13 +48,18 @@ export function parseWorkspaceGlobs(yaml) {
     ) {
       break;
     }
+
     if (trimmed.startsWith("-")) {
-      const value = trimmed.slice(1).trim().replace(/^['"]|['"]$/g, "");
+      const value = trimmed
+        .slice(1)
+        .trim()
+        .replaceAll(/^['"]|['"]$/g, "");
       if (value) {
         globs.push(value);
       }
     }
   }
+
   return globs;
 }
 
@@ -69,14 +78,17 @@ export function rootsFromGlobs(globs) {
     if (glob.startsWith("!")) {
       continue;
     }
+
     const top = glob.split("/")[0].trim();
     if (!top || top === "." || top === "*" || top === "**") {
       continue;
     }
+
     if (!roots.includes(top)) {
       roots.push(top);
     }
   }
+
   return roots;
 }
 
@@ -87,11 +99,19 @@ export function rootsFromGlobs(globs) {
  */
 export function globsFromWorkspacesField(workspaces) {
   if (Array.isArray(workspaces)) {
-    return workspaces.filter((w) => typeof w === "string");
+    return workspaces.filter((workspace) => typeof workspace === "string");
   }
-  if (workspaces && typeof workspaces === "object" && Array.isArray(workspaces.packages)) {
-    return workspaces.packages.filter((w) => typeof w === "string");
+
+  if (
+    workspaces &&
+    typeof workspaces === "object" &&
+    Array.isArray(workspaces.packages)
+  ) {
+    return workspaces.packages.filter(
+      (workspace) => typeof workspace === "string",
+    );
   }
+
   return [];
 }
 
@@ -104,7 +124,9 @@ export function globsFromWorkspacesField(workspaces) {
 export function detectPackageRoots(root) {
   const pnpmFile = join(root, "pnpm-workspace.yaml");
   if (existsSync(pnpmFile)) {
-    const roots = rootsFromGlobs(parseWorkspaceGlobs(readFileSync(pnpmFile, "utf8")));
+    const roots = rootsFromGlobs(
+      parseWorkspaceGlobs(readFileSync(pnpmFile, "utf8")),
+    );
     if (roots.length > 0) {
       return roots;
     }

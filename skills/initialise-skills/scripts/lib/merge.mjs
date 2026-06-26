@@ -23,25 +23,32 @@ export function deepEqual(a, b) {
   if (a === b) {
     return true;
   }
+
   if (typeof a !== typeof b || a === null || b === null) {
     return false;
   }
+
   if (Array.isArray(a) || Array.isArray(b)) {
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
       return false;
     }
-    return a.every((item, i) => deepEqual(item, b[i]));
+
+    return a.every((item, index) => deepEqual(item, b[index]));
   }
+
   if (typeof a !== "object") {
     return false;
   }
+
   const ak = Object.keys(a);
   const bk = Object.keys(b);
   if (ak.length !== bk.length) {
     return false;
   }
+
   return ak.every(
-    (key) => Object.prototype.hasOwnProperty.call(b, key) && deepEqual(a[key], b[key]),
+    (key) =>
+      Object.prototype.hasOwnProperty.call(b, key) && deepEqual(a[key], b[key]),
   );
 }
 
@@ -55,6 +62,7 @@ export function sameSet(a, b) {
   if (!Array.isArray(a) || !Array.isArray(b)) {
     return false;
   }
+
   // Compare as true sets so duplicates don't mask a difference: ["ASW","ASW"]
   // and ["ASW","SK"] are NOT equal (sizes 1 vs 2), so a duplicated issueKeys
   // value isn't silently treated as unchanged.
@@ -63,11 +71,13 @@ export function sameSet(a, b) {
   if (setA.size !== setB.size) {
     return false;
   }
+
   for (const item of setA) {
     if (!setB.has(item)) {
       return false;
     }
   }
+
   return true;
 }
 
@@ -88,16 +98,16 @@ export function valuesEqual(key, a, b) {
   if (SET_KEYS.has(key)) {
     return sameSet(a, b);
   }
+
   return deepEqual(a, b);
 }
 
 /**
- * @typedef {{
- *   status: "inferred" | "unchanged" | "drift" | "needs-manual-input" | "manual-kept" | "unknown-kept",
- *   write?: unknown,        // value to persist (inferred / accepted drift)
- *   keep?: unknown,         // value left untouched (drift / manual-kept / unknown-kept)
- *   detected?: unknown,     // detector value (drift — shown alongside `keep`)
- * }} KeyResult
+ * @typedef {object} KeyResult
+ * @property {"inferred" | "unchanged" | "drift" | "needs-manual-input" | "manual-kept" | "unknown-kept"} status - how the key was classified
+ * @property {unknown} [write] - value to persist (inferred / accepted drift)
+ * @property {unknown} [keep] - value left untouched (drift / manual-kept / unknown-kept)
+ * @property {unknown} [detected] - detector value (drift — shown alongside `keep`)
  */
 
 /**
@@ -133,16 +143,16 @@ export function classifyKey(key, base, ours, theirs) {
   if (hasBase && valuesEqual(key, ours, base)) {
     return detected
       ? { status: "inferred", write: value }
-      : { status: "needs-manual-input", keep: ours };
+      : { keep: ours, status: "needs-manual-input" };
   }
 
   // A real value that differs from what we detected: a deliberate edit. Keep it.
   if (detected) {
-    return { status: "drift", keep: ours, detected: value };
+    return { detected: value, keep: ours, status: "drift" };
   }
 
   // A real value we have no detector for: keep it, no flag (nothing to compare).
-  return { status: "manual-kept", keep: ours };
+  return { keep: ours, status: "manual-kept" };
 }
 
 /**
@@ -152,7 +162,6 @@ export function classifyKey(key, base, ours, theirs) {
  * a function (not a precomputed map) so detectors run lazily and can be stubbed
  * in tests. `acceptDrift` is the per-key opt-in: keys listed there have their
  * drift overwritten with the detected value.
- *
  * @param {object} params
  * @param {Record<string, unknown>} params.example  config.example.json contents (key set + placeholders)
  * @param {Record<string, unknown>} params.config   existing config.json contents
@@ -164,7 +173,7 @@ export function classifyKey(key, base, ours, theirs) {
  *   changed: boolean,
  * }}
  */
-export function mergeConfig({ example, config, detect, acceptDrift = [] }) {
+export function mergeConfig({ acceptDrift = [], config, detect, example }) {
   const exampleKeys = Object.keys(example ?? {});
   const configKeys = Object.keys(config ?? {});
   // Example drives reconciliation; config-only keys are reported but never touched.
@@ -183,7 +192,7 @@ export function mergeConfig({ example, config, detect, acceptDrift = [] }) {
 
     // A key the consumer added that no skill template knows about: leave it be.
     if (!inExample && inConfig) {
-      results[key] = { status: "unknown-kept", keep: config[key] };
+      results[key] = { keep: config[key], status: "unknown-kept" };
       continue;
     }
 
@@ -205,8 +214,10 @@ export function mergeConfig({ example, config, detect, acceptDrift = [] }) {
     }
   }
 
-  return { results, data, changed };
+  return { changed, data, results };
 }
 
-/** Statuses that represent an applied change (for summary counts). */
+/**
+ * Statuses that represent an applied change (for summary counts).
+ */
 export const APPLIED_STATUSES = new Set(["inferred"]);

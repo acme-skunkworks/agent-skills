@@ -17,12 +17,11 @@
 //   BRANCH_NAME — entry lookup key (default: current branch via git)
 
 import { findEntryByBranch } from "./lib/changelog.mjs";
+import { loadConfig } from "./lib/config.mjs";
 import { derivePackagesFromPaths } from "./lib/derive-packages.mjs";
 import { parseFrontmatter, stringifyFrontmatter } from "./lib/frontmatter.mjs";
-import { loadConfig } from "./lib/config.mjs";
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { argv } from "node:process";
 
 /**
@@ -33,7 +32,6 @@ import { argv } from "node:process";
  * expected `branch` key — which is what `parseFrontmatter` returns when the
  * entry has no parseable frontmatter — throw rather than clobber the file with
  * just `affected_packages`.
- *
  * @param {Record<string, unknown>} data parsed frontmatter data
  * @param {string[]} packages derived affected packages
  * @returns {Record<string, unknown>} the rebuilt frontmatter object
@@ -52,11 +50,14 @@ export function buildAffectedPackagesFrontmatter(data, packages) {
     if (key === "affected_packages") {
       continue; // re-inserted in its canonical slot below
     }
+
     if (key === "stats") {
       fm.affected_packages = packages;
     }
+
     fm[key] = value;
   }
+
   if (!("affected_packages" in fm)) {
     // No `stats` key to anchor against; append (a missing `stats` is itself a
     // contract violation the validator will flag).
@@ -81,9 +82,9 @@ function git(args) {
 }
 
 function currentBranch() {
-  const fromEnv = process.env.BRANCH_NAME?.trim();
-  if (fromEnv) {
-    return fromEnv;
+  const fromEnvironment = process.env.BRANCH_NAME?.trim();
+  if (fromEnvironment) {
+    return fromEnvironment;
   }
 
   return git(["rev-parse", "--abbrev-ref", "HEAD"]);
@@ -111,9 +112,9 @@ function main() {
   }
 
   const packages = derivePackagesFromPaths(changedPaths(BASE_REF), {
-    packageRoots: config.packageRoots,
-    fallbackPackage: config.fallbackPackage,
     changelogDir: config.changelogDir,
+    fallbackPackage: config.fallbackPackage,
+    packageRoots: config.packageRoots,
   });
 
   const raw = readFileSync(file, "utf8");
@@ -134,6 +135,6 @@ function main() {
 
 // Only run when invoked as a CLI, not when imported (e.g. by unit tests
 // exercising `buildAffectedPackagesFrontmatter`).
-if (argv[1] && fileURLToPath(import.meta.url) === argv[1]) {
+if (argv[1] && import.meta.filename === argv[1]) {
   main();
 }
