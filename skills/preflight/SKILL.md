@@ -20,7 +20,7 @@ compatibility: >-
   Linear debt-issue step needs the Linear MCP server; skip it silently if
   unavailable.
 metadata:
-  version: 0.1.2
+  version: 0.1.3
 allowed-tools: Read, Bash(git:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
@@ -50,9 +50,11 @@ They operate on the **consumer repo's root** (run them from the repo root, where
    auto-detected — see Configuration).
 2. Run the preflight: `node skills/preflight/scripts/preflight.mjs` (append
    `--dry-run` to report categories and scoped file lists without classifying
-   violations).
+   violations). `--dry-run` is a true preview — every linter reports `would-run`
+   and nothing is written, including `.preflight-summary.json`.
 3. Read `.preflight-summary.json` for the categories run and the violation counts
-   (`passed`, `deferred`, `blocking`).
+   (`passed`, `deferred`, `blocking`). Written only on a real run, not under
+   `--dry-run`.
 
 The script's exit code drives the loop:
 
