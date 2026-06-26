@@ -33,13 +33,18 @@ export default defineConfig([
       "import/no-extraneous-dependencies": ["error", { devDependencies: true }],
     },
   },
-  // A few changelog tests assert on frontmatter KEY ORDER (e.g.
+  // Some tests assert on object KEY ORDER (changelog-frontmatter:
   // buildAffectedPackagesFrontmatter inserts affected_packages immediately
-  // before stats), so their object-literal fixtures are deliberately
-  // non-alphabetical. perfectionist/sort-objects would auto-rewrite the very
-  // order under test, so switch it off for those files.
+  // before stats) or deliberately pass differently-ordered objects to prove an
+  // order-insensitive comparison (initialise-merge: deepEqual). Their
+  // object-literal fixtures are intentionally non-alphabetical, so
+  // perfectionist/sort-objects would silently rewrite the very thing under
+  // test — switch it off for those files.
   {
-    files: ["infrastructure/tests/changelog-frontmatter.test.ts"],
+    files: [
+      "infrastructure/tests/changelog-frontmatter.test.ts",
+      "infrastructure/tests/initialise-merge.test.ts",
+    ],
     rules: {
       "perfectionist/sort-objects": "off",
     },

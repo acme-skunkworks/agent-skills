@@ -18,9 +18,11 @@ describe("deepEqual", () => {
     expect(deepEqual("a", "b")).toBe(false);
     expect(deepEqual(["a", "b"], ["a", "b"])).toBe(true);
     expect(deepEqual(["a", "b"], ["b", "a"])).toBe(false);
+    // Intentionally different key orders — exercises deepEqual's
+    // key-order-insensitive comparison (the meaningful case here).
     expect(
       deepEqual(
-        { manifest: "package.json", root: "skills" },
+        { root: "skills", manifest: "package.json" },
         { manifest: "package.json", root: "skills" },
       ),
     ).toBe(true);

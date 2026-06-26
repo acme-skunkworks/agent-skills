@@ -7,10 +7,8 @@
   // sibling config widens the program to span the scripts *and* their tests so
   // every linted file resolves. It never emits and is used only by ESLint —
   // agent-skills ships skills.sh bundles, so there's no build config to leak into.
+  // (noEmit is inherited from tsconfig.json, so it isn't re-declared here.)
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "noEmit": true
-  },
   "include": [
     "infrastructure/scripts/**/*.ts",
     "infrastructure/tests/**/*.ts"
