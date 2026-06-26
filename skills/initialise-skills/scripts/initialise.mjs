@@ -14,42 +14,56 @@
 //
 // Exit codes: 0 success; 2 usage/IO error.
 
+import { createDetectors } from "./lib/detectors.mjs";
+import { discoverSkills } from "./lib/discover.mjs";
+import { serialiseConfig } from "./lib/jsonio.mjs";
+import { mergeConfig } from "./lib/merge.mjs";
+import { buildReport, formatHuman } from "./lib/report.mjs";
 import { readFileSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
 
-import { createDetectors } from "./lib/detectors.mjs";
-import { discoverSkills } from "./lib/discover.mjs";
-import { mergeConfig } from "./lib/merge.mjs";
-import { serialiseConfig } from "./lib/jsonio.mjs";
-import { buildReport, formatHuman } from "./lib/report.mjs";
-
-/** A value-taking flag needs a real value — fail clearly rather than letting
+/**
+ * A value-taking flag needs a real value — fail clearly rather than letting
  * `undefined` (trailing flag) or the next option (`--repo-root --json`) flow into
- * the detectors as a path. */
+ * the detectors as a path.
+ */
 function requireValue(flag, value) {
   if (value === undefined || value.startsWith("--")) {
     console.error(`initialise-skills: ${flag} requires a value`);
     process.exit(2);
   }
+
   return value;
 }
 
 function parseArgs(argv) {
-  const opts = { write: false, json: false, repoRoot: process.cwd(), skillsDir: undefined };
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === "--write") opts.write = true;
-    else if (arg === "--dry-run") opts.write = false;
-    else if (arg === "--json") opts.json = true;
-    else if (arg === "--repo-root") opts.repoRoot = requireValue(arg, argv[++i]);
-    else if (arg === "--skills-dir") opts.skillsDir = requireValue(arg, argv[++i]);
-    else if (arg === "--help" || arg === "-h") opts.help = true;
-    else {
-      console.error(`initialise-skills: unknown argument "${arg}"`);
+  const options = {
+    json: false,
+    repoRoot: process.cwd(),
+    skillsDir: undefined,
+    write: false,
+  };
+  for (let index = 0; index < argv.length; index++) {
+    const argument = argv[index];
+    if (argument === "--write") {
+      options.write = true;
+    } else if (argument === "--dry-run") {
+      options.write = false;
+    } else if (argument === "--json") {
+      options.json = true;
+    } else if (argument === "--repo-root") {
+      options.repoRoot = requireValue(argument, argv[++index]);
+    } else if (argument === "--skills-dir") {
+      options.skillsDir = requireValue(argument, argv[++index]);
+    } else if (argument === "--help" || argument === "-h") {
+      options.help = true;
+    } else {
+      console.error(`initialise-skills: unknown argument "${argument}"`);
       process.exit(2);
     }
   }
-  return opts;
+
+  return options;
 }
 
 /**
@@ -58,96 +72,125 @@ function parseArgs(argv) {
  */
 function readStdinPayload() {
   if (process.stdin.isTTY) {
-    return { facts: {}, acceptDrift: {} };
+    return { acceptDrift: {}, facts: {} };
   }
+
   let raw = "";
   try {
     raw = readFileSync(0, "utf8");
   } catch {
-    return { facts: {}, acceptDrift: {} };
+    return { acceptDrift: {}, facts: {} };
   }
+
   if (!raw.trim()) {
-    return { facts: {}, acceptDrift: {} };
+    return { acceptDrift: {}, facts: {} };
   }
+
   let parsed;
   try {
     parsed = JSON.parse(raw);
-  } catch (err) {
-    console.error(`initialise-skills: could not parse stdin JSON: ${err.message}`);
+  } catch (error) {
+    console.error(
+      `initialise-skills: could not parse stdin JSON: ${error.message}`,
+    );
     process.exit(2);
   }
+
   return {
+    acceptDrift:
+      parsed.acceptDrift && typeof parsed.acceptDrift === "object"
+        ? parsed.acceptDrift
+        : {},
     facts: parsed.facts && typeof parsed.facts === "object" ? parsed.facts : {},
-    acceptDrift: parsed.acceptDrift && typeof parsed.acceptDrift === "object" ? parsed.acceptDrift : {},
   };
 }
 
-/** Coerce an acceptDrift entry to a list of key names, tolerating malformed input
- * (non-array, or array with non-string members) without throwing. */
+/**
+ * Coerce an acceptDrift entry to a list of key names, tolerating malformed input
+ * (non-array, or array with non-string members) without throwing.
+ */
 function asKeyList(value) {
-  return Array.isArray(value) ? value.filter((k) => typeof k === "string") : [];
+  return Array.isArray(value)
+    ? value.filter((key) => typeof key === "string")
+    : [];
 }
 
-/** Drift keys accepted for a given skill: keyed by skill name or its repo-relative
- * config path. */
+/**
+ * Drift keys accepted for a given skill: keyed by skill name or its repo-relative
+ * config path.
+ */
 function acceptedDriftFor(skill, acceptDrift, repoRoot) {
   const rel = relative(repoRoot, skill.configPath);
   return [
-    ...new Set([...asKeyList(acceptDrift[skill.name]), ...asKeyList(acceptDrift[rel])]),
+    ...new Set([
+      ...asKeyList(acceptDrift[skill.name]),
+      ...asKeyList(acceptDrift[rel]),
+    ]),
   ];
 }
 
 function main() {
-  const opts = parseArgs(process.argv.slice(2));
-  if (opts.help) {
-    console.log("Usage: node scripts/initialise.mjs [--dry-run|--write] [--json] [--repo-root <p>] [--skills-dir <p>]");
+  const options = parseArgs(process.argv.slice(2));
+  if (options.help) {
+    console.log(
+      "Usage: node scripts/initialise.mjs [--dry-run|--write] [--json] [--repo-root <p>] [--skills-dir <p>]",
+    );
     return;
   }
 
-  const { facts, acceptDrift } = readStdinPayload();
-  const skills = discoverSkills(opts.skillsDir);
-  const { detect } = createDetectors({ repoRoot: opts.repoRoot, linearFacts: facts });
+  const { acceptDrift, facts } = readStdinPayload();
+  const skills = discoverSkills(options.skillsDir);
+  const { detect } = createDetectors({
+    linearFacts: facts,
+    repoRoot: options.repoRoot,
+  });
 
   const skillReports = [];
   for (const skill of skills) {
     if (skill.malformed) {
       skillReports.push({
-        name: skill.name,
-        configPath: relative(opts.repoRoot, skill.configPath),
+        configPath: relative(options.repoRoot, skill.configPath),
         malformed: true,
+        name: skill.name,
         results: {},
       });
       continue;
     }
 
-    const accepted = acceptedDriftFor(skill, acceptDrift, opts.repoRoot);
-    const { results, data, changed } = mergeConfig({
-      example: skill.example,
+    const accepted = acceptedDriftFor(skill, acceptDrift, options.repoRoot);
+    const { changed, data, results } = mergeConfig({
+      acceptDrift: accepted,
       config: skill.config.data,
       detect,
-      acceptDrift: accepted,
+      example: skill.example,
     });
 
-    if (opts.write && changed) {
-      const text = serialiseConfig(skill.config, data, Object.keys(skill.example));
+    if (options.write && changed) {
+      const text = serialiseConfig(
+        skill.config,
+        data,
+        Object.keys(skill.example),
+      );
       try {
         writeFileSync(skill.configPath, text);
-      } catch (err) {
-        console.error(`initialise-skills: could not write ${skill.configPath}: ${err.message}`);
+      } catch (error) {
+        console.error(
+          `initialise-skills: could not write ${skill.configPath}: ${error.message}`,
+        );
         process.exit(2);
       }
     }
 
     skillReports.push({
-      name: skill.name,
-      configPath: relative(opts.repoRoot, skill.configPath),
+      configPath: relative(options.repoRoot, skill.configPath),
       malformed: false,
+      name: skill.name,
       results,
     });
   }
 
-  const report = buildReport(skillReports, opts.write);
-  if (opts.json) {
+  const report = buildReport(skillReports, options.write);
+  if (options.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
     console.log(formatHuman(report));
@@ -156,9 +199,9 @@ function main() {
 
 try {
   main();
-} catch (err) {
+} catch (error) {
   // The CLI contract documents exit 2 for usage/IO errors — funnel any unexpected
   // throw (discovery, detection, write, output) into it instead of a raw crash.
-  console.error(`initialise-skills: ${err.message}`);
+  console.error(`initialise-skills: ${error.message}`);
   process.exit(2);
 }

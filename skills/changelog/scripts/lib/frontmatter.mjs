@@ -24,35 +24,37 @@ function indentOf(line) {
 
 // Parse a scalar token (the text after `key:` or an array item).
 function parseScalar(token) {
-  const t = token.trim();
-  if (t === "" || t === "null" || t === "~") {
+  const text = token.trim();
+  if (text === "" || text === "null" || text === "~") {
     return null;
   }
 
-  if (t === "true") {
+  if (text === "true") {
     return true;
   }
 
-  if (t === "false") {
+  if (text === "false") {
     return false;
   }
 
-  if (/^-?\d+$/.test(t)) {
-    return Number.parseInt(t, 10);
+  if (/^-?\d+$/.test(text)) {
+    return Number.parseInt(text, 10);
   }
 
-  if (t.startsWith("'") && t.endsWith("'") && t.length >= 2) {
-    return t.slice(1, -1).replaceAll("''", "'");
+  if (text.startsWith("'") && text.endsWith("'") && text.length >= 2) {
+    return text.slice(1, -1).replaceAll("''", "'");
   }
 
-  if (t.startsWith('"') && t.endsWith('"') && t.length >= 2) {
+  if (text.startsWith('"') && text.endsWith('"') && text.length >= 2) {
     // Unescape in a single left-to-right pass so an escaped backslash (`\\`)
     // can't have its trailing char re-consumed by a later rule (e.g. `\\n`
     // must become `\n`, not a newline).
-    return t.slice(1, -1).replace(/\\(.)/g, (_, c) => (c === "n" ? "\n" : c));
+    return text
+      .slice(1, -1)
+      .replaceAll(/\\(.)/g, (_, char) => (char === "n" ? "\n" : char));
   }
 
-  return t;
+  return text;
 }
 
 // Split an inline-array body on top-level commas only — commas inside single-
@@ -64,20 +66,20 @@ function splitInlineItems(inner) {
   let current = "";
   /** @type {"'"|'"'|null} */
   let quote = null;
-  for (let i = 0; i < inner.length; i++) {
-    const ch = inner[i];
+  for (let index = 0; index < inner.length; index++) {
+    const ch = inner[index];
     if (quote === '"') {
       current += ch;
-      if (ch === "\\" && i + 1 < inner.length) {
-        current += inner[++i];
+      if (ch === "\\" && index + 1 < inner.length) {
+        current += inner[++index];
       } else if (ch === '"') {
         quote = null;
       }
     } else if (quote === "'") {
       current += ch;
       if (ch === "'") {
-        if (inner[i + 1] === "'") {
-          current += inner[++i];
+        if (inner[index + 1] === "'") {
+          current += inner[++index];
         } else {
           quote = null;
         }
@@ -118,12 +120,12 @@ function parseInlineArray(body) {
 // the consumed lines (those more indented than `parentIndent`) and the next index.
 function collectBlock(lines, start, parentIndent) {
   const block = [];
-  let i = start;
-  while (i < lines.length) {
-    const line = lines[i];
+  let index = start;
+  while (index < lines.length) {
+    const line = lines[index];
     if (line.trim() === "") {
       block.push(line);
-      i++;
+      index++;
       continue;
     }
 
@@ -132,7 +134,7 @@ function collectBlock(lines, start, parentIndent) {
     }
 
     block.push(line);
-    i++;
+    index++;
   }
 
   // Drop trailing blank lines that belong to the gap before the next key.
@@ -140,7 +142,7 @@ function collectBlock(lines, start, parentIndent) {
     block.pop();
   }
 
-  return { block, next: i };
+  return { block, next: index };
 }
 
 // Fold/keep a block scalar per its indicator (`>` folds newlines to spaces,
@@ -150,26 +152,26 @@ function parseBlockScalar(indicator, block) {
   // An empty block — or one whose lines are all whitespace — has no content to
   // dedent. `Math.min(...[])` is `Infinity`, which would slice every line down
   // to "" and silently collapse the block, so treat both cases as empty.
-  const nonBlank = block.filter((l) => l.trim() !== "");
+  const nonBlank = block.filter((line) => line.trim() !== "");
   if (nonBlank.length === 0) {
     return "";
   }
 
-  const minIndent = Math.min(...nonBlank.map((l) => indentOf(l)));
-  const dedented = block.map((l) => l.slice(minIndent));
+  const minIndent = Math.min(...nonBlank.map((line) => indentOf(line)));
+  const dedented = block.map((line) => line.slice(minIndent));
   const folded = indicator.startsWith(">");
   return folded
-    ? dedented.join(" ").replace(/\s+/g, " ").trim()
+    ? dedented.join(" ").replaceAll(/\s+/g, " ").trim()
     : dedented.join("\n");
 }
 
 function parseMapping(lines, startIndent) {
   const data = {};
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index];
     if (line.trim() === "") {
-      i++;
+      index++;
       continue;
     }
 
@@ -178,11 +180,14 @@ function parseMapping(lines, startIndent) {
       // No `:` means malformed input (or a mis-routed block-array item). Fail
       // loudly: silently slicing on colon === -1 mangles the key/value and
       // produces a confusing downstream validation error instead.
-      throw new Error(`Invalid frontmatter line (expected "key: value"): ${line}`);
+      throw new Error(
+        `Invalid frontmatter line (expected "key: value"): ${line}`,
+      );
     }
+
     const key = line.slice(indentOf(line), colon).trim();
     const rest = line.slice(colon + 1).trim();
-    i++;
+    index++;
 
     if (
       rest === "" ||
@@ -191,8 +196,8 @@ function parseMapping(lines, startIndent) {
       rest === "|" ||
       rest === "|-"
     ) {
-      const { block, next } = collectBlock(lines, i, startIndent);
-      i = next;
+      const { block, next } = collectBlock(lines, index, startIndent);
+      index = next;
       if (rest === "") {
         // Could be a block array, a nested mapping, or a bare null.
         if (block.length === 0) {
@@ -202,7 +207,9 @@ function parseMapping(lines, startIndent) {
           // preserves a blank line between `key:` and the first `- item`, so
           // keying off `block[0]` would misroute such a block into parseMapping()
           // and throw on the `- item` lines.
-          const firstContent = block.find((l) => l.trim() !== "");
+          const firstContent = block.find(
+            (blockLine) => blockLine.trim() !== "",
+          );
           if (
             firstContent?.trimStart().startsWith("- ") ||
             firstContent?.trim() === "-"
@@ -211,8 +218,10 @@ function parseMapping(lines, startIndent) {
             // lines between items would otherwise yield spurious `null` entries
             // (each blank line parses as the empty scalar -> `null`).
             data[key] = block
-              .filter((l) => l.trim() !== "")
-              .map((l) => parseScalar(l.trimStart().replace(/^-\s?/, "")));
+              .filter((blockLine) => blockLine.trim() !== "")
+              .map((blockLine) =>
+                parseScalar(blockLine.trimStart().replace(/^-\s?/, "")),
+              );
           } else {
             const childIndent = indentOf(firstContent ?? block[0]);
             data[key] = parseMapping(block, childIndent);
@@ -246,12 +255,12 @@ export function parseFrontmatter(raw) {
   const text = raw.startsWith("﻿") ? raw.slice(1) : raw;
   const match = FRONTMATTER_RE.exec(text);
   if (!match) {
-    return { data: {}, content: text };
+    return { content: text, data: {} };
   }
 
   const fmLines = match[1].split("\n");
   const content = text.slice(match[0].length);
-  return { data: parseMapping(fmLines, 0), content };
+  return { content, data: parseMapping(fmLines, 0) };
 }
 
 // --- serialising -----------------------------------------------------------
@@ -278,60 +287,64 @@ const INDICATORS = new Set([
   "}",
 ]);
 
-function reparsesAsNonString(str) {
+function reparsesAsNonString(string_) {
   // True when an unquoted emit of this string would parse back as something
   // other than a string (bool/int/null) or as a date-shaped token worth quoting.
   if (
-    str === "" ||
-    str === "null" ||
-    str === "~" ||
-    str === "true" ||
-    str === "false"
+    string_ === "" ||
+    string_ === "null" ||
+    string_ === "~" ||
+    string_ === "true" ||
+    string_ === "false"
   ) {
     return true;
   }
 
-  if (/^-?\d+$/.test(str)) {
+  if (/^-?\d+$/.test(string_)) {
     return true;
   }
 
-  return /^\d{4}-\d{2}-\d{2}/.test(str);
+  return /^\d{4}-\d{2}-\d{2}/.test(string_);
 }
 
-function needsQuoting(str) {
-  if (str.length === 0) {
+function needsQuoting(string_) {
+  if (string_.length === 0) {
     return true;
   }
 
-  if (str !== str.trim()) {
+  if (string_ !== string_.trim()) {
     return true;
   }
 
-  if (INDICATORS.has(str[0]) || str.startsWith("- ")) {
+  if (INDICATORS.has(string_[0]) || string_.startsWith("- ")) {
     return true;
   }
 
-  if (str.includes(": ") || str.includes(" #") || str.includes("\n")) {
+  if (
+    string_.includes(": ") ||
+    string_.includes(" #") ||
+    string_.includes("\n")
+  ) {
     return true;
   }
 
-  return reparsesAsNonString(str);
+  return reparsesAsNonString(string_);
 }
 
-function serialiseString(str) {
-  if (!needsQuoting(str)) {
-    return str;
+function serialiseString(string_) {
+  if (!needsQuoting(string_)) {
+    return string_;
   }
 
-  if (str.includes("\n")) {
-    const escaped = str
+  if (string_.includes("\n")) {
+    const escaped = string_
       .replaceAll("\\", "\\\\")
       .replaceAll('"', '\\"')
       .replaceAll("\n", "\\n");
     return `"${escaped}"`;
   }
 
-  return `'${str.replaceAll("'", "''")}'`;
+  return `'${string_.replaceAll("'", "''")}'`;
 }
 
 function serialiseScalar(value) {
@@ -367,9 +380,9 @@ function serialiseValue(key, value, lines) {
 
   if (value !== null && typeof value === "object") {
     lines.push(`${key}:`);
-    for (const [k, v] of Object.entries(value)) {
-      const child = serialiseScalar(v);
-      lines.push(child === "" ? `  ${k}:` : `  ${k}: ${child}`);
+    for (const [childKey, childValue] of Object.entries(value)) {
+      const child = serialiseScalar(childValue);
+      lines.push(child === "" ? `  ${childKey}:` : `  ${childKey}: ${child}`);
     }
 
     return;

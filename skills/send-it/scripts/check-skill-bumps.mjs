@@ -25,13 +25,12 @@
 // The pure functions (collectTouchedSkills, incrementVersion, classifyBundles)
 // keep no git/fs state, so they're exported for vitest. main() does the I/O.
 
+import { deriveBump } from "./derive-bump.mjs";
+import { readGitCommits, resolveBaseRef } from "./lib/git.mjs";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-
-import { readGitCommits, resolveBaseRef } from "./lib/git.mjs";
-import { deriveBump } from "./derive-bump.mjs";
 
 const CONFIG_PATH = new URL("../config.json", import.meta.url);
 
@@ -47,6 +46,7 @@ export function collectTouchedSkills(changedFiles, root) {
     if (!file.startsWith(prefix)) {
       continue;
     }
+
     const rest = file.slice(prefix.length);
     const slash = rest.indexOf("/");
     // Need a file INSIDE a bundle dir (`skills/foo/…`), not a loose
@@ -55,7 +55,8 @@ export function collectTouchedSkills(changedFiles, root) {
       names.add(rest.slice(0, slash));
     }
   }
-  return [...names].sort();
+
+  return [...names].toSorted();
 }
 
 /**
@@ -66,10 +67,11 @@ export function collectTouchedSkills(changedFiles, root) {
 export function incrementVersion(version, bump) {
   const core = String(version).split(/[-+]/, 1)[0];
   const parts = core.split(".");
-  if (parts.length !== 3 || parts.some((p) => !/^\d+$/.test(p))) {
+  if (parts.length !== 3 || parts.some((part) => !/^\d+$/.test(part))) {
     throw new Error(`not a semver version: ${JSON.stringify(version)}`);
   }
-  let [major, minor, patch] = parts.map(Number);
+
+  const [major, minor, patch] = parts.map(Number);
   switch (bump) {
     case "major":
       return `${major + 1}.0.0`;
@@ -93,23 +95,26 @@ export function classifyBundles(touched, versions, suggestedBump, paths) {
   const unbumped = [];
   const bumped = [];
   for (const name of touched) {
-    const v = versions[name];
-    if (!v || v.current == null) {
+    const entry = versions[name];
+    if (!entry || entry.current === null) {
       continue; // not a versioned bundle (no manifest) — nothing to check
     }
-    if (v.base == null || v.base !== v.current) {
+
+    if (entry.base === null || entry.base !== entry.current) {
       bumped.push(name);
       continue;
     }
+
     unbumped.push({
-      name,
-      currentVersion: v.current,
-      suggestedBump,
-      suggestedVersion: incrementVersion(v.current, suggestedBump),
+      currentVersion: entry.current,
       manifestPath: paths(name).manifestPath,
+      name,
       skillPath: paths(name).skillPath,
+      suggestedBump,
+      suggestedVersion: incrementVersion(entry.current, suggestedBump),
     });
   }
+
   return { bumped, unbumped };
 }
 
@@ -125,13 +130,16 @@ function changedFilesVsBase(base) {
   const out = execFileSync("git", ["diff", "--name-only", `${base}...HEAD`], {
     encoding: "utf8",
   });
-  return out.split("\n").map((l) => l.trim()).filter(Boolean);
+  return out
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 function versionFromManifestText(text) {
   try {
-    const v = JSON.parse(text).version;
-    return typeof v === "string" ? v : null;
+    const version = JSON.parse(text).version;
+    return typeof version === "string" ? version : null;
   } catch {
     return null;
   }
@@ -148,28 +156,36 @@ function readVersionAtRef(ref, path) {
 }
 
 function readCurrentVersion(path) {
-  return existsSync(path) ? versionFromManifestText(readFileSync(path, "utf8")) : null;
+  return existsSync(path)
+    ? versionFromManifestText(readFileSync(path, "utf8"))
+    : null;
 }
 
 function main() {
   const config = readConfig();
   const bv = config.bundleVersioning;
   if (!bv || typeof bv !== "object") {
-    console.log(JSON.stringify({ bumped: [], configured: false, unbumped: [] }, null, 2));
+    console.log(
+      JSON.stringify({ bumped: [], configured: false, unbumped: [] }, null, 2),
+    );
     return;
   }
 
   const root = bv.root ?? "skills";
   const manifest = bv.manifest ?? "package.json";
   const skillFile = bv.skillFile ?? "SKILL.md";
-  const paths = (name) => ({
-    manifestPath: join(root, name, manifest),
-    skillPath: join(root, name, skillFile),
-  });
+  function paths(name) {
+    return {
+      manifestPath: join(root, name, manifest),
+      skillPath: join(root, name, skillFile),
+    };
+  }
 
   const base = resolveBaseRef();
   if (!base) {
-    console.log(JSON.stringify({ bumped: [], configured: true, unbumped: [] }, null, 2));
+    console.log(
+      JSON.stringify({ bumped: [], configured: true, unbumped: [] }, null, 2),
+    );
     return;
   }
 
@@ -185,7 +201,12 @@ function main() {
     };
   }
 
-  const { bumped, unbumped } = classifyBundles(touched, versions, suggestedBump, paths);
+  const { bumped, unbumped } = classifyBundles(
+    touched,
+    versions,
+    suggestedBump,
+    paths,
+  );
   console.log(JSON.stringify({ bumped, configured: true, unbumped }, null, 2));
 }
 

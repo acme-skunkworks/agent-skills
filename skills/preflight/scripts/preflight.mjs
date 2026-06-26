@@ -1,18 +1,21 @@
 #!/usr/bin/env node
-/**
- * Change-gated, branch-scoped lint preflight (originally ASW-282).
- */
-import { spawnSync } from "node:child_process";
-import { existsSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-
-import { getBranchScope, relativiseToWorkspace, resolveConfig } from "./lib/scope.mjs";
 import {
   classifyViolations,
   parseActionlintText,
   parseEslintJson,
   parseMarkdownlintText,
 } from "./classify-lint.mjs";
+import {
+  getBranchScope,
+  relativiseToWorkspace,
+  resolveConfig,
+} from "./lib/scope.mjs";
+/**
+ * Change-gated, branch-scoped lint preflight (originally ASW-282).
+ */
+import { spawnSync } from "node:child_process";
+import { existsSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 const ROOT = process.cwd();
 const SUMMARY_PATH = join(ROOT, ".preflight-summary.json");
@@ -21,13 +24,13 @@ const dryRun = process.argv.includes("--dry-run");
 /**
  * @param {string} cmd
  * @param {string[]} args
- * @param {{ encoding?: 'utf8'; input?: string }} [opts]
+ * @param {{ encoding?: 'utf8'; input?: string }} [options]
  */
-function run(cmd, args, opts = {}) {
+function run(cmd, args, options = {}) {
   return spawnSync(cmd, args, {
     cwd: ROOT,
-    encoding: opts.encoding ?? "utf8",
-    input: opts.input,
+    encoding: options.encoding ?? "utf8",
+    input: options.input,
     // ESLint `-f json` can exceed Node's 1 MiB default on a sizeable codebase;
     // truncated output fails JSON.parse and is swallowed as "zero violations",
     // so the run falsely passes. Raise the buffer well clear.
@@ -42,14 +45,14 @@ function run(cmd, args, opts = {}) {
  */
 function runEslintGroup(label, files) {
   if (files.length === 0) {
-    return { ok: true, violations: [], label, skipped: true };
+    return { label, ok: true, skipped: true, violations: [] };
   }
 
   if (dryRun) {
     console.log(
       `preflight: [dry-run] would run ESLint (${label}) on ${files.length} file(s)`,
     );
-    return { ok: true, violations: [], label, files, dryRun: true };
+    return { dryRun: true, files, label, ok: true, violations: [] };
   }
 
   const result = run("pnpm", ["exec", "eslint", "-f", "json", "--", ...files]);
@@ -59,7 +62,7 @@ function runEslintGroup(label, files) {
     console.error(result.stderr);
   }
 
-  return { ok, violations, label, files };
+  return { files, label, ok, violations };
 }
 
 /**
@@ -69,14 +72,14 @@ function runEslintGroup(label, files) {
  */
 function runEslintFilter(filter, files, prefix) {
   if (files.length === 0) {
-    return { ok: true, violations: [], label: filter, skipped: true };
+    return { label: filter, ok: true, skipped: true, violations: [] };
   }
 
   if (dryRun) {
     console.log(
       `preflight: [dry-run] would run ESLint (${filter}) on ${files.length} file(s)`,
     );
-    return { ok: true, violations: [], label: filter, files, dryRun: true };
+    return { dryRun: true, files, label: filter, ok: true, violations: [] };
   }
 
   // `pnpm --filter <pkg> exec` runs with the workspace dir as cwd, so ESLint
@@ -101,10 +104,10 @@ function runEslintFilter(filter, files, prefix) {
   }
 
   return {
+    files,
+    label: filter,
     ok,
     violations,
-    label: filter,
-    files,
   };
 }
 
@@ -136,7 +139,7 @@ function markdownlintMissing(result) {
  */
 function runMarkdownlint(files) {
   if (files.length === 0) {
-    return { ok: true, violations: [], skipped: true, markdownlint: "skipped" };
+    return { markdownlint: "skipped", ok: true, skipped: true, violations: [] };
   }
 
   if (dryRun) {
@@ -144,11 +147,11 @@ function runMarkdownlint(files) {
       `preflight: [dry-run] would run markdownlint on ${files.length} file(s)`,
     );
     return {
+      dryRun: true,
+      files,
+      markdownlint: "would-run",
       ok: true,
       violations: [],
-      files,
-      dryRun: true,
-      markdownlint: "would-run",
     };
   }
 
@@ -161,7 +164,7 @@ function runMarkdownlint(files) {
     console.warn(
       "preflight: markdownlint-cli2 not installed — skipping markdown lint (install it locally or rely on CI)",
     );
-    return { ok: true, violations: [], files, markdownlint: "warn-skipped" };
+    return { files, markdownlint: "warn-skipped", ok: true, violations: [] };
   }
 
   const violations = parseMarkdownlintText(
@@ -172,7 +175,7 @@ function runMarkdownlint(files) {
     console.error(result.stderr);
   }
 
-  return { ok: passed, violations, files, markdownlint: "ran" };
+  return { files, markdownlint: "ran", ok: passed, violations };
 }
 
 /**
@@ -180,7 +183,7 @@ function runMarkdownlint(files) {
  */
 function runActionlint(files) {
   if (files.length === 0) {
-    return { ok: true, violations: [], skipped: true, actionlint: "skipped" };
+    return { actionlint: "skipped", ok: true, skipped: true, violations: [] };
   }
 
   if (dryRun) {
@@ -188,11 +191,11 @@ function runActionlint(files) {
       `preflight: [dry-run] would run actionlint on ${files.length} workflow(s)`,
     );
     return {
+      actionlint: "would-run",
+      dryRun: true,
+      files,
       ok: true,
       violations: [],
-      files,
-      dryRun: true,
-      actionlint: "would-run",
     };
   }
 
@@ -210,49 +213,49 @@ function runActionlint(files) {
     console.warn(
       "preflight: actionlint not installed — skipping workflow lint (install actionlint locally or rely on CI)",
     );
-    return { ok: true, violations: [], files, actionlint: "warn-skipped" };
+    return { actionlint: "warn-skipped", files, ok: true, violations: [] };
   }
 
   const result = run(actionlintBin, [...files]);
   const violations = parseActionlintText(result.stderr || result.stdout, files);
   return {
+    actionlint: "ran",
+    files,
     ok: result.status === 0 && violations.length === 0,
     violations,
-    files,
-    actionlint: "ran",
   };
 }
 
 function buildSummary(scope, results, classified) {
   const failedLinters = results.failedLinters ?? [];
   const categories = {
+    actionlint: scope.workflowsChanged ? scope.actionlintTargets : "skipped",
     eslint: scope.codeChanged ? { ...scope.eslint } : "skipped",
     markdown: scope.markdownChanged ? scope.markdown : "skipped",
-    actionlint: scope.workflowsChanged ? scope.actionlintTargets : "skipped",
   };
 
   return {
+    blocking: classified.introduced.length > 0 || failedLinters.length > 0,
+    categories,
+    deferred: classified.preExisting.length > 0 && !dryRun,
     dryRun,
     mergeBase: scope.mergeBase,
-    categories,
+    passed: classified.introduced.length === 0 && failedLinters.length === 0,
     results: {
+      actionlint: results.actionlintStatus,
       eslintRan: scope.codeChanged,
-      markdownRan: scope.markdownChanged,
+      failedLinters,
       markdownlint:
         results.markdownlintStatus ??
         (scope.markdownChanged ? "ran" : "skipped"),
-      actionlint: results.actionlintStatus,
-      failedLinters,
+      markdownRan: scope.markdownChanged,
     },
     violations: {
       introduced: classified.introduced,
-      preExisting: classified.preExisting,
       introducedCount: classified.introduced.length,
+      preExisting: classified.preExisting,
       preExistingCount: classified.preExisting.length,
     },
-    passed: classified.introduced.length === 0 && failedLinters.length === 0,
-    deferred: classified.preExisting.length > 0 && !dryRun,
-    blocking: classified.introduced.length > 0 || failedLinters.length > 0,
   };
 }
 
@@ -298,9 +301,7 @@ function main() {
   const failedLinters = [];
 
   if (scope.codeChanged) {
-    console.log(
-      "preflight: running scoped ESLint (code changed on branch)",
-    );
+    console.log("preflight: running scoped ESLint (code changed on branch)");
     const groups = [
       runEslintGroup("scripts", scope.eslint.scripts),
       runEslintGroup("root", scope.eslint.root),
@@ -308,20 +309,18 @@ function main() {
         runEslintFilter(filter, scope.eslint[key], prefix),
       ),
     ];
-    for (const g of groups) {
-      if (!g.skipped && !g.dryRun) {
-        allViolations.push(...g.violations);
-        if (g.ok) {
-          console.log(`preflight: ESLint passed (${g.label})`);
-        } else if (g.violations.length === 0) {
+    for (const group of groups) {
+      if (!group.skipped && !group.dryRun) {
+        allViolations.push(...group.violations);
+        if (group.ok) {
+          console.log(`preflight: ESLint passed (${group.label})`);
+        } else if (group.violations.length === 0) {
           console.error(
-            `preflight: ESLint failed to run successfully (${g.label}) — no parseable violations from non-zero exit`,
+            `preflight: ESLint failed to run successfully (${group.label}) — no parseable violations from non-zero exit`,
           );
-          failedLinters.push(`eslint:${g.label}`);
+          failedLinters.push(`eslint:${group.label}`);
         } else {
-          console.error(
-            `preflight: ESLint reported issues (${g.label})`,
-          );
+          console.error(`preflight: ESLint reported issues (${group.label})`);
         }
       }
     }
@@ -349,16 +348,12 @@ function main() {
       }
     }
   } else {
-    console.log(
-      "preflight: skipping markdownlint (no markdown changes)",
-    );
+    console.log("preflight: skipping markdownlint (no markdown changes)");
   }
 
   if (scope.workflowsChanged) {
     const targetCount = scope.actionlintTargets.length;
-    console.log(
-      `preflight: running actionlint on ${targetCount} workflow(s)`,
-    );
+    console.log(`preflight: running actionlint on ${targetCount} workflow(s)`);
     const wf = runActionlint(scope.actionlintTargets);
     actionlintStatus = wf.actionlint ?? "ran";
     if (!wf.skipped && !wf.dryRun && wf.actionlint !== "warn-skipped") {
@@ -384,7 +379,7 @@ function main() {
 
   const summary = buildSummary(
     scope,
-    { actionlintStatus, markdownlintStatus, failedLinters },
+    { actionlintStatus, failedLinters, markdownlintStatus },
     classified,
   );
   writeFileSync(SUMMARY_PATH, `${JSON.stringify(summary, null, 2)}\n`);
@@ -413,8 +408,10 @@ function main() {
     console.error(
       "\npreflight: blocking — introduced violations must be fixed (run node skills/preflight/scripts/lint-fix.mjs and re-run preflight)",
     );
-    for (const v of classified.introduced.slice(0, 20)) {
-      console.error(`  ${v.file}:${v.line} [${v.source}] ${v.message}`);
+    for (const violation of classified.introduced.slice(0, 20)) {
+      console.error(
+        `  ${violation.file}:${violation.line} [${violation.source}] ${violation.message}`,
+      );
     }
 
     if (classified.introduced.length > 20) {
@@ -439,8 +436,10 @@ function main() {
     console.error(
       "\npreflight: pre-existing violations in branch-touched files — choose fix now or create a Linear debt issue",
     );
-    for (const v of classified.preExisting.slice(0, 20)) {
-      console.error(`  ${v.file}:${v.line} [${v.source}] ${v.message}`);
+    for (const violation of classified.preExisting.slice(0, 20)) {
+      console.error(
+        `  ${violation.file}:${violation.line} [${violation.source}] ${violation.message}`,
+      );
     }
 
     if (classified.preExisting.length > 20) {

@@ -1,23 +1,22 @@
 #!/usr/bin/env node
 import { loadConfig } from "./lib/config.mjs";
-import { readdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { argv } from "node:process";
 
 const {
-  linearWorkspaceSlug: WORKSPACE,
-  issueKeys: TEAM_KEYS,
   changelogDir: CHANGELOG_DIR,
+  issueKeys: TEAM_KEYS,
+  linearWorkspaceSlug: WORKSPACE,
 } = loadConfig();
 
 /**
  * Escape regex metacharacters so a configured key such as `C++` or `MY.KEY`
  * can't throw at construction or silently widen the match.
- * @param {string} s
+ * @param {string} source
  */
-function escapeRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function escapeRegex(source) {
+  return source.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 // `null` when no issue keys are configured: an empty alternation would match the
@@ -36,7 +35,7 @@ const ALREADY_LINKED_RE = /\[[^\]]*\]\([^)]*\)/g;
 // the label (four or more would be an indented code block), so allow `{0,3}`.
 // Must run before `REFERENCE_LINKED_RE` so a definition is never partially
 // consumed as an in-text label.
-const REFERENCE_DEFINITION_RE = /^ {0,3}\[[^\]]+\]:[^\n]*(?:\n[ \t]+[^\n]*)*/gm;
+const REFERENCE_DEFINITION_RE = /^ {0,3}\[[^\]]+\]:[^\n]*(?:\n[ \t][^\n]*)*/gm;
 // Reference-style links — `[text][ref]` and the collapsed `[text][]` — also
 // already point at a definition, so mask them too. Without this, `ISSUE_RE`
 // rewrites inside the label (`[ASW-1][1]` -> `[[ASW-1](url)][1]`) and re-runs
@@ -57,20 +56,23 @@ export function rewriteBody(body) {
   // a UTF-8 text file, so a token can never collide with real prose on restore
   // (the previous bare `FENCE0`/`INLINE1`/`LINK2` tokens could).
   const masks = [];
-  const mask = (m) => {
-    masks.push(m);
-    return `\x00CR_MASK_${masks.length - 1}\x00`;
-  };
+  function mask(match) {
+    masks.push(match);
+    return `\u0000CR_MASK_${masks.length - 1}\u0000`;
+  }
 
   const masked = body
-    .replace(FENCE_RE, mask)
-    .replace(INLINE_CODE_RE, mask)
-    .replace(ALREADY_LINKED_RE, mask)
-    .replace(REFERENCE_DEFINITION_RE, mask)
-    .replace(REFERENCE_LINKED_RE, mask)
+    .replaceAll(FENCE_RE, mask)
+    .replaceAll(INLINE_CODE_RE, mask)
+    .replaceAll(ALREADY_LINKED_RE, mask)
+    .replaceAll(REFERENCE_DEFINITION_RE, mask)
+    .replaceAll(REFERENCE_LINKED_RE, mask)
     .replace(ISSUE_RE, (id) => `[${id}](${buildUrl(id)})`);
 
-  return masked.replace(/\x00CR_MASK_(\d+)\x00/g, (_, i) => masks[Number(i)]);
+  return masked.replaceAll(
+    /\0CR_MASK_(\d+)\0/g,
+    (_, index) => masks[Number(index)],
+  );
 }
 
 export function splitFrontmatter(raw) {
@@ -79,10 +81,10 @@ export function splitFrontmatter(raw) {
   // would let `rewriteBody` rewrite the frontmatter region too).
   const match = raw.match(/^---\r?\n[\s\S]*?\r?\n---\r?\n/);
   if (!match) {
-    return { fm: "", body: raw };
+    return { body: raw, fm: "" };
   }
 
-  return { fm: match[0], body: raw.slice(match[0].length) };
+  return { body: raw.slice(match[0].length), fm: match[0] };
 }
 
 function main() {
@@ -100,13 +102,13 @@ function main() {
   }
 
   const files = readdirSync(CHANGELOG_DIR)
-    .filter((n) => n.endsWith(".md") && n !== "README.md")
-    .map((n) => join(CHANGELOG_DIR, n));
+    .filter((name) => name.endsWith(".md") && name !== "README.md")
+    .map((name) => join(CHANGELOG_DIR, name));
 
   let touched = 0;
   for (const file of files) {
     const raw = readFileSync(file, "utf8");
-    const { fm, body } = splitFrontmatter(raw);
+    const { body, fm } = splitFrontmatter(raw);
     const next = rewriteBody(body);
     if (next !== body) {
       writeFileSync(file, fm + next);
@@ -120,6 +122,6 @@ function main() {
 
 // Only run the filesystem pass when invoked as a CLI, not when imported (e.g.
 // by unit tests exercising `rewriteBody`).
-if (argv[1] && fileURLToPath(import.meta.url) === argv[1]) {
+if (argv[1] && import.meta.filename === argv[1]) {
   main();
 }

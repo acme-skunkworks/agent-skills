@@ -25,11 +25,11 @@ export function classifyViolations(mergeBase, violations) {
   /** @type {Violation[]} */
   const preExisting = [];
 
-  for (const v of violations) {
-    if (isIntroducedLine(introducedByFile, v.file, v.line)) {
-      introduced.push(v);
+  for (const violation of violations) {
+    if (isIntroducedLine(introducedByFile, violation.file, violation.line)) {
+      introduced.push(violation);
     } else {
-      preExisting.push(v);
+      preExisting.push(violation);
     }
   }
 
@@ -60,20 +60,20 @@ export function parseEslintJson(eslintJson) {
   const violations = [];
   for (const result of data) {
     const file = toRepoRelative(result.filePath ?? "");
-    for (const msg of result.messages ?? []) {
+    for (const message of result.messages ?? []) {
       // Drop severity 0 (off) only. Severity 1 (warn) is kept and counts as a
       // blocking violation when on an introduced line — preflight is
       // deliberately strict about warnings the branch adds.
-      if (msg.severity === 0 || !msg.line) {
+      if (message.severity === 0 || !message.line) {
         continue;
       }
 
       violations.push({
+        column: message.column,
         file,
-        line: msg.line,
-        column: msg.column,
-        ruleId: msg.ruleId,
-        message: msg.message,
+        line: message.line,
+        message: message.message,
+        ruleId: message.ruleId,
         source: "eslint",
       });
     }
@@ -122,13 +122,13 @@ export function parseMarkdownlintJson(mdJson) {
     violations.push({
       file,
       line,
-      ruleId: Array.isArray(item.ruleNames)
-        ? item.ruleNames.join("/")
-        : item.ruleName,
       message:
         item.ruleDescription ??
         item.ruleInformation ??
         "markdownlint violation",
+      ruleId: Array.isArray(item.ruleNames)
+        ? item.ruleNames.join("/")
+        : item.ruleName,
       source: "markdownlint",
     });
   }
@@ -159,7 +159,7 @@ export function parseMarkdownlintText(text) {
   /** @type {Violation[]} */
   const violations = [];
   for (const raw of text.split("\n")) {
-    const match = raw.trimEnd().match(/^(.+?):(\d+)(?::(\d+))?\s+(.+)$/);
+    const match = raw.trimEnd().match(/^(.+?):(\d+)(?::(\d+))?\s+(\S.*)$/);
     if (!match) {
       continue;
     }
@@ -167,7 +167,7 @@ export function parseMarkdownlintText(text) {
     // Strip an optional `error`/`warning` severity token, then split the rest
     // into the rule name(s) and the human description.
     let rest = match[4];
-    const severity = rest.match(/^(?:error|warning)\s+(.+)$/i);
+    const severity = rest.match(/^(?:error|warning)\s+(\S.*)$/i);
     if (severity) {
       rest = severity[1];
     }
@@ -180,8 +180,8 @@ export function parseMarkdownlintText(text) {
       file: toRepoRelative(match[1]),
       line: Number(match[2]),
       ...(match[3] ? { column: Number(match[3]) } : {}),
-      ruleId,
       message,
+      ruleId,
       source: "markdownlint",
     });
   }
@@ -212,9 +212,9 @@ export function parseActionlintText(stderr, workflowFiles) {
     const match = line.match(/^([^:]+):(\d+):(\d+): (.+)$/);
     if (match) {
       violations.push({
+        column: Number(match[3]),
         file: toRepoRelative(match[1]),
         line: Number(match[2]),
-        column: Number(match[3]),
         message: match[4],
         source: "actionlint",
       });

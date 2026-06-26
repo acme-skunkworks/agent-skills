@@ -9,8 +9,8 @@ importers:
   .:
     devDependencies:
       '@acme-skunkworks/eslint-config':
-        specifier: ^1.0.4
-        version: 1.0.5(@types/node@25.9.1)(@typescript-eslint/utils@8.62.0(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3))(eslint-config-prettier@10.1.8(eslint@9.39.4(jiti@2.7.0)))(eslint-plugin-import-x@4.17.0(@typescript-eslint/utils@8.62.0(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.4(jiti@2.7.0)))(eslint@9.39.4(jiti@2.7.0))(prettier@3.8.4)(typescript@6.0.3)(vitest@4.1.7(@types/node@25.9.1)(vite@8.0.14(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.3)(yaml@2.9.0)))(zod@4.4.3)
+        specifier: ^1.1.0
+        version: 1.1.0(@types/node@25.9.1)(@typescript-eslint/utils@8.62.0(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3))(eslint-config-prettier@10.1.8(eslint@9.39.4(jiti@2.7.0)))(eslint-plugin-import-x@4.17.0(@typescript-eslint/utils@8.62.0(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.4(jiti@2.7.0)))(eslint@9.39.4(jiti@2.7.0))(prettier@3.8.4)(typescript@6.0.3)(vitest@4.1.7(@types/node@25.9.1)(vite@8.0.14(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.3)(yaml@2.9.0)))(zod@4.4.3)
       '@acme-skunkworks/markdownlint-config':
         specifier: ^2.0.0
         version: 2.0.1
@@ -53,8 +53,8 @@ importers:
 
 packages:
 
-  '@acme-skunkworks/eslint-config@1.0.5':
-    resolution: {integrity: sha512-wHrV2SmwvmKhzJVc0XkSKybcMRZs+G5EOA6NSLnxGz38uVTPbQC+JUu2qvGPDOEOsCFIYtE11uGLCsqAfhKbpQ==}
+  '@acme-skunkworks/eslint-config@1.1.0':
+    resolution: {integrity: sha512-0s/PSqITokTFqd65Z5SItbFrOSku2LNbSBjWQSaCDnYDLwct0v2D+3lwQLa+dGx/DpaM60GlL74IZhdG3U+bIg==}
     engines: {node: '>=22'}
     peerDependencies:
       eslint: ^8.57.0 || ^9.0.0
@@ -3460,7 +3460,7 @@ packages:
 
 snapshots:
 
-  '@acme-skunkworks/eslint-config@1.0.5(@types/node@25.9.1)(@typescript-eslint/utils@8.62.0(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3))(eslint-config-prettier@10.1.8(eslint@9.39.4(jiti@2.7.0)))(eslint-plugin-import-x@4.17.0(@typescript-eslint/utils@8.62.0(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.4(jiti@2.7.0)))(eslint@9.39.4(jiti@2.7.0))(prettier@3.8.4)(typescript@6.0.3)(vitest@4.1.7(@types/node@25.9.1)(vite@8.0.14(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.3)(yaml@2.9.0)))(zod@4.4.3)':
+  '@acme-skunkworks/eslint-config@1.1.0(@types/node@25.9.1)(@typescript-eslint/utils@8.62.0(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3))(eslint-config-prettier@10.1.8(eslint@9.39.4(jiti@2.7.0)))(eslint-plugin-import-x@4.17.0(@typescript-eslint/utils@8.62.0(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3))(eslint@9.39.4(jiti@2.7.0)))(eslint@9.39.4(jiti@2.7.0))(prettier@3.8.4)(typescript@6.0.3)(vitest@4.1.7(@types/node@25.9.1)(vite@8.0.14(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.3)(yaml@2.9.0)))(zod@4.4.3)':
     dependencies:
       astro-eslint-parser: 1.4.0
       eslint: 9.39.4(jiti@2.7.0)

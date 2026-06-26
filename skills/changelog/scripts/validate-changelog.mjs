@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { parseFrontmatter } from "./lib/frontmatter.mjs";
 import { loadConfig } from "./lib/config.mjs";
+import { parseFrontmatter } from "./lib/frontmatter.mjs";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, basename } from "node:path";
+import { basename, join } from "node:path";
 
 const CHANGELOG_DIR = loadConfig().changelogDir;
 const FILENAME_RE = /^(\d{8})-(\d{6})-([a-z0-9-]+)\.md$/;
@@ -32,20 +32,22 @@ const REQUIRED = [
 ];
 
 const errors = [];
-function fail(file, msg) {
-  errors.push(`${file}: ${msg}`);
+function fail(file, message) {
+  errors.push(`${file}: ${message}`);
 }
 
-function isInt(v) {
-  return typeof v === "number" && Number.isInteger(v);
+function isInt(value) {
+  return typeof value === "number" && Number.isInteger(value);
 }
 
-function isNonNegInt(v) {
-  return isInt(v) && v >= 0;
+function isNonNegInt(value) {
+  return isInt(value) && value >= 0;
 }
 
-function isStringArray(v) {
-  return Array.isArray(v) && v.every((x) => typeof x === "string");
+function isStringArray(value) {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+  );
 }
 
 function validateEntry(file, raw) {
@@ -92,11 +94,11 @@ function validateEntry(file, raw) {
   }
 
   if ("created_at" in fm) {
-    const v =
+    const value =
       typeof fm.created_at === "string"
         ? fm.created_at
         : (fm.created_at?.toISOString?.() ?? "");
-    if (!ISO_UTC_RE.test(v)) {
+    if (!ISO_UTC_RE.test(value)) {
       fail(
         file,
         `created_at must be ISO 8601 UTC with Z suffix (got ${JSON.stringify(fm.created_at)})`,
@@ -104,12 +106,12 @@ function validateEntry(file, raw) {
     }
   }
 
-  if (fm.merged_at != null && fm.merged_at !== "") {
-    const v =
+  if ("merged_at" in fm && fm.merged_at !== null && fm.merged_at !== "") {
+    const value =
       typeof fm.merged_at === "string"
         ? fm.merged_at
         : (fm.merged_at?.toISOString?.() ?? "");
-    if (!ISO_UTC_RE.test(v)) {
+    if (!ISO_UTC_RE.test(value)) {
       fail(file, "merged_at must be ISO 8601 UTC with Z suffix when set");
     }
   }
@@ -121,16 +123,27 @@ function validateEntry(file, raw) {
     fail(file, "branch must be a non-empty string");
   }
 
-  if (fm.pr != null && fm.pr !== "" && (!isInt(fm.pr) || Number(fm.pr) <= 0)) {
+  if (
+    "pr" in fm &&
+    fm.pr !== null &&
+    fm.pr !== "" &&
+    (!isInt(fm.pr) || Number(fm.pr) <= 0)
+  ) {
     fail(file, "pr must be a positive integer when set");
   }
 
-  if (fm.commit != null && fm.commit !== "" && !SHA7_RE.test(fm.commit)) {
+  if (
+    "commit" in fm &&
+    fm.commit !== null &&
+    fm.commit !== "" &&
+    !SHA7_RE.test(fm.commit)
+  ) {
     fail(file, "commit must be a 7-char hex SHA when set");
   }
 
   if (
-    fm.merge_strategy != null &&
+    "merge_strategy" in fm &&
+    fm.merge_strategy !== null &&
     fm.merge_strategy !== "" &&
     !MERGE_STRATEGIES.has(fm.merge_strategy)
   ) {
@@ -179,7 +192,7 @@ function validateEntry(file, raw) {
   // canonical list derived from PR files. Only enforce structure (string array).
   if (
     "affected_packages" in fm &&
-    fm.affected_packages != null &&
+    fm.affected_packages !== null &&
     !isStringArray(fm.affected_packages)
   ) {
     fail(
@@ -190,25 +203,25 @@ function validateEntry(file, raw) {
 
   // PR stats live under stats: { files_changed, loc_added, loc_removed }.
   const statKeys = ["files_changed", "loc_added", "loc_removed"];
-  for (const k of statKeys) {
-    if (k in fm) {
-      fail(file, `${k} must be under stats, not top-level`);
+  for (const key of statKeys) {
+    if (key in fm) {
+      fail(file, `${key} must be under stats, not top-level`);
     }
   }
 
-  if (!("stats" in fm) || fm.stats == null) {
+  if (!("stats" in fm) || fm.stats === null || fm.stats === undefined) {
     fail(file, "missing required field: stats");
   } else if (typeof fm.stats !== "object" || Array.isArray(fm.stats)) {
     fail(file, "stats must be an object");
   } else {
-    for (const k of statKeys) {
+    for (const key of statKeys) {
       if (
-        k in fm.stats &&
-        fm.stats[k] != null &&
-        fm.stats[k] !== "" &&
-        !isNonNegInt(fm.stats[k])
+        key in fm.stats &&
+        fm.stats[key] !== null &&
+        fm.stats[key] !== "" &&
+        !isNonNegInt(fm.stats[key])
       ) {
-        fail(file, `stats.${k} must be a non-negative integer when set`);
+        fail(file, `stats.${key} must be a non-negative integer when set`);
       }
     }
   }
@@ -240,8 +253,8 @@ function listEntries() {
   }
 
   return readdirSync(CHANGELOG_DIR)
-    .filter((n) => n.endsWith(".md") && n !== "README.md")
-    .map((n) => join(CHANGELOG_DIR, n));
+    .filter((name) => name.endsWith(".md") && name !== "README.md")
+    .map((name) => join(CHANGELOG_DIR, name));
 }
 
 const entries = listEntries();
@@ -253,8 +266,8 @@ if (errors.length > 0) {
   console.error(
     `Changelog validation failed with ${errors.length} error(s):\n`,
   );
-  for (const e of errors) {
-    console.error(`  - ${e}`);
+  for (const error of errors) {
+    console.error(`  - ${error}`);
   }
 
   process.exit(1);

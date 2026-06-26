@@ -16,8 +16,8 @@ const DEFAULT_PACKAGE_ROOTS = ["apps", "packages", "services"];
 const DEFAULT_FALLBACK_PACKAGE = "infrastructure";
 const DEFAULT_CHANGELOG_DIR = "changelog";
 
-function escapeRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function escapeRegex(source) {
+  return source.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
@@ -30,9 +30,9 @@ function escapeRegex(s) {
  */
 export function derivePackagesFromPaths(paths, options = {}) {
   const {
-    packageRoots = DEFAULT_PACKAGE_ROOTS,
+    changelogDir: changelogDirectory = DEFAULT_CHANGELOG_DIR,
     fallbackPackage = DEFAULT_FALLBACK_PACKAGE,
-    changelogDir = DEFAULT_CHANGELOG_DIR,
+    packageRoots = DEFAULT_PACKAGE_ROOTS,
   } = options;
 
   // `<root>/<x>/` → captures `<x>`, for any configured root.
@@ -41,7 +41,7 @@ export function derivePackagesFromPaths(paths, options = {}) {
       ? new RegExp(`^(?:${packageRoots.map(escapeRegex).join("|")})/([^/]+)/`)
       : null;
   // Normalise a trailing slash so `changelogDir: "changelog/"` still skips.
-  const skipPrefix = `${changelogDir.replace(/\/+$/, "")}/`;
+  const skipPrefix = `${changelogDirectory.replace(/\/+$/, "")}/`;
 
   const out = new Set();
   for (const changedPath of paths) {
@@ -54,8 +54,8 @@ export function derivePackagesFromPaths(paths, options = {}) {
       continue;
     }
 
-    const m = rootRe ? rootRe.exec(path) : null;
-    out.add(m ? m[1] : fallbackPackage);
+    const match = rootRe ? rootRe.exec(path) : null;
+    out.add(match ? match[1] : fallbackPackage);
   }
 
   return [...out].toSorted();

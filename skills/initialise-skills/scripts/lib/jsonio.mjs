@@ -48,6 +48,7 @@ function detectIndent(raw) {
   if (!match) {
     return 2;
   }
+
   const ws = match[1];
   return ws.startsWith("\t") ? "\t" : ws.length;
 }
@@ -63,11 +64,12 @@ export function parseConfig(raw) {
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     throw new Error("config.json must contain a JSON object");
   }
+
   return {
-    exists: true,
     data,
-    keyOrder: Object.keys(data),
+    exists: true,
     indent: detectIndent(raw),
+    keyOrder: Object.keys(data),
     newline: detectNewline(raw),
     trailingNewline: raw.endsWith("\n"),
   };
@@ -83,19 +85,21 @@ export function readConfig(path) {
   let raw;
   try {
     raw = readFileSync(path, "utf8");
-  } catch (err) {
-    if (err.code === "ENOENT") {
+  } catch (error) {
+    if (error.code === "ENOENT") {
       return {
-        exists: false,
         data: {},
-        keyOrder: [],
+        exists: false,
         indent: 2,
+        keyOrder: [],
         newline: "\n",
         trailingNewline: true,
       };
     }
-    throw err;
+
+    throw error;
   }
+
   return parseConfig(raw);
 }
 
@@ -118,11 +122,12 @@ export function serialiseConfig(parsed, data, appendOrder = []) {
       ordered[key] = data[key];
     }
   }
+
   // 2. New keys, preferring `appendOrder`, then any remaining insertion order.
-  const newKeys = Object.keys(data).filter((k) => !seen.has(k));
+  const newKeys = Object.keys(data).filter((key) => !seen.has(key));
   const orderedNew = [
-    ...appendOrder.filter((k) => newKeys.includes(k)),
-    ...newKeys.filter((k) => !appendOrder.includes(k)),
+    ...appendOrder.filter((key) => newKeys.includes(key)),
+    ...newKeys.filter((key) => !appendOrder.includes(key)),
   ];
   for (const key of orderedNew) {
     ordered[key] = data[key];
@@ -132,7 +137,8 @@ export function serialiseConfig(parsed, data, appendOrder = []) {
   // JSON.stringify always emits LF; reapply the source line-ending so a CRLF file
   // stays CRLF (and the trailing newline matches too).
   if (parsed.newline !== "\n") {
-    body = body.replace(/\n/g, parsed.newline);
+    body = body.replaceAll("\n", parsed.newline);
   }
+
   return parsed.trailingNewline ? `${body}${parsed.newline}` : body;
 }

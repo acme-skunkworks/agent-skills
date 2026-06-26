@@ -11,7 +11,7 @@
  * file, and usually none.
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 
 const ROOT = process.cwd();
@@ -73,7 +73,7 @@ function readWorkspaceGlobs(root) {
       const value = trimmed
         .slice(1)
         .trim()
-        .replace(/^['"]|['"]$/g, "");
+        .replaceAll(/^['"]|['"]$/g, "");
       if (value) {
         globs.push(value);
       }
@@ -147,14 +147,14 @@ function expandGlob(root, glob) {
  * @returns {Record<string, { filter: string; prefix: string }>}
  */
 export function detectWorkspaces(root = ROOT) {
-  const dirs = readWorkspaceGlobs(root).flatMap((glob) =>
+  const directories = readWorkspaceGlobs(root).flatMap((glob) =>
     expandGlob(root, glob),
   );
   /** @type {Record<string, { filter: string; prefix: string }>} */
   const workspaces = {};
 
-  for (const dir of dirs) {
-    const pkgPath = join(root, dir, "package.json");
+  for (const directory of directories) {
+    const pkgPath = join(root, directory, "package.json");
     if (!existsSync(pkgPath)) {
       continue;
     }
@@ -173,15 +173,15 @@ export function detectWorkspaces(root = ROOT) {
     // Key by basename for readable summary output. On the rare collision (two
     // workspaces sharing a basename across glob roots, e.g. apps/shared and
     // packages/shared) fall back to the full path so neither is silently dropped.
-    let key = basename(dir);
+    let key = basename(directory);
     if (Object.prototype.hasOwnProperty.call(workspaces, key)) {
       console.warn(
-        `preflight: workspace basename collision for "${key}" — keying "${dir}" by its full path`,
+        `preflight: workspace basename collision for "${key}" — keying "${directory}" by its full path`,
       );
-      key = dir;
+      key = directory;
     }
 
-    workspaces[key] = { filter: pkg.name, prefix: `${dir}/` };
+    workspaces[key] = { filter: pkg.name, prefix: `${directory}/` };
   }
 
   return workspaces;
@@ -375,7 +375,9 @@ export function gitChangedFiles(mergeBase) {
   );
   if (result.error || result.status !== 0) {
     const detail =
-      result.error?.message || result.stderr?.trim() || "unknown git diff error";
+      result.error?.message ||
+      result.stderr?.trim() ||
+      "unknown git diff error";
     throw new Error(`preflight: git diff failed: ${detail}`);
   }
 
@@ -437,9 +439,9 @@ export function classifyChangedFiles(
 
   /** @type {Record<string, string[]>} */
   const eslint = {
-    scripts: [],
     root: [],
-    ...Object.fromEntries(Object.keys(workspaces).map((k) => [k, []])),
+    scripts: [],
+    ...Object.fromEntries(Object.keys(workspaces).map((key) => [key, []])),
   };
   const markdown = [];
   const workflows = [];
@@ -487,14 +489,14 @@ export function classifyChangedFiles(
   );
 
   return {
-    codeChanged,
-    markdownChanged,
-    workflowsChanged,
-    eslint,
-    markdown,
-    workflows,
     actionlintTargets,
     changedFiles,
+    codeChanged,
+    eslint,
+    markdown,
+    markdownChanged,
+    workflows,
+    workflowsChanged,
   };
 }
 

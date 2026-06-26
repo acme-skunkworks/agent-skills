@@ -29,7 +29,6 @@
 
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 
 // Common AI review-bot logins. GitHub's GraphQL API returns bot logins WITHOUT
 // the `[bot]` suffix (e.g. `claude`, `coderabbitai`), whereas the REST API and
@@ -39,35 +38,43 @@ const DEFAULT_BOTS = ["claude", "cursor", "coderabbitai"];
 
 // ---- pure transform (no network) ----------------------------------------
 
-/** Strip a trailing `[bot]` suffix so a login compares equal in either form. */
+/**
+ * Strip a trailing `[bot]` suffix so a login compares equal in either form.
+ */
 function normaliseBot(login) {
   return String(login ?? "").replace(/\[bot\]$/, "");
 }
 
-/** Build a suffix-insensitive predicate matching a login against the bot list. */
+/**
+ * Build a suffix-insensitive predicate matching a login against the bot list.
+ */
 function makeBotMatcher(bots) {
   const set = new Set(bots.map(normaliseBot));
   return (login) => set.has(normaliseBot(login));
 }
 
-/** Reduce raw GraphQL comment nodes to the minimal `{ author, body }`. */
+/**
+ * Reduce raw GraphQL comment nodes to the minimal `{ author, body }`.
+ */
 function trimComments(commentNodes) {
-  return (commentNodes ?? []).map((c) => ({
-    author: c.author?.login ?? "unknown",
-    body: c.body ?? "",
+  return (commentNodes ?? []).map((commentNode) => ({
+    author: commentNode.author?.login ?? "unknown",
+    body: commentNode.body ?? "",
   }));
 }
 
-/** Reduce a raw review-thread node to its minimal shape for the report. */
+/**
+ * Reduce a raw review-thread node to its minimal shape for the report.
+ */
 function shapeThread(node) {
   const comments = trimComments(node.comments?.nodes);
   return {
-    threadId: node.id,
-    path: node.path ?? null,
-    line: node.line ?? node.originalLine ?? null,
-    isOutdated: Boolean(node.isOutdated),
     author: comments[0]?.author ?? "unknown",
     comments,
+    isOutdated: Boolean(node.isOutdated),
+    line: node.line ?? node.originalLine ?? null,
+    path: node.path ?? null,
+    threadId: node.id,
   };
 }
 
@@ -77,96 +84,130 @@ function shapeThread(node) {
  * surfacing human threads for the report.
  */
 export function buildResult({
-  number,
-  isDraft,
-  threadNodes,
-  commentNodes,
   bots,
+  commentNodes,
   includeResolved = false,
+  isDraft,
+  number,
+  threadNodes,
 }) {
   const isBot = makeBotMatcher(bots);
   const unresolvedThreads = [];
   const humanThreads = [];
 
   for (const node of threadNodes ?? []) {
-    if (!includeResolved && node.isResolved) continue;
+    if (!includeResolved && node.isResolved) {
+      continue;
+    }
+
     const thread = shapeThread(node);
-    if (isBot(thread.author)) unresolvedThreads.push(thread);
-    else humanThreads.push(thread);
+    if (isBot(thread.author)) {
+      unresolvedThreads.push(thread);
+    } else {
+      humanThreads.push(thread);
+    }
   }
 
   const aiSummaryComments = (commentNodes ?? [])
-    .filter((c) => isBot(c.author?.login))
-    .map((c) => ({
-      commentId: c.id,
-      author: c.author?.login ?? "unknown",
-      body: c.body ?? "",
+    .filter((commentNode) => isBot(commentNode.author?.login))
+    .map((commentNode) => ({
+      author: commentNode.author?.login ?? "unknown",
+      body: commentNode.body ?? "",
+      commentId: commentNode.id,
     }));
 
   return {
-    pr: number,
-    isDraft: Boolean(isDraft),
-    unresolvedThreads,
-    humanThreads,
     aiSummaryComments,
+    humanThreads,
+    isDraft: Boolean(isDraft),
+    pr: number,
+    unresolvedThreads,
   };
 }
 
 // ---- argument parsing ----------------------------------------------------
 
-/** Parse argv into `{ pr, bots, repo, includeResolved }`; throws on a flag missing its value, an unknown `--flag`, or a malformed `--repo`. */
+/**
+ * Parse argv into `{ pr, bots, repo, includeResolved }`; throws on a flag missing its value, an unknown `--flag`, or a malformed `--repo`.
+ */
 export function parseArgs(argv) {
-  const opts = { bots: DEFAULT_BOTS, repo: null, includeResolved: false, pr: null };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
-    if (arg === "--include-resolved") opts.includeResolved = true;
-    else if (arg === "--bots") {
-      const value = argv[++i];
+  const options = {
+    bots: DEFAULT_BOTS,
+    includeResolved: false,
+    pr: null,
+    repo: null,
+  };
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (argument === "--include-resolved") {
+      options.includeResolved = true;
+    } else if (argument === "--bots") {
+      const value = argv[++index];
       if (!value || value.startsWith("--")) {
         throw new Error("--bots requires a comma-separated list of bot logins");
       }
-      opts.bots = value
+
+      options.bots = value
         .split(",")
-        .map((s) => s.trim())
+        .map((source) => source.trim())
         .filter(Boolean);
-      if (opts.bots.length === 0) {
+      if (options.bots.length === 0) {
         throw new Error("--bots requires at least one non-empty bot login");
       }
-    } else if (arg === "--repo") {
-      const value = argv[++i];
+    } else if (argument === "--repo") {
+      const value = argv[++index];
       if (!value || value.startsWith("--")) {
         throw new Error("--repo requires an owner/name value");
       }
+
       if (!/^[^/\s]+\/[^/\s]+$/.test(value)) {
         throw new Error("--repo must be exactly owner/name");
       }
-      opts.repo = value;
-    } else if (!arg.startsWith("--") && opts.pr === null) opts.pr = arg;
-    else if (!arg.startsWith("--")) throw new Error(`unexpected argument: ${arg}`);
-    else throw new Error(`unknown option: ${arg}`);
+
+      options.repo = value;
+    } else if (!argument.startsWith("--") && options.pr === null) {
+      options.pr = argument;
+    } else if (argument.startsWith("--")) {
+      throw new Error(`unknown option: ${argument}`);
+    } else {
+      throw new Error(`unexpected argument: ${argument}`);
+    }
   }
-  return opts;
+
+  return options;
 }
 
-/** Accept a bare number or a full PR URL; return `{ number, repo }`. */
-export function resolvePr(prArg, repoArg) {
-  if (prArg == null) throw new Error("no PR number or URL given");
-  const urlMatch = String(prArg).match(
+/**
+ * Accept a bare number or a full PR URL; return `{ number, repo }`.
+ */
+export function resolvePr(prArgument, repoArgument) {
+  if (prArgument === null) {
+    throw new Error("no PR number or URL given");
+  }
+
+  const urlMatch = String(prArgument).match(
     /github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/,
   );
   if (urlMatch) {
-    return { number: Number(urlMatch[3]), repo: `${urlMatch[1]}/${urlMatch[2]}` };
+    return {
+      number: Number(urlMatch[3]),
+      repo: `${urlMatch[1]}/${urlMatch[2]}`,
+    };
   }
-  const number = Number(prArg);
+
+  const number = Number(prArgument);
   if (!Number.isInteger(number) || number <= 0) {
-    throw new Error(`not a PR number or URL: ${prArg}`);
+    throw new Error(`not a PR number or URL: ${prArgument}`);
   }
-  return { number, repo: repoArg };
+
+  return { number, repo: repoArgument };
 }
 
 // ---- network layer (gh) --------------------------------------------------
 
-/** Run a `gh` command and return stdout; 30s timeout so a stalled call can't hang. */
+/**
+ * Run a `gh` command and return stdout; 30s timeout so a stalled call can't hang.
+ */
 function gh(args) {
   return execFileSync("gh", args, {
     encoding: "utf8",
@@ -175,23 +216,38 @@ function gh(args) {
   });
 }
 
-/** Run a GraphQL query via `gh api graphql`, typing each variable as -f/-F. */
+/**
+ * Run a GraphQL query via `gh api graphql`, typing each variable as -f/-F.
+ */
 function ghGraphQL(query, variables) {
   const args = ["api", "graphql", "-f", `query=${query}`];
   for (const [key, value] of Object.entries(variables)) {
-    if (value === null || value === undefined) continue;
+    if (value === null || value === undefined) {
+      continue;
+    }
+
     if (typeof value === "number" || typeof value === "boolean") {
       args.push("-F", `${key}=${value}`);
     } else {
       args.push("-f", `${key}=${value}`);
     }
   }
+
   return JSON.parse(gh(args));
 }
 
-/** Return the current repository as `owner/name`. */
+/**
+ * Return the current repository as `owner/name`.
+ */
 function detectRepo() {
-  return gh(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"]).trim();
+  return gh([
+    "repo",
+    "view",
+    "--json",
+    "nameWithOwner",
+    "-q",
+    ".nameWithOwner",
+  ]).trim();
 }
 
 const THREADS_QUERY = `query($owner:String!,$name:String!,$number:Int!,$cursor:String){
@@ -230,93 +286,130 @@ function fetchAll(query, owner, name, number, pick) {
   let cursor = null;
   let isDraft;
   do {
-    const data = ghGraphQL(query, { owner, name, number, cursor });
+    const data = ghGraphQL(query, { cursor, name, number, owner });
     const pr = data.data.repository.pullRequest;
-    if (pr.isDraft !== undefined) isDraft = pr.isDraft;
+    if (pr.isDraft !== undefined) {
+      isDraft = pr.isDraft;
+    }
+
     const conn = pick(pr);
     nodes.push(...conn.nodes);
     cursor = conn.pageInfo.hasNextPage ? conn.pageInfo.endCursor : null;
   } while (cursor);
-  return { nodes, isDraft };
+
+  return { isDraft, nodes };
 }
 
-/** Fetch a PR's review threads and issue comments from GitHub. */
+/**
+ * Fetch a PR's review threads and issue comments from GitHub.
+ */
 function fetchFromGitHub(number, repo) {
   const nameWithOwner = repo ?? detectRepo();
   const parts = nameWithOwner.split("/");
   if (parts.length !== 2 || !parts[0] || !parts[1]) {
     throw new Error(`could not resolve repo: ${nameWithOwner}`);
   }
+
   const [owner, name] = parts;
-  const threads = fetchAll(THREADS_QUERY, owner, name, number, (pr) => pr.reviewThreads);
-  const comments = fetchAll(COMMENTS_QUERY, owner, name, number, (pr) => pr.comments);
-  return { isDraft: threads.isDraft, threadNodes: threads.nodes, commentNodes: comments.nodes };
+  const threads = fetchAll(
+    THREADS_QUERY,
+    owner,
+    name,
+    number,
+    (pr) => pr.reviewThreads,
+  );
+  const comments = fetchAll(
+    COMMENTS_QUERY,
+    owner,
+    name,
+    number,
+    (pr) => pr.comments,
+  );
+  return {
+    commentNodes: comments.nodes,
+    isDraft: threads.isDraft,
+    threadNodes: threads.nodes,
+  };
 }
 
 // ---- self-test -----------------------------------------------------------
 
-/** Run the built-in fixtures (no network) and exit non-zero on any failure. */
+/**
+ * Map an array of shaped threads to their `threadId`s (self-test helper).
+ */
+function ids(array) {
+  return array.map((thread) => thread.threadId);
+}
+
+/**
+ * Run the built-in fixtures (no network) and exit non-zero on any failure.
+ */
 function selfTest() {
   // GraphQL returns bot logins WITHOUT the `[bot]` suffix (e.g. `cursor`,
   // `claude`, `coderabbitai`), so the fixtures use the bare form.
   const threadNodes = [
     {
-      id: "T_bot_unresolved",
-      isResolved: false,
-      isOutdated: false,
-      path: "skills/x/SKILL.md",
-      line: 42,
       comments: { nodes: [{ author: { login: "cursor" }, body: "nit: typo" }] },
-    },
-    {
-      id: "T_bot_resolved",
-      isResolved: true,
+      id: "T_bot_unresolved",
       isOutdated: false,
-      path: "a.ts",
-      line: 1,
-      comments: { nodes: [{ author: { login: "claude" }, body: "done" }] },
+      isResolved: false,
+      line: 42,
+      path: "skills/x/SKILL.md",
     },
     {
+      comments: { nodes: [{ author: { login: "claude" }, body: "done" }] },
+      id: "T_bot_resolved",
+      isOutdated: false,
+      isResolved: true,
+      line: 1,
+      path: "a.ts",
+    },
+    {
+      comments: { nodes: [{ author: { login: "claude" }, body: "moved" }] },
       id: "T_bot_outdated",
-      isResolved: false,
       isOutdated: true,
-      path: "b.ts",
+      isResolved: false,
       line: null,
       originalLine: 9,
-      comments: { nodes: [{ author: { login: "claude" }, body: "moved" }] },
+      path: "b.ts",
     },
     {
+      comments: {
+        nodes: [{ author: { login: "alice" }, body: "please rename" }],
+      },
       id: "T_human",
-      isResolved: false,
       isOutdated: false,
-      path: "c.ts",
+      isResolved: false,
       line: 3,
-      comments: { nodes: [{ author: { login: "alice" }, body: "please rename" }] },
+      path: "c.ts",
     },
   ];
   const commentNodes = [
-    { id: "IC_summary", author: { login: "coderabbitai" }, body: "## Review summary" },
-    { id: "IC_human", author: { login: "bob" }, body: "lgtm" },
+    {
+      author: { login: "coderabbitai" },
+      body: "## Review summary",
+      id: "IC_summary",
+    },
+    { author: { login: "bob" }, body: "lgtm", id: "IC_human" },
   ];
   const bots = DEFAULT_BOTS;
 
   const result = buildResult({
-    number: 7,
-    isDraft: false,
-    threadNodes,
-    commentNodes,
     bots,
+    commentNodes,
+    isDraft: false,
+    number: 7,
+    threadNodes,
   });
   const withResolved = buildResult({
-    number: 7,
-    isDraft: false,
-    threadNodes,
-    commentNodes,
     bots,
+    commentNodes,
     includeResolved: true,
+    isDraft: false,
+    number: 7,
+    threadNodes,
   });
 
-  const ids = (arr) => arr.map((t) => t.threadId);
   const cases = [
     {
       name: "unresolved bot thread is included",
@@ -333,10 +426,12 @@ function selfTest() {
     {
       name: "outdated flag and originalLine fallback are preserved",
       ok:
-        result.unresolvedThreads.find((t) => t.threadId === "T_bot_outdated")
-          ?.isOutdated === true &&
-        result.unresolvedThreads.find((t) => t.threadId === "T_bot_outdated")
-          ?.line === 9,
+        result.unresolvedThreads.find(
+          (thread) => thread.threadId === "T_bot_outdated",
+        )?.isOutdated === true &&
+        result.unresolvedThreads.find(
+          (thread) => thread.threadId === "T_bot_outdated",
+        )?.line === 9,
     },
     {
       name: "human thread goes to humanThreads, not unresolvedThreads",
@@ -346,45 +441,51 @@ function selfTest() {
     },
     {
       name: "comments are trimmed to author + body only",
-      ok: result.unresolvedThreads.every((t) =>
-        t.comments.every(
-          (c) => Object.keys(c).sort().join(",") === "author,body",
+      ok: result.unresolvedThreads.every((thread) =>
+        thread.comments.every(
+          (comment) =>
+            Object.keys(comment).toSorted().join(",") === "author,body",
         ),
       ),
     },
     {
       name: "thread author is taken from the first comment",
       ok:
-        result.unresolvedThreads.find((t) => t.threadId === "T_bot_unresolved")
-          ?.author === "cursor",
+        result.unresolvedThreads.find(
+          (thread) => thread.threadId === "T_bot_unresolved",
+        )?.author === "cursor",
     },
     {
       name: "sticky AI summary comment is picked up",
-      ok: result.aiSummaryComments.some((c) => c.commentId === "IC_summary"),
+      ok: result.aiSummaryComments.some(
+        (comment) => comment.commentId === "IC_summary",
+      ),
     },
     {
       name: "human issue comment is not treated as an AI summary",
-      ok: !result.aiSummaryComments.some((c) => c.commentId === "IC_human"),
+      ok: !result.aiSummaryComments.some(
+        (comment) => comment.commentId === "IC_human",
+      ),
     },
   ];
 
   // A config entry written with the `[bot]` suffix must still match the bare
   // login GraphQL returns (and vice versa).
   const normalised = buildResult({
-    number: 7,
+    bots: ["claude[bot]"],
+    commentNodes: [],
     isDraft: false,
+    number: 7,
     threadNodes: [
       {
-        id: "T_norm",
-        isResolved: false,
-        isOutdated: false,
-        path: "d.ts",
-        line: 1,
         comments: { nodes: [{ author: { login: "claude" }, body: "x" }] },
+        id: "T_norm",
+        isOutdated: false,
+        isResolved: false,
+        line: 1,
+        path: "d.ts",
       },
     ],
-    commentNodes: [],
-    bots: ["claude[bot]"],
   });
   cases.push({
     name: "config '[bot]' suffix matches a bare GraphQL login",
@@ -392,7 +493,12 @@ function selfTest() {
   });
 
   // argument + PR-resolution parsing
-  const parsed = parseArgs(["123", "--bots", "x[bot], y[bot]", "--include-resolved"]);
+  const parsed = parseArgs([
+    "123",
+    "--bots",
+    "x[bot], y[bot]",
+    "--include-resolved",
+  ]);
   cases.push({
     name: "parseArgs reads pr, bots (trimmed), and --include-resolved",
     ok:
@@ -486,42 +592,52 @@ function selfTest() {
       console.log(`  FAIL  ${name}`);
     }
   }
+
   console.log(`\n${cases.length - failed}/${cases.length} passed`);
   process.exit(failed === 0 ? 0 : 1);
 }
 
 // ---- main ----------------------------------------------------------------
 
-/** CLI entry: parse args, fetch from GitHub, and print the minimal JSON. */
+/**
+ * CLI entry: parse args, fetch from GitHub, and print the minimal JSON.
+ */
 function main() {
   const argv = process.argv.slice(2);
   if (argv.includes("--self-test")) {
     selfTest();
     return;
   }
-  let opts;
+
+  let options;
   let pr;
   try {
-    opts = parseArgs(argv);
-    pr = resolvePr(opts.pr, opts.repo);
-  } catch (e) {
-    console.error(`review-threads: ${e.message}`);
+    options = parseArgs(argv);
+    pr = resolvePr(options.pr, options.repo);
+  } catch (error) {
+    console.error(`review-threads: ${error.message}`);
     process.exit(2);
   }
+
   try {
-    const { isDraft, threadNodes, commentNodes } = fetchFromGitHub(pr.number, pr.repo);
+    const { commentNodes, isDraft, threadNodes } = fetchFromGitHub(
+      pr.number,
+      pr.repo,
+    );
     const result = buildResult({
-      number: pr.number,
-      isDraft,
-      threadNodes,
+      bots: options.bots,
       commentNodes,
-      bots: opts.bots,
-      includeResolved: opts.includeResolved,
+      includeResolved: options.includeResolved,
+      isDraft,
+      number: pr.number,
+      threadNodes,
     });
     console.log(JSON.stringify(result, null, 2));
-  } catch (e) {
+  } catch (error) {
     // Non-zero exit so the skill can tell "couldn't fetch" from "no findings".
-    console.error(`review-threads: failed to fetch from GitHub — ${e.message}`);
+    console.error(
+      `review-threads: failed to fetch from GitHub — ${error.message}`,
+    );
     process.exit(1);
   }
 }
@@ -533,12 +649,12 @@ function main() {
 // macOS /var → /private/var, pnpm's symlinked store). Normalise both sides
 // through realpath before comparing.
 function isCliEntry() {
-  if (!process.argv[1]) return false;
+  if (!process.argv[1]) {
+    return false;
+  }
+
   try {
-    return (
-      realpathSync(fileURLToPath(import.meta.url)) ===
-      realpathSync(process.argv[1])
-    );
+    return realpathSync(import.meta.filename) === realpathSync(process.argv[1]);
   } catch {
     return false;
   }

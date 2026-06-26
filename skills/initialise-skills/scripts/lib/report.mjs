@@ -1,13 +1,15 @@
 // Render the reconcile report — both a human-readable summary and the JSON shape
 // Claude parses to drive the Linear-fact and per-key drift-opt-in steps (SK-409).
 
-/** Human-friendly labels + ordering for the per-key statuses. */
+/**
+ * Human-friendly labels + ordering for the per-key statuses.
+ */
 const STATUS_LABEL = {
-  inferred: "inferred",
-  unchanged: "unchanged",
   drift: "drift",
-  "needs-manual-input": "needs-manual-input",
+  inferred: "inferred",
   "manual-kept": "manual-kept",
+  "needs-manual-input": "needs-manual-input",
+  unchanged: "unchanged",
   "unknown-kept": "unknown-kept",
 };
 
@@ -20,7 +22,9 @@ const STATUS_ORDER = [
   "unchanged",
 ];
 
-const fmt = (v) => (v === undefined ? "" : JSON.stringify(v));
+function fmt(value) {
+  return value === undefined ? "" : JSON.stringify(value);
+}
 
 /**
  * @typedef {{
@@ -42,21 +46,44 @@ export function buildReport(skillReports, wrote) {
   const driftKeys = [];
   const manualKeys = [];
 
-  const skills = skillReports.map((s) => {
-    const keys = Object.entries(s.results).map(([key, r]) => {
-      totals[r.status] = (totals[r.status] ?? 0) + 1;
-      if (r.status === "drift") {
-        driftKeys.push({ skill: s.name, configPath: s.configPath, key, kept: r.keep, detected: r.detected });
+  const skills = skillReports.map((skillReport) => {
+    const keys = Object.entries(skillReport.results).map(([key, result]) => {
+      totals[result.status] = (totals[result.status] ?? 0) + 1;
+      if (result.status === "drift") {
+        driftKeys.push({
+          configPath: skillReport.configPath,
+          detected: result.detected,
+          kept: result.keep,
+          key,
+          skill: skillReport.name,
+        });
       }
-      if (r.status === "needs-manual-input") {
-        manualKeys.push({ skill: s.name, configPath: s.configPath, key });
+
+      if (result.status === "needs-manual-input") {
+        manualKeys.push({
+          configPath: skillReport.configPath,
+          key,
+          skill: skillReport.name,
+        });
       }
-      return { key, ...r };
+
+      return { key, ...result };
     });
-    return { name: s.name, configPath: s.configPath, malformed: s.malformed, keys };
+    return {
+      configPath: skillReport.configPath,
+      keys,
+      malformed: skillReport.malformed,
+      name: skillReport.name,
+    };
   });
 
-  return { mode: wrote ? "write" : "dry-run", skills, totals, driftKeys, manualKeys };
+  return {
+    driftKeys,
+    manualKeys,
+    mode: wrote ? "write" : "dry-run",
+    skills,
+    totals,
+  };
 }
 
 /**
@@ -74,33 +101,46 @@ export function formatHuman(report) {
 
   for (const skill of report.skills) {
     if (skill.malformed) {
-      lines.push(`${skill.configPath}  ⚠ existing config.json is unparseable — skipped`, "");
+      lines.push(
+        `${skill.configPath}  ⚠ existing config.json is unparseable — skipped`,
+        "",
+      );
       continue;
     }
+
     lines.push(skill.configPath);
-    const ordered = [...skill.keys].sort(
-      (a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || a.key.localeCompare(b.key),
+    const ordered = [...skill.keys].toSorted(
+      (a, b) =>
+        STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) ||
+        a.key.localeCompare(b.key),
     );
-    for (const k of ordered) {
-      const label = STATUS_LABEL[k.status].padEnd(20);
-      const name = k.key.padEnd(22);
+    for (const keyResult of ordered) {
+      const label = STATUS_LABEL[keyResult.status].padEnd(20);
+      const name = keyResult.key.padEnd(22);
       let detail = "";
-      if (k.status === "inferred") {
-        detail = fmt(k.write);
-      } else if (k.status === "drift") {
-        detail = `keeps ${fmt(k.keep)} vs detected ${fmt(k.detected)}`;
-      } else if (k.status === "needs-manual-input") {
+      if (keyResult.status === "inferred") {
+        detail = fmt(keyResult.write);
+      } else if (keyResult.status === "drift") {
+        detail = `keeps ${fmt(keyResult.keep)} vs detected ${fmt(keyResult.detected)}`;
+      } else if (keyResult.status === "needs-manual-input") {
         detail = "— provide a value (e.g. via Linear MCP)";
-      } else if (k.status === "manual-kept" || k.status === "unknown-kept") {
-        detail = `keeps ${fmt(k.keep)}`;
+      } else if (
+        keyResult.status === "manual-kept" ||
+        keyResult.status === "unknown-kept"
+      ) {
+        detail = `keeps ${fmt(keyResult.keep)}`;
       }
+
       lines.push(`  ${label}${name}${detail}`.trimEnd());
     }
+
     lines.push("");
   }
 
-  const t = report.totals;
-  const summary = STATUS_ORDER.filter((s) => t[s]).map((s) => `${t[s]} ${STATUS_LABEL[s]}`).join(", ");
+  const totals = report.totals;
+  const summary = STATUS_ORDER.filter((status) => totals[status])
+    .map((status) => `${totals[status]} ${STATUS_LABEL[status]}`)
+    .join(", ");
   lines.push(summary || "no keys to reconcile", "");
 
   if (report.mode === "dry-run") {
@@ -109,10 +149,11 @@ export function formatHuman(report) {
         `${report.driftKeys.length} drifted key(s) kept. To accept a detected value, re-run --write with that key in acceptDrift.`,
       );
     }
+
     if (report.manualKeys.length) {
       lines.push(
         `${report.manualKeys.length} key(s) need manual input: ${report.manualKeys
-          .map((m) => `${m.skill}.${m.key}`)
+          .map((manualKey) => `${manualKey.skill}.${manualKey.key}`)
           .join(", ")}.`,
       );
     }

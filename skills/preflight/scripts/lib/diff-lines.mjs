@@ -59,8 +59,8 @@ export function getIntroducedLinesPerFile(mergeBase) {
     }
 
     const lines = byFile.get(currentFile);
-    for (let i = 0; i < count; i++) {
-      lines.add(start + i);
+    for (let index = 0; index < count; index++) {
+      lines.add(start + index);
     }
   }
 

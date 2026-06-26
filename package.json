@@ -28,8 +28,8 @@
   ],
   "scripts": {
     "changelog:finalise": "tsx infrastructure/scripts/finalise-changelog.ts",
-    "lint": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/tests/**/*.ts' --cache --cache-location ./.eslintcache",
-    "lint:fix": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/tests/**/*.ts' --fix --cache --cache-location ./.eslintcache",
+    "lint": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/tests/**/*.ts' 'skills/**/*.mjs' --cache --cache-location ./.eslintcache",
+    "lint:fix": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/tests/**/*.ts' 'skills/**/*.mjs' --fix --cache --cache-location ./.eslintcache",
     "lint:md": "markdownlint-cli2",
     "lint:md:fix": "markdownlint-cli2 --fix",
     "lint:sh": "bash -c 'if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh infrastructure/scripts/*.sh .husky/pre-commit .husky/pre-push .husky/commit-msg; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  shellcheck not installed — skipping. Install: brew install shellcheck\"; else echo \"⚠️  shellcheck not installed — skipping. Install: apt-get install shellcheck\"; fi'",
@@ -63,7 +63,7 @@
     ]
   },
   "devDependencies": {
-    "@acme-skunkworks/eslint-config": "^1.0.4",
+    "@acme-skunkworks/eslint-config": "^1.1.0",
     "@acme-skunkworks/markdownlint-config": "^2.0.0",
     "@types/node": "^25.6.0",
     "eslint": "^9.0.0",

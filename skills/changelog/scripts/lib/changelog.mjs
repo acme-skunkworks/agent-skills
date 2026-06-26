@@ -13,39 +13,41 @@ const DEFAULT_CHANGELOG_DIR = "changelog";
 /**
  * Find the changelog entry whose frontmatter `branch:` equals `branch`.
  * @param {string} branch the branch name to match against the `branch:` field
- * @param {string} [changelogDir] directory to scan (default: "changelog")
+ * @param {string} [changelogDirectory] directory to scan (default: "changelog")
  * @returns {string|null} the matching entry's path, or null if none matches
  */
 export function findEntryByBranch(
   branch,
-  changelogDir = DEFAULT_CHANGELOG_DIR,
+  changelogDirectory = DEFAULT_CHANGELOG_DIR,
 ) {
   let names;
   try {
-    names = readdirSync(changelogDir);
-  } catch (err) {
+    names = readdirSync(changelogDirectory);
+  } catch (error) {
     // A repo with no `changelog/` directory yet means "no entry found", not a
     // crash — callers (e.g. set-affected-packages.mjs) already handle null.
-    if (err.code === "ENOENT") {
+    if (error.code === "ENOENT") {
       return null;
     }
-    throw err;
+
+    throw error;
   }
 
   const files = names
-    .filter((n) => n.endsWith(".md") && n !== "README.md")
-    .map((n) => join(changelogDir, n));
+    .filter((name) => name.endsWith(".md") && name !== "README.md")
+    .map((name) => join(changelogDirectory, name));
   for (const entryPath of files) {
     let data;
     try {
       ({ data } = parseFrontmatter(readFileSync(entryPath, "utf8")));
-    } catch (err) {
+    } catch (error) {
       // Rethrow with the offending file named — the raw parser error carries no
       // filename, so a malformed entry anywhere in the corpus is hard to locate.
       throw new Error(
-        `Failed to parse changelog frontmatter in ${entryPath}: ${err.message}`,
+        `Failed to parse changelog frontmatter in ${entryPath}: ${error.message}`,
       );
     }
+
     if (data?.branch === branch) {
       return entryPath;
     }
