@@ -121,8 +121,11 @@ function main() {
       if (!check) {
         writeFileSync(file, fm + next);
       }
+
       touched++;
-      console.log(check ? `[check] would rewrite: ${file}` : `rewrote: ${file}`);
+      console.log(
+        check ? `[check] would rewrite: ${file}` : `rewrote: ${file}`,
+      );
     }
   }
 

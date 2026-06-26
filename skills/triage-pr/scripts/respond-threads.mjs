@@ -828,6 +828,7 @@ function main() {
     selfTest();
     return;
   }
+
   if (command === "--help" || command === "-h") {
     console.log(USAGE);
     return;

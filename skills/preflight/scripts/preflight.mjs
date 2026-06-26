@@ -278,6 +278,7 @@ function main() {
       );
       writeFileSync(SUMMARY_PATH, `${JSON.stringify(earlySummary, null, 2)}\n`);
     }
+
     process.exit(0);
   }
 
@@ -296,6 +297,7 @@ function main() {
       );
       writeFileSync(SUMMARY_PATH, `${JSON.stringify(earlySummary, null, 2)}\n`);
     }
+
     process.exit(0);
   }
 
@@ -342,6 +344,7 @@ function main() {
     if (!dryRun) {
       console.log("preflight: running scoped markdownlint");
     }
+
     const md = runMarkdownlint(scope.markdown);
     markdownlintStatus = md.markdownlint ?? "ran";
     if (!md.skipped && !md.dryRun && md.markdownlint !== "warn-skipped") {
@@ -364,8 +367,11 @@ function main() {
   if (scope.workflowsChanged) {
     const targetCount = scope.actionlintTargets.length;
     if (!dryRun) {
-      console.log(`preflight: running actionlint on ${targetCount} workflow(s)`);
+      console.log(
+        `preflight: running actionlint on ${targetCount} workflow(s)`,
+      );
     }
+
     const wf = runActionlint(scope.actionlintTargets);
     actionlintStatus = wf.actionlint ?? "ran";
     if (!wf.skipped && !wf.dryRun && wf.actionlint !== "warn-skipped") {
@@ -404,7 +410,7 @@ function main() {
   console.log("");
   console.log("preflight: summary");
   console.log(
-    `  categories: eslint=${!scope.codeChanged ? "skipped" : dryRun ? "would-run" : "ran"} markdown=${markdownlintStatus} actionlint=${actionlintStatus}`,
+    `  categories: eslint=${scope.codeChanged ? (dryRun ? "would-run" : "ran") : "skipped"} markdown=${markdownlintStatus} actionlint=${actionlintStatus}`,
   );
   if (!dryRun) {
     console.log(

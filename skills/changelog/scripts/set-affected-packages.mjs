@@ -140,6 +140,7 @@ function main() {
       console.log(`  affected_packages=${JSON.stringify(packages)}`);
       process.exit(0);
     }
+
     console.log(`[check] would set affected_packages on ${file}`);
     console.log(`  branch=${branch} base=${BASE_REF}`);
     console.log(`  affected_packages=${JSON.stringify(packages)}`);
