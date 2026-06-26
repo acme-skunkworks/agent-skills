@@ -28,6 +28,8 @@
   ],
   "scripts": {
     "changelog:finalise": "tsx infrastructure/scripts/finalise-changelog.ts",
+    "lint": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/tests/**/*.ts' --cache --cache-location ./.eslintcache",
+    "lint:fix": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/tests/**/*.ts' --fix --cache --cache-location ./.eslintcache",
     "lint:md": "markdownlint-cli2",
     "lint:md:fix": "markdownlint-cli2 --fix",
     "lint:sh": "bash -c 'if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh infrastructure/scripts/*.sh .husky/pre-commit .husky/pre-push .husky/commit-msg; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  shellcheck not installed — skipping. Install: brew install shellcheck\"; else echo \"⚠️  shellcheck not installed — skipping. Install: apt-get install shellcheck\"; fi'",
@@ -39,6 +41,7 @@
     "test": "vitest run",
     "test:sh": "bash -c 'if command -v bats >/dev/null 2>&1; then bats infrastructure/tests/*.bats; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  bats not installed — skipping. Install: brew install bats-core\"; else echo \"⚠️  bats not installed — skipping. Install: apt-get install bats\"; fi'",
     "test:watch": "vitest",
+    "tsc": "tsc -p tsconfig.json",
     "validate:changelog": "tsx infrastructure/scripts/validate-changelog.ts",
     "validate:skills": "tsx infrastructure/scripts/validate-skills.ts"
   },
@@ -60,12 +63,17 @@
     ]
   },
   "devDependencies": {
+    "@acme-skunkworks/eslint-config": "^1.0.4",
     "@acme-skunkworks/markdownlint-config": "^2.0.0",
     "@types/node": "^25.6.0",
+    "eslint": "^9.0.0",
     "gray-matter": "^4.0.3",
     "husky": "^9.1.7",
+    "jiti": "^2.7.0",
     "lint-staged": "^16.3.2",
     "markdownlint-cli2": "^0.22.1",
+    "prettier": "^3.0.0",
+    "prettier-plugin-tailwindcss": "^0.8.0",
     "tsx": "^4.21.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.6"

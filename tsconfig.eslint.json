@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Type-aware ESLint project. The base preset enables type-aware linting
+  // (parserOptions.project), which resolves each linted file to a TS program.
+  // The canonical tsconfig.json is scripts-only (tests deliberately excluded,
+  // since vitest type-strips them rather than tsc-checking them), so this
+  // sibling config widens the program to span the scripts *and* their tests so
+  // every linted file resolves. It never emits and is used only by ESLint —
+  // agent-skills ships skills.sh bundles, so there's no build config to leak into.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "infrastructure/scripts/**/*.ts",
+    "infrastructure/tests/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}
