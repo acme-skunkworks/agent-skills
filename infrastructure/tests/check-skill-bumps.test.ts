@@ -1,16 +1,17 @@
-import { describe, expect, it } from "vitest";
-
 import {
   classifyBundles,
   collectTouchedSkills,
   incrementVersion,
 } from "../../skills/send-it/scripts/check-skill-bumps.mjs";
+import { describe, expect, it } from "vitest";
 
 // `paths` stub mirrors main()'s closure shape for the classify tests.
-const paths = (name: string) => ({
-  manifestPath: `skills/${name}/package.json`,
-  skillPath: `skills/${name}/SKILL.md`,
-});
+function paths(name: string): { manifestPath: string; skillPath: string } {
+  return {
+    manifestPath: `skills/${name}/package.json`,
+    skillPath: `skills/${name}/SKILL.md`,
+  };
+}
 
 describe("collectTouchedSkills", () => {
   it("picks up skills with a changed file inside the bundle dir", () => {
@@ -34,7 +35,11 @@ describe("collectTouchedSkills", () => {
   it("ignores files outside the bundle root", () => {
     expect(
       collectTouchedSkills(
-        ["CLAUDE.md", "infrastructure/scripts/validate-skills.ts", ".github/x.yml"],
+        [
+          "CLAUDE.md",
+          "infrastructure/scripts/validate-skills.ts",
+          ".github/x.yml",
+        ],
         "skills",
       ),
     ).toEqual([]);
@@ -45,9 +50,9 @@ describe("collectTouchedSkills", () => {
   });
 
   it("tolerates a trailing slash on the configured root", () => {
-    expect(collectTouchedSkills(["skills/send-it/SKILL.md"], "skills/")).toEqual([
-      "send-it",
-    ]);
+    expect(
+      collectTouchedSkills(["skills/send-it/SKILL.md"], "skills/"),
+    ).toEqual(["send-it"]);
   });
 });
 
@@ -82,7 +87,7 @@ describe("incrementVersion", () => {
 
 describe("classifyBundles", () => {
   it("flags a changed bundle whose version is unchanged from base", () => {
-    const { unbumped, bumped } = classifyBundles(
+    const { bumped, unbumped } = classifyBundles(
       ["send-it"],
       { "send-it": { base: "0.1.0", current: "0.1.0" } },
       "minor",
@@ -91,18 +96,18 @@ describe("classifyBundles", () => {
     expect(bumped).toEqual([]);
     expect(unbumped).toEqual([
       {
-        name: "send-it",
         currentVersion: "0.1.0",
+        manifestPath: "skills/send-it/package.json",
+        name: "send-it",
+        skillPath: "skills/send-it/SKILL.md",
         suggestedBump: "minor",
         suggestedVersion: "0.2.0",
-        manifestPath: "skills/send-it/package.json",
-        skillPath: "skills/send-it/SKILL.md",
       },
     ]);
   });
 
   it("treats a moved version as already bumped", () => {
-    const { unbumped, bumped } = classifyBundles(
+    const { bumped, unbumped } = classifyBundles(
       ["send-it"],
       { "send-it": { base: "0.1.0", current: "0.2.0" } },
       "minor",
@@ -113,7 +118,7 @@ describe("classifyBundles", () => {
   });
 
   it("does not flag a newly-added bundle (no base manifest)", () => {
-    const { unbumped, bumped } = classifyBundles(
+    const { bumped, unbumped } = classifyBundles(
       ["brand-new"],
       { "brand-new": { base: null, current: "0.1.0" } },
       "minor",
@@ -124,7 +129,7 @@ describe("classifyBundles", () => {
   });
 
   it("skips a touched dir that is not a versioned bundle", () => {
-    const { unbumped, bumped } = classifyBundles(
+    const { bumped, unbumped } = classifyBundles(
       ["not-a-skill"],
       { "not-a-skill": { base: null, current: null } },
       "patch",
@@ -135,7 +140,7 @@ describe("classifyBundles", () => {
   });
 
   it("handles a mix across several bundles", () => {
-    const { unbumped, bumped } = classifyBundles(
+    const { bumped, unbumped } = classifyBundles(
       ["changelog", "preflight", "send-it"],
       {
         changelog: { base: "1.0.0", current: "1.0.0" }, // unbumped
@@ -146,7 +151,13 @@ describe("classifyBundles", () => {
       paths,
     );
     expect(bumped).toEqual(["preflight"]);
-    expect(unbumped.map((u) => u.name)).toEqual(["changelog", "send-it"]);
-    expect(unbumped.map((u) => u.suggestedVersion)).toEqual(["1.0.1", "0.1.1"]);
+    expect(unbumped.map((entry) => entry.name)).toEqual([
+      "changelog",
+      "send-it",
+    ]);
+    expect(unbumped.map((entry) => entry.suggestedVersion)).toEqual([
+      "1.0.1",
+      "0.1.1",
+    ]);
   });
 });

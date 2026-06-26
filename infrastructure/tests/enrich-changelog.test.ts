@@ -1,20 +1,17 @@
+import { enrichFrontmatter } from "../scripts/enrich-changelog.js";
+import type { EnrichInput } from "../scripts/enrich-changelog.js";
 import matter from "gray-matter";
 import { describe, expect, it } from "vitest";
 
-import {
-  enrichFrontmatter,
-  type EnrichInput,
-} from "../scripts/enrich-changelog.js";
-
 const BASE: EnrichInput = {
-  branch: "asw-123-fix-a-thing",
-  mergeSha: "abc1234def5678",
-  mergedAt: "2026-05-24T09:00:00Z",
-  prNumber: "42",
   additions: "10",
-  deletions: "2",
+  branch: "asw-123-fix-a-thing",
   changedFiles: "3",
+  deletions: "2",
+  mergedAt: "2026-05-24T09:00:00Z",
+  mergeSha: "abc1234def5678",
   mergeStrategy: "squash",
+  prNumber: "42",
 };
 
 function placeholderEntry(): string {
@@ -57,8 +54,8 @@ describe("enrichFrontmatter", () => {
     const first = enrichFrontmatter(placeholderEntry(), BASE);
     const second = enrichFrontmatter(first, {
       ...BASE,
-      mergeSha: "9999999",
       mergedAt: "2099-01-01T00:00:00Z",
+      mergeSha: "9999999",
       mergeStrategy: "rebase",
       prNumber: "999",
     });
@@ -74,8 +71,8 @@ describe("enrichFrontmatter", () => {
     const second = enrichFrontmatter(first, {
       ...BASE,
       additions: "100",
-      deletions: "5",
       changedFiles: "9",
+      deletions: "5",
     });
     const { data } = matter(second);
     expect(data.stats).toEqual({
@@ -115,8 +112,8 @@ describe("enrichFrontmatter", () => {
   it("skips optional fields that aren't provided", () => {
     const out = enrichFrontmatter(placeholderEntry(), {
       branch: BASE.branch,
-      mergeSha: BASE.mergeSha,
       mergedAt: BASE.mergedAt,
+      mergeSha: BASE.mergeSha,
     });
     const { data } = matter(out);
     expect(data.commit).toBe("abc1234");

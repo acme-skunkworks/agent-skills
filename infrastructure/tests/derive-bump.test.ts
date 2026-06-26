@@ -1,10 +1,9 @@
-import { describe, expect, it } from "vitest";
-
 import {
   deriveBody,
   deriveBump,
   deriveSlug,
 } from "../../skills/send-it/scripts/derive-bump.mjs";
+import { describe, expect, it } from "vitest";
 
 describe("deriveSlug", () => {
   it("truncates over the 60-char ceiling at a word boundary when possible", () => {
@@ -34,22 +33,22 @@ describe("deriveBump", () => {
   it("is major on a BREAKING CHANGE trailer", () => {
     expect(
       deriveBump([
-        { subject: "feat: add x", body: "BREAKING CHANGE: removes Y" },
+        { body: "BREAKING CHANGE: removes Y", subject: "feat: add x" },
       ]),
     ).toBe("major");
   });
 
   it("is major on a bang in a conventional-commit subject", () => {
     expect(
-      deriveBump([{ subject: "refactor!: drop legacy API", body: "" }]),
+      deriveBump([{ body: "", subject: "refactor!: drop legacy API" }]),
     ).toBe("major");
   });
 
   it("is minor when the first commit is a feat", () => {
     expect(
       deriveBump([
-        { subject: "feat: add new export", body: "" },
-        { subject: "fix: typo", body: "" },
+        { body: "", subject: "feat: add new export" },
+        { body: "", subject: "fix: typo" },
       ]),
     ).toBe("minor");
   });
@@ -60,26 +59,26 @@ describe("deriveBump", () => {
     // The send-it heuristic treats the lead commit as the release intent.
     expect(
       deriveBump([
-        { subject: "fix: stabilise", body: "" },
-        { subject: "feat: new export", body: "" },
+        { body: "", subject: "fix: stabilise" },
+        { body: "", subject: "feat: new export" },
       ]),
     ).toBe("patch");
   });
 
   it("is minor on a scoped feat", () => {
-    expect(deriveBump([{ subject: "feat(react): add hook", body: "" }])).toBe(
+    expect(deriveBump([{ body: "", subject: "feat(react): add hook" }])).toBe(
       "minor",
     );
   });
 
   it("is patch on a fix", () => {
-    expect(deriveBump([{ subject: "fix: handle nullable", body: "" }])).toBe(
+    expect(deriveBump([{ body: "", subject: "fix: handle nullable" }])).toBe(
       "patch",
     );
   });
 
   it("is patch on a docs commit", () => {
-    expect(deriveBump([{ subject: "docs: update readme", body: "" }])).toBe(
+    expect(deriveBump([{ body: "", subject: "docs: update readme" }])).toBe(
       "patch",
     );
   });
@@ -92,13 +91,13 @@ describe("deriveBump", () => {
 describe("deriveBody", () => {
   it("strips the conventional-commit prefix", () => {
     expect(
-      deriveBody([{ subject: "feat(react): add useToast", body: "" }]),
+      deriveBody([{ body: "", subject: "feat(react): add useToast" }]),
     ).toBe("add useToast");
   });
 
   it("strips the bang variant", () => {
     expect(
-      deriveBody([{ subject: "feat!: remove legacy API", body: "" }]),
+      deriveBody([{ body: "", subject: "feat!: remove legacy API" }]),
     ).toBe("remove legacy API");
   });
 

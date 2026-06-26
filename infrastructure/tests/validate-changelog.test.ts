@@ -1,6 +1,5 @@
-import { describe, expect, it } from "vitest";
-
 import { validateEntry } from "../scripts/validate-changelog.js";
+import { describe, expect, it } from "vitest";
 
 const VALID_NAME = "20260523-145537-v1-0-3.md";
 

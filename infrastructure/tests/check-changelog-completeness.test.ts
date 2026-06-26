@@ -1,10 +1,9 @@
-import { describe, expect, it } from "vitest";
-
 import {
   checkCompleteness,
   hasChangelogEntry,
   isReleaseTriggering,
 } from "../scripts/check-changelog-completeness.js";
+import { describe, expect, it } from "vitest";
 
 describe("isReleaseTriggering", () => {
   it("is true for feat", () => {
@@ -16,7 +15,9 @@ describe("isReleaseTriggering", () => {
   });
 
   it("is true for a scoped feat", () => {
-    expect(isReleaseTriggering("feat(cleanup-repo): add prune step")).toBe(true);
+    expect(isReleaseTriggering("feat(cleanup-repo): add prune step")).toBe(
+      true,
+    );
   });
 
   it("is true for a breaking bang on any type", () => {
@@ -63,14 +64,17 @@ describe("hasChangelogEntry", () => {
 
   it("ignores changelog/README.md", () => {
     expect(
-      hasChangelogEntry(["changelog/README.md", "skills/cleanup-repo/SKILL.md"]),
+      hasChangelogEntry([
+        "changelog/README.md",
+        "skills/cleanup-repo/SKILL.md",
+      ]),
     ).toBe(false);
   });
 
   it("is false when no changelog entry is present", () => {
-    expect(hasChangelogEntry(["package.json", "skills/cleanup-repo/SKILL.md"])).toBe(
-      false,
-    );
+    expect(
+      hasChangelogEntry(["package.json", "skills/cleanup-repo/SKILL.md"]),
+    ).toBe(false);
   });
 });
 

@@ -1,10 +1,9 @@
-import matter from "gray-matter";
-import { describe, expect, it } from "vitest";
-
 import {
   readPackageVersion,
   stampVersion,
 } from "../scripts/stamp-changelog-version.js";
+import matter from "gray-matter";
+import { describe, expect, it } from "vitest";
 
 function entry(versionLine: string): string {
   return [

@@ -1,14 +1,12 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
+import { findEntryByBranch } from "../../skills/changelog/scripts/lib/changelog.mjs";
 // Imports the BUNDLE scripts directly (the distributed `.mjs`), the same
 // pattern as derive-packages.test.ts.
 import { parseFrontmatter } from "../../skills/changelog/scripts/lib/frontmatter.mjs";
-import { findEntryByBranch } from "../../skills/changelog/scripts/lib/changelog.mjs";
 import { buildAffectedPackagesFrontmatter } from "../../skills/changelog/scripts/set-affected-packages.mjs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 describe("parseFrontmatter — inline arrays (bug 1)", () => {
   it("throws on an unterminated quoted inline-array item", () => {
@@ -47,14 +45,7 @@ describe("parseFrontmatter — block arrays (bug 2)", () => {
   });
 
   it("parses a block array whose first collected line is blank", () => {
-    const raw =
-      "---\n" +
-      "items:\n" +
-      "\n" +
-      "  - a\n" +
-      "  - b\n" +
-      "---\n" +
-      "body\n";
+    const raw = "---\nitems:\n\n  - a\n  - b\n---\nbody\n";
     expect(parseFrontmatter(raw).data.items).toEqual(["a", "b"]);
   });
 });
@@ -85,30 +76,30 @@ describe("parseFrontmatter — block scalars (bug 3)", () => {
 });
 
 describe("findEntryByBranch — parse-error context (bug 6)", () => {
-  let dir: string;
+  let directory: string;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "changelog-find-"));
+    directory = mkdtempSync(join(tmpdir(), "changelog-find-"));
   });
 
   afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(directory, { recursive: true, force: true });
   });
 
   it("names the offending file when an entry has malformed frontmatter", () => {
     // A frontmatter line with no `:` makes parseMapping throw.
-    const bad = join(dir, "20260101-000000-bad.md");
+    const bad = join(directory, "20260101-000000-bad.md");
     writeFileSync(bad, "---\nthis line has no colon\n---\nbody\n");
-    expect(() => findEntryByBranch("any-branch", dir)).toThrow(
+    expect(() => findEntryByBranch("any-branch", directory)).toThrow(
       /Failed to parse changelog frontmatter in .*20260101-000000-bad\.md/,
     );
   });
 
   it("returns the matching entry path for a well-formed corpus", () => {
-    const good = join(dir, "20260101-000000-good.md");
+    const good = join(directory, "20260101-000000-good.md");
     writeFileSync(good, "---\nbranch: my-branch\n---\nbody\n");
-    expect(findEntryByBranch("my-branch", dir)).toBe(good);
-    expect(findEntryByBranch("other-branch", dir)).toBeNull();
+    expect(findEntryByBranch("my-branch", directory)).toBe(good);
+    expect(findEntryByBranch("other-branch", directory)).toBeNull();
   });
 });
 

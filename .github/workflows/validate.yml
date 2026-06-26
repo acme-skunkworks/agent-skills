@@ -59,6 +59,18 @@ jobs:
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: 🔠 Typecheck (tsc)
+        # Type-check-only (tsconfig.json sets noEmit) over the infrastructure
+        # CLI tooling (SK-394). agent-skills ships skills.sh bundles, so there's
+        # nothing to emit — this just enforces the strict tsconfig in CI.
+        run: pnpm tsc
+
+      - name: 🧹 ESLint
+        # Adopts the shared @acme-skunkworks/eslint-config over the infra .ts
+        # surface (scripts + tests) (SK-394). The .mjs skill helpers are linted
+        # separately once SK-439 lands standalone-.mjs support in the preset.
+        run: pnpm lint
+
       - name: 🧪 Unit tests (changelog + send-it helpers)
         run: pnpm test
 

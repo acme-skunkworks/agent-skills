@@ -1,21 +1,21 @@
+import { validateSkill } from "../scripts/validate-skills.js";
 import { describe, expect, it } from "vitest";
 
-import { validateSkill } from "../scripts/validate-skills.js";
-
-const pkg = (over: Record<string, unknown> = {}): string =>
-  JSON.stringify({
+function pkg(over: Record<string, unknown> = {}): string {
+  return JSON.stringify({
     name: "@acme-skunkworks/skill-cleanup-repo",
-    version: "0.1.0",
     private: true,
+    version: "0.1.0",
     ...over,
   });
+}
 
 // Build the SKILL.md frontmatter as explicit YAML so gray-matter parses it
 // the same way it parses the real bundles.
-const yamlSkill = (name: string, version: string | null): string => {
+function yamlSkill(name: string, version: null | string): string {
   const versionLine = version === null ? "" : `\n  version: ${version}`;
   return `---\nname: ${name}\nmetadata:${versionLine || "\n  other: x"}\n---\n\n# body\n`;
-};
+}
 
 describe("validateSkill", () => {
   it("passes a well-formed bundle", () => {
@@ -25,13 +25,21 @@ describe("validateSkill", () => {
   });
 
   it("flags a missing package.json", () => {
-    const errors = validateSkill("cleanup-repo", null, yamlSkill("cleanup-repo", "0.1.0"));
-    expect(errors.some((e) => e.includes("missing package.json"))).toBe(true);
+    const errors = validateSkill(
+      "cleanup-repo",
+      null,
+      yamlSkill("cleanup-repo", "0.1.0"),
+    );
+    expect(errors.some((error) => error.includes("missing package.json"))).toBe(
+      true,
+    );
   });
 
   it("flags a missing SKILL.md", () => {
     const errors = validateSkill("cleanup-repo", pkg(), null);
-    expect(errors.some((e) => e.includes("missing SKILL.md"))).toBe(true);
+    expect(errors.some((error) => error.includes("missing SKILL.md"))).toBe(
+      true,
+    );
   });
 
   it("rejects a name that doesn't match the dir + skill- prefix", () => {
@@ -40,7 +48,11 @@ describe("validateSkill", () => {
       pkg({ name: "@acme-skunkworks/cleanup-repo" }),
       yamlSkill("cleanup-repo", "0.1.0"),
     );
-    expect(errors.some((e) => e.includes("@acme-skunkworks/skill-cleanup-repo"))).toBe(true);
+    expect(
+      errors.some((error) =>
+        error.includes("@acme-skunkworks/skill-cleanup-repo"),
+      ),
+    ).toBe(true);
   });
 
   it("rejects private: false", () => {
@@ -49,7 +61,7 @@ describe("validateSkill", () => {
       pkg({ private: false }),
       yamlSkill("cleanup-repo", "0.1.0"),
     );
-    expect(errors.some((e) => e.includes("private"))).toBe(true);
+    expect(errors.some((error) => error.includes("private"))).toBe(true);
   });
 
   it("rejects a non-semver version", () => {
@@ -58,7 +70,7 @@ describe("validateSkill", () => {
       pkg({ version: "v1" }),
       yamlSkill("cleanup-repo", "0.1.0"),
     );
-    expect(errors.some((e) => e.includes("semver"))).toBe(true);
+    expect(errors.some((error) => error.includes("semver"))).toBe(true);
   });
 
   it("flags a SKILL.md name that doesn't equal the dir", () => {
@@ -67,7 +79,7 @@ describe("validateSkill", () => {
       pkg(),
       yamlSkill("wrong-name", "0.1.0"),
     );
-    expect(errors.some((e) => e.includes("directory name"))).toBe(true);
+    expect(errors.some((error) => error.includes("directory name"))).toBe(true);
   });
 
   it("flags metadata.version drift from package.json version", () => {
@@ -76,7 +88,9 @@ describe("validateSkill", () => {
       pkg({ version: "0.2.0" }),
       yamlSkill("cleanup-repo", "0.1.0"),
     );
-    expect(errors.some((e) => e.includes("must equal package.json version"))).toBe(true);
+    expect(
+      errors.some((error) => error.includes("must equal package.json version")),
+    ).toBe(true);
   });
 
   it("flags a missing metadata.version", () => {
@@ -85,6 +99,8 @@ describe("validateSkill", () => {
       pkg(),
       yamlSkill("cleanup-repo", null),
     );
-    expect(errors.some((e) => e.includes("metadata.version is missing"))).toBe(true);
+    expect(
+      errors.some((error) => error.includes("metadata.version is missing")),
+    ).toBe(true);
   });
 });

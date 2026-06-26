@@ -1,25 +1,26 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE loader directly (the distributed `.mjs`). `parseConfig` is
 // exported so the fail-loud contract is testable without filesystem setup.
 import { parseConfig } from "../../skills/changelog/scripts/lib/config.mjs";
+import { describe, expect, it } from "vitest";
 
 const VALID = {
   issueKeys: ["ASW"],
   linearWorkspaceSlug: "goose-and-hobbes",
 };
 
-const raw = (obj: unknown) => JSON.stringify(obj);
+function raw(object: unknown): string {
+  return JSON.stringify(object);
+}
 
 describe("parseConfig", () => {
   it("merges structural defaults over a minimal valid config", () => {
     expect(parseConfig(raw(VALID))).toEqual({
-      issueKeys: ["ASW"],
-      linearWorkspaceSlug: "goose-and-hobbes",
       baseBranch: "main",
       changelogDir: "changelog",
-      packageRoots: ["apps", "packages", "services"],
       fallbackPackage: "infrastructure",
+      issueKeys: ["ASW"],
+      linearWorkspaceSlug: "goose-and-hobbes",
+      packageRoots: ["apps", "packages", "services"],
     });
   });
 
@@ -60,15 +61,15 @@ describe("parseConfig", () => {
   });
 
   it("fails loudly on an empty issueKeys array", () => {
-    expect(() =>
-      parseConfig(raw({ ...VALID, issueKeys: [] })),
-    ).toThrow(/issueKeys/);
+    expect(() => parseConfig(raw({ ...VALID, issueKeys: [] }))).toThrow(
+      /issueKeys/,
+    );
   });
 
   it("fails loudly when issueKeys contains a non-string", () => {
-    expect(() =>
-      parseConfig(raw({ ...VALID, issueKeys: ["ASW", 7] })),
-    ).toThrow(/issueKeys/);
+    expect(() => parseConfig(raw({ ...VALID, issueKeys: ["ASW", 7] }))).toThrow(
+      /issueKeys/,
+    );
   });
 
   it("fails loudly when linearWorkspaceSlug is missing or empty", () => {
@@ -81,15 +82,15 @@ describe("parseConfig", () => {
   });
 
   it("fails loudly on a mistyped structural key (packageRoots as string)", () => {
-    expect(() =>
-      parseConfig(raw({ ...VALID, packageRoots: "apps" })),
-    ).toThrow(/packageRoots/);
+    expect(() => parseConfig(raw({ ...VALID, packageRoots: "apps" }))).toThrow(
+      /packageRoots/,
+    );
   });
 
   it("fails loudly on a mistyped baseBranch", () => {
-    expect(() =>
-      parseConfig(raw({ ...VALID, baseBranch: 3 })),
-    ).toThrow(/baseBranch/);
+    expect(() => parseConfig(raw({ ...VALID, baseBranch: 3 }))).toThrow(
+      /baseBranch/,
+    );
   });
 
   it("includes an actionable hint pointing at the config source", () => {

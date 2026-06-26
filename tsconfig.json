@@ -22,8 +22,7 @@
     "useDefineForClassFields": true
   },
   "include": [
-    "infrastructure/scripts/**/*.ts",
-    "infrastructure/send-it/**/*.ts"
+    "infrastructure/scripts/**/*.ts"
   ],
   "exclude": ["node_modules", "**/*.test.ts"]
 }

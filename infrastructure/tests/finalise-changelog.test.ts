@@ -1,12 +1,7 @@
+import { finaliseEntry, makeResolver } from "../scripts/finalise-changelog.js";
+import type { ResolvedPr, Runner } from "../scripts/finalise-changelog.js";
 import matter from "gray-matter";
 import { describe, expect, it } from "vitest";
-
-import {
-  finaliseEntry,
-  makeResolver,
-  type ResolvedPr,
-  type Runner,
-} from "../scripts/finalise-changelog.js";
 
 const PR: ResolvedPr = {
   additions: "10",
@@ -95,17 +90,27 @@ function makeRunner(handlers: Record<string, () => string>): {
   run: Runner;
 } {
   const calls: Call[] = [];
-  const run: Runner = (cmd, args) => {
+  function run(cmd: string, args: readonly string[]): string {
     calls.push({ args, cmd });
     const key = `${cmd} ${args.join(" ")}`;
-    for (const prefix of Object.keys(handlers).sort(
+    for (const prefix of Object.keys(handlers).toSorted(
       (a, b) => b.length - a.length,
     )) {
-      if (key.startsWith(prefix)) return handlers[prefix]();
+      if (key.startsWith(prefix)) {
+        return handlers[prefix]();
+      }
     }
+
     return "";
-  };
+  }
+
   return { calls, run };
+}
+
+// A Runner that always throws, for the "gh fails" path. Module-scoped because
+// it closes over nothing (unicorn/consistent-function-scoping).
+function throwingRunner(): string {
+  throw new Error("gh: API rate limit exceeded");
 }
 
 describe("makeResolver", () => {
@@ -152,10 +157,7 @@ describe("makeResolver", () => {
   });
 
   it("returns null (does not throw) when gh fails, so the release isn't blocked", () => {
-    const run: Runner = () => {
-      throw new Error("gh: API rate limit exceeded");
-    };
-    expect(makeResolver(run)("any-branch")).toBeNull();
+    expect(makeResolver(throwingRunner)("any-branch")).toBeNull();
   });
 
   it("returns null mergeStrategy when the PR has no merge commit", () => {

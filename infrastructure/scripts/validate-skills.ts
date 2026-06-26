@@ -38,13 +38,13 @@ const SEMVER_RE =
  * absent. Returns an array of human-readable error strings.
  */
 export function validateSkill(
-  dir: string,
+  directory: string,
   pkgRaw: null | string,
   skillRaw: null | string,
 ): string[] {
   const errors: string[] = [];
   function fail(message: string): void {
-    errors.push(`${dir}: ${message}`);
+    errors.push(`${directory}: ${message}`);
   }
 
   if (skillRaw === null) {
@@ -64,7 +64,7 @@ export function validateSkill(
     return errors;
   }
 
-  const expectedName = `${SKILL_SCOPE}/skill-${dir}`;
+  const expectedName = `${SKILL_SCOPE}/skill-${directory}`;
   if (pkg.name !== expectedName) {
     fail(
       `package.json name must be "${expectedName}" (got ${JSON.stringify(pkg.name)})`,
@@ -94,16 +94,18 @@ export function validateSkill(
     return errors;
   }
 
-  if (fm.name !== dir) {
+  if (fm.name !== directory) {
     fail(
-      `SKILL.md name must equal the directory name "${dir}" (got ${JSON.stringify(fm.name)})`,
+      `SKILL.md name must equal the directory name "${directory}" (got ${JSON.stringify(fm.name)})`,
     );
   }
 
   const metadata = (fm.metadata ?? {}) as Record<string, unknown>;
   const skillVersion = metadata.version;
   if (skillVersion === undefined) {
-    fail("SKILL.md metadata.version is missing (mirror the package.json version)");
+    fail(
+      "SKILL.md metadata.version is missing (mirror the package.json version)",
+    );
   } else if (
     typeof pkgVersion === "string" &&
     String(skillVersion) !== pkgVersion
@@ -116,7 +118,7 @@ export function validateSkill(
   return errors;
 }
 
-function listSkillDirs(directory: string): string[] {
+function listSkillDirectories(directory: string): string[] {
   let stat;
   try {
     stat = statSync(directory);
@@ -130,16 +132,18 @@ function listSkillDirs(directory: string): string[] {
     process.exit(2);
   }
 
-  return readdirSync(directory, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    // A directory is a skill bundle if it has either marker file; a bare dir
-    // with neither is ignored (e.g. future non-bundle scaffolding).
-    .filter(
-      (name) =>
-        existsSync(join(directory, name, "SKILL.md")) ||
-        existsSync(join(directory, name, "package.json")),
-    );
+  return (
+    readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      // A directory is a skill bundle if it has either marker file; a bare dir
+      // with neither is ignored (e.g. future non-bundle scaffolding).
+      .filter(
+        (name) =>
+          existsSync(join(directory, name, "SKILL.md")) ||
+          existsSync(join(directory, name, "package.json")),
+      )
+  );
 }
 
 function readOrNull(path: string): null | string {
@@ -147,13 +151,13 @@ function readOrNull(path: string): null | string {
 }
 
 function main(): void {
-  const dirs = listSkillDirs(SKILLS_DIR);
+  const directories = listSkillDirectories(SKILLS_DIR);
   const errors: string[] = [];
-  for (const dir of dirs) {
-    const base = join(SKILLS_DIR, dir);
+  for (const directory of directories) {
+    const base = join(SKILLS_DIR, directory);
     errors.push(
       ...validateSkill(
-        dir,
+        directory,
         readOrNull(join(base, "package.json")),
         readOrNull(join(base, "SKILL.md")),
       ),
@@ -170,7 +174,7 @@ function main(): void {
   }
 
   console.log(
-    `Skill validation passed (${dirs.length} skill${dirs.length === 1 ? "" : "s"} checked).`,
+    `Skill validation passed (${directories.length} skill${directories.length === 1 ? "" : "s"} checked).`,
   );
 }
 
