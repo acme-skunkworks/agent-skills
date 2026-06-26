@@ -1,5 +1,6 @@
 {
   "reviewBots": ["claude", "cursor", "coderabbitai"],
   "maxCiRounds": 5,
-  "replyOnAccept": true
+  "replyOnAccept": true,
+  "promoteOnGreen": false
 }
