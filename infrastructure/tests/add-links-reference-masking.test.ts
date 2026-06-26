@@ -1,8 +1,7 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`). `rewriteBody`
 // uses the bundle's own config.json (workspace `acme-skunkworks`, keys ASW/AKW).
 import { rewriteBody } from "../../skills/changelog/scripts/add-links.mjs";
+import { describe, expect, it } from "vitest";
 
 describe("rewriteBody — reference-style link masking (bug 4)", () => {
   it("does not rewrite inside a numbered reference label `[ASW-123][1]`", () => {
@@ -35,8 +34,7 @@ describe("rewriteBody — reference-style link masking (bug 4)", () => {
   });
 
   it("is idempotent on an already-linked inline ID (regression guard)", () => {
-    const body =
-      "[ASW-123](https://linear.app/goose-and-hobbes/issue/ASW-123)";
+    const body = "[ASW-123](https://linear.app/goose-and-hobbes/issue/ASW-123)";
     expect(rewriteBody(body)).toBe(body);
     expect(rewriteBody(rewriteBody(body))).toBe(body);
   });
@@ -63,8 +61,7 @@ describe("rewriteBody — reference-style link masking (bug 4)", () => {
   });
 
   it("still links a bare ID in prose while leaving the definition intact", () => {
-    const body =
-      "Closes ASW-9.\n\n[ASW-123]: https://example.com/whatever\n";
+    const body = "Closes ASW-9.\n\n[ASW-123]: https://example.com/whatever\n";
     expect(rewriteBody(body)).toBe(
       "Closes [ASW-9](https://linear.app/goose-and-hobbes/issue/ASW-9).\n\n[ASW-123]: https://example.com/whatever\n",
     );

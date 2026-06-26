@@ -33,6 +33,17 @@ export default defineConfig([
       "import/no-extraneous-dependencies": ["error", { devDependencies: true }],
     },
   },
+  // A few changelog tests assert on frontmatter KEY ORDER (e.g.
+  // buildAffectedPackagesFrontmatter inserts affected_packages immediately
+  // before stats), so their object-literal fixtures are deliberately
+  // non-alphabetical. perfectionist/sort-objects would auto-rewrite the very
+  // order under test, so switch it off for those files.
+  {
+    files: ["infrastructure/tests/changelog-frontmatter.test.ts"],
+    rules: {
+      "perfectionist/sort-objects": "off",
+    },
+  },
   // The base preset enables type-aware linting (parserOptions.project), which
   // resolves each file to a TS program. The canonical tsconfig.json is
   // scripts-only, so pin an explicit project spanning scripts + tests
