@@ -14,7 +14,6 @@ breaking: false
 issues:
   - SK-410
 affected_packages:
-  - infrastructure
   - triage-pr
 stats:
   files_changed:
