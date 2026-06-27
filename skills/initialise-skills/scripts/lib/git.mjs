@@ -55,10 +55,11 @@ export function listBranchNames(root) {
 
 /**
  * Branch names known to the repo (local + remote), ordered **most-recently
- * committed first** via `git for-each-ref --sort=-committerdate`. Same decoration
- * stripping as `listBranchNames` (leading remote name, `HEAD ->` symbolic refs).
- * Returns [] when git fails (e.g. no repo). The ordering is what lets issue-key
- * detection prefer the current key over historical ones (A-556).
+ * committed first** via `git for-each-ref --sort=-committerdate`, de-duplicated
+ * keeping the first (most recent) occurrence. Querying both `refs/heads` and
+ * `refs/remotes` means a branch and its tracking ref collapse to one name after
+ * the remote-prefix strip. Returns [] when git fails (e.g. no repo). The ordering
+ * is what lets issue-key detection prefer the current key over historical (A-556).
  * @param {string} root
  * @returns {string[]}
  */
@@ -78,12 +79,26 @@ export function listBranchNamesByRecency(root) {
     return [];
   }
 
-  return result.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .filter((name) => !name.includes("->"))
-    .map((name) => name.replace(/^[^/]+\//, ""));
+  const seen = new Set();
+  return (
+    result.stdout
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      // `for-each-ref` emits `origin/HEAD` (not the `HEAD ->` decoration `git
+      // branch -a` adds), so strip the remote prefix first, then drop the bare
+      // `HEAD` symbolic ref it collapses to.
+      .map((name) => name.replace(/^[^/]+\//, ""))
+      .filter((name) => name !== "HEAD")
+      .filter((name) => {
+        if (seen.has(name)) {
+          return false;
+        }
+
+        seen.add(name);
+        return true;
+      })
+  );
 }
 
 /**
