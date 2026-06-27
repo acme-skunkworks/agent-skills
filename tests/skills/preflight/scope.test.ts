@@ -66,6 +66,24 @@ describe("classifyChangedFiles", () => {
     expect(out.eslint.web).toEqual([]);
     expect(out.eslint.scripts).toEqual([]);
   });
+
+  it("routes top-level lintable code with no workspace match into the root bucket (A-527 regression)", () => {
+    // Before the fix these set codeChanged=true but landed in no eslint bucket,
+    // so preflight reported ESLint "ran", skipped every empty group, and passed
+    // — a silent false-pass. They must now be linted at the repo root.
+    const out = classifyChangedFiles(
+      ["foo.ts", "lib/bar.ts", "vitest.config.ts"],
+      WORKSPACES,
+    );
+    expect(out.codeChanged).toBe(true);
+    expect(out.eslint.root).toEqual([
+      "foo.ts",
+      "lib/bar.ts",
+      "vitest.config.ts",
+    ]);
+    expect(out.eslint.web).toEqual([]);
+    expect(out.eslint.scripts).toEqual([]);
+  });
 });
 
 describe("relativiseToWorkspace", () => {

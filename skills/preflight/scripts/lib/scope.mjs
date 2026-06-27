@@ -475,10 +475,24 @@ export function classifyChangedFiles(
     ) {
       eslint.root.push(file);
     } else {
+      // A lintable file outside `scripts/` and the root config: route it to the
+      // workspace(s) whose prefix it matches, else to the root bucket so it is
+      // linted at the repo root with the root ESLint config. Without this
+      // catch-all a top-level (or otherwise unclaimed) code file set
+      // `codeChanged = true` but landed in no bucket — preflight then reported
+      // ESLint "ran", skipped every empty group, and passed: a silent
+      // false-pass in the gate, breaking any non-pnpm consumer or a repo with
+      // linted code at the root outside `scripts/` (A-527).
+      let matched = false;
       for (const [key, { prefix }] of Object.entries(workspaces)) {
         if (file.startsWith(prefix)) {
           eslint[key].push(file);
+          matched = true;
         }
+      }
+
+      if (!matched) {
+        eslint.root.push(file);
       }
     }
   }
