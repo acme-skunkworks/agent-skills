@@ -4,7 +4,7 @@
 // lockfile is honoured before validating. Assumes the consumer repo uses pnpm
 // with a committed lockfile; skip this step if yours does not.
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
@@ -157,7 +157,21 @@ function main() {
 }
 
 // Only run when invoked as a CLI, not when imported (e.g. by unit tests
-// exercising the pure version helpers).
-if (process.argv[1] && import.meta.filename === process.argv[1]) {
+// exercising the pure version helpers). Compare realpath'd paths so symlinks
+// (macOS /var→/private/var, pnpm's store) don't cause a false negative that
+// skips main().
+function isCliEntry() {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  try {
+    return realpathSync(import.meta.filename) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
   main();
 }

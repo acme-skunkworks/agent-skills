@@ -35,8 +35,7 @@ To deploy the shared set across a target repo — wipe its bespoke skill/command
 ├── .release-please-manifest.json   # release-please version manifest
 ├── infrastructure/
 │   ├── repo-config.yaml      # non-secret CI/release knobs
-│   ├── scripts/              # changelog .ts helpers + ensure-*.sh tool bootstraps
-│   ├── send-it/              # deterministic helpers for /send-it
+│   ├── scripts/              # validate-skills, ensure-*.sh bootstraps, fleet-wipe.mjs
 │   └── tests/                # bats (publish scripts) + vitest (changelog)
 ├── scripts/                 # publish wrappers (npm OIDC + GitHub Packages)
 ├── skills/                  # one folder per skill

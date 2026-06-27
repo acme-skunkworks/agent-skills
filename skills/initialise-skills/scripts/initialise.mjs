@@ -120,7 +120,11 @@ export function asKeyList(value) {
  * config path.
  */
 export function acceptedDriftFor(skill, acceptDrift, repoRoot) {
-  const rel = relative(repoRoot, skill.configPath);
+  // The acceptDrift contract uses POSIX-separated config paths (they come from
+  // hand-written JSON / Linear facts). `relative()` emits backslashes on
+  // Windows, so normalise to forward slashes before matching, or a path-keyed
+  // entry would silently fail to match there.
+  const rel = relative(repoRoot, skill.configPath).replaceAll("\\", "/");
   return [
     ...new Set([
       ...asKeyList(acceptDrift[skill.name]),

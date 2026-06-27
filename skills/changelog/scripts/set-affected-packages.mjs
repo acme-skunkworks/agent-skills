@@ -114,7 +114,8 @@ function main() {
   // demands a rewrite. Genuine monorepos opt in via `affectedPackages: true`.
   if (!config.affectedPackages) {
     console.log(
-      "affected_packages is disabled (affectedPackages: false). Nothing to set.",
+      "affectedPackages is off (config.json sets it false, or omits it and it " +
+        "defaults to false) — affected_packages not emitted. Nothing to set.",
     );
     process.exit(0);
   }

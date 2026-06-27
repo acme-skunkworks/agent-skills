@@ -49,7 +49,10 @@ slate and no duplicate or competing definitions. Preview first.
   skill — e.g. a hand-rolled `.claude/commands/send-it.md` (the pattern every
   adoption issue calls out).
 - Local prototype skill bundles under any agent skills dir (`.claude/skills/`,
-  `.agents/skills/`, `.cursor/...`) that the shared set replaces.
+  `.agents/skills/`, `.cursor/...`) that the shared set replaces. Find these by
+  listing those dirs yourself (e.g. `ls .claude/skills .agents/skills`) — the
+  helper below only flags dirs that share a canonical skill name, not
+  arbitrarily-named prototypes.
 
 **Preserve:**
 
@@ -69,9 +72,13 @@ node infrastructure/scripts/fleet-wipe.mjs --repo /path/to/target
 node infrastructure/scripts/fleet-wipe.mjs --repo /path/to/target --apply
 ```
 
-The helper only touches the canonical command shims it knows about; review and
-remove any remaining bespoke skill dirs by hand from the preview's "other
-candidates" list.
+The helper only removes the canonical command shims it knows about
+(`.claude/commands/<skill>.md`). Its "other candidates" list flags **only** skill
+dirs whose name matches a canonical skill (a vendored install and a bespoke
+prototype are indistinguishable by name, so it never auto-deletes them) — it does
+**not** discover arbitrarily-named prototype dirs. Review the candidates it lists,
+and separately scan the agent skill dirs yourself for any other bespoke bundles to
+remove by hand.
 
 ## Step 2 — Install via skills.sh
 

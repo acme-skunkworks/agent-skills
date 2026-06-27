@@ -25,6 +25,7 @@ import {
   readdirSync,
   realpathSync,
   rmSync,
+  statSync,
   unlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -140,6 +141,13 @@ function main(argv) {
 
   if (!existsSync(options.repo)) {
     console.error(`fleet-wipe: target repo not found: ${options.repo}`);
+    process.exit(2);
+  }
+
+  // existsSync is true for a regular file too; a non-directory --repo would
+  // otherwise fall through and report a clean repo instead of a usage error.
+  if (!statSync(options.repo).isDirectory()) {
+    console.error(`fleet-wipe: --repo must be a directory: ${options.repo}`);
     process.exit(2);
   }
 
