@@ -1,4 +1,7 @@
-import { validateSkill } from "../scripts/validate-skills.js";
+import {
+  configKeyParityErrors,
+  validateSkill,
+} from "../scripts/validate-skills.js";
 import { describe, expect, it } from "vitest";
 
 function pkg(over: Record<string, unknown> = {}): string {
@@ -102,5 +105,62 @@ describe("validateSkill", () => {
     expect(
       errors.some((error) => error.includes("metadata.version is missing")),
     ).toBe(true);
+  });
+});
+
+describe("configKeyParityErrors", () => {
+  it("passes when the key sets match (values may differ)", () => {
+    const config = JSON.stringify({ a: 1, nested: { x: true } });
+    const example = JSON.stringify({ a: 99, nested: { x: false } });
+    expect(configKeyParityErrors("s", config, example)).toEqual([]);
+  });
+
+  it("is exempt when only one file ships (e.g. preflight's example-only)", () => {
+    expect(configKeyParityErrors("s", null, JSON.stringify({ a: 1 }))).toEqual(
+      [],
+    );
+    expect(configKeyParityErrors("s", JSON.stringify({ a: 1 }), null)).toEqual(
+      [],
+    );
+  });
+
+  it("flags a key in config.json missing from the example", () => {
+    const errors = configKeyParityErrors(
+      "s",
+      JSON.stringify({ a: 1, b: 2 }),
+      JSON.stringify({ a: 1 }),
+    );
+    expect(
+      errors.some((error) => error.includes("missing from config.example")),
+    ).toBe(true);
+    expect(errors.join("\n")).toContain("b");
+  });
+
+  it("flags a key in the example missing from config.json", () => {
+    const errors = configKeyParityErrors(
+      "s",
+      JSON.stringify({ a: 1 }),
+      JSON.stringify({ a: 1, extra: 3 }),
+    );
+    expect(
+      errors.some((error) =>
+        error.includes("config.example.json has keys missing"),
+      ),
+    ).toBe(true);
+    expect(errors.join("\n")).toContain("extra");
+  });
+
+  it("compares nested object keys recursively (dotted paths)", () => {
+    const errors = configKeyParityErrors(
+      "s",
+      JSON.stringify({ bundleVersioning: { manifest: "p", root: "skills" } }),
+      JSON.stringify({ bundleVersioning: { root: "skills" } }),
+    );
+    expect(errors.join("\n")).toContain("bundleVersioning.manifest");
+  });
+
+  it("reports invalid JSON instead of throwing", () => {
+    const errors = configKeyParityErrors("s", "{not json", JSON.stringify({}));
+    expect(errors.some((error) => error.includes("not valid JSON"))).toBe(true);
   });
 });

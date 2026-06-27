@@ -695,11 +695,26 @@ function selfTest() {
 
 // ---- main ----------------------------------------------------------------
 
+const USAGE = `review-threads — fetch a PR's unresolved review feedback as minimal JSON (read-only)
+
+Usage:
+  node review-threads.mjs <pr-number-or-url>           Print minimal JSON to stdout
+  node review-threads.mjs <pr> --bots "a[bot],b[bot]"  Override review-bot logins
+  node review-threads.mjs <pr> --repo owner/name       Set the repo explicitly
+  node review-threads.mjs <pr> --include-resolved      Keep resolved threads too
+  node review-threads.mjs --self-test                  Run the built-in offline fixtures
+  node review-threads.mjs --help                       Show this message (alias: -h)`;
+
 /**
  * CLI entry: parse args, fetch from GitHub, and print the minimal JSON.
  */
 function main() {
   const argv = process.argv.slice(2);
+  if (argv.includes("--help") || argv.includes("-h")) {
+    console.log(USAGE);
+    return;
+  }
+
   if (argv.includes("--self-test")) {
     selfTest();
     return;
