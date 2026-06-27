@@ -226,7 +226,16 @@ function runActionlint(files) {
   };
 }
 
-function buildSummary(scope, results, classified) {
+/**
+ * Assemble the machine-readable preflight summary the ship flow reads. Pure —
+ * `isDryRun` is passed in (not read from module scope) so both modes are
+ * unit-testable.
+ * @param {ReturnType<import('./lib/scope.mjs').getBranchScope>} scope
+ * @param {{ failedLinters?: string[], actionlintStatus?: string, markdownlintStatus?: string }} results
+ * @param {{ introduced: unknown[], preExisting: unknown[] }} classified
+ * @param {boolean} isDryRun
+ */
+export function buildSummary(scope, results, classified, isDryRun) {
   const failedLinters = results.failedLinters ?? [];
   const categories = {
     actionlint: scope.workflowsChanged ? scope.actionlintTargets : "skipped",
@@ -237,8 +246,8 @@ function buildSummary(scope, results, classified) {
   return {
     blocking: classified.introduced.length > 0 || failedLinters.length > 0,
     categories,
-    deferred: classified.preExisting.length > 0 && !dryRun,
-    dryRun,
+    deferred: classified.preExisting.length > 0 && !isDryRun,
+    dryRun: isDryRun,
     mergeBase: scope.mergeBase,
     passed: classified.introduced.length === 0 && failedLinters.length === 0,
     results: {
@@ -291,6 +300,7 @@ function main() {
           introduced: [],
           preExisting: [],
         },
+        dryRun,
       );
       writeFileSync(SUMMARY_PATH, `${JSON.stringify(earlySummary, null, 2)}\n`);
     }
@@ -310,6 +320,7 @@ function main() {
           introduced: [],
           preExisting: [],
         },
+        dryRun,
       );
       writeFileSync(SUMMARY_PATH, `${JSON.stringify(earlySummary, null, 2)}\n`);
     }
@@ -416,6 +427,7 @@ function main() {
     scope,
     { actionlintStatus, failedLinters, markdownlintStatus },
     classified,
+    dryRun,
   );
   // --dry-run is a true preview: skip the summary write the ship flow reads.
   if (!dryRun) {
