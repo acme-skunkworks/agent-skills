@@ -15,7 +15,7 @@ compatibility: >-
   Linear MCP server; if it is unavailable, skip that step silently. The
   filesystem pass needs Node.js ≥22.
 metadata:
-  version: 0.3.1
+  version: 0.3.2
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -49,7 +49,8 @@ metacharacters, and when there is more than one key wrap the alternation in
 `(?:…)` so the `-\d+` binds to all of them — `\b(?:A|B)-\d+\b`, never the naive
 join `\bA|B-\d+\b` (which parses as `\bA` *or* `B-\d+\b`). A single key needs no
 wrapper: `\bA-\d+\b`. With no keys configured, match nothing. This mirrors the
-canonical `ISSUE_RE` in the changelog bundle's `scripts/add-links.mjs`. Match it
+canonical `buildIssueRe` in the repo-root `lib/issue-keys.mjs`, which
+`pnpm vendor:sync` copies into each consuming bundle (ADR-0004). Match it
 against the **upper-cased** branch name (branches like `asw-7-as-acquired` carry
 the key in lower case).
 

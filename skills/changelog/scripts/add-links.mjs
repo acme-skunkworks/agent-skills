@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { loadConfig } from "./lib/config.mjs";
+import { buildIssueRe } from "./lib/vendor/issue-keys.mjs";
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { argv } from "node:process";
@@ -10,27 +11,10 @@ const {
   linearWorkspaceSlug: WORKSPACE,
 } = loadConfig();
 
-/**
- * Escape regex metacharacters so a configured key such as `C++` or `MY.KEY`
- * can't throw at construction or silently widen the match.
- * @param {string} source
- */
-function escapeRegex(source) {
-  return source.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-// `null` when no issue keys are configured: an empty alternation would match the
-// empty string before every `-<digits>` and inject bogus links (e.g. `-2`). A
-// single key needs no `(?:…)` wrapper — only wrap when there's an alternation.
-const ISSUE_RE = (() => {
-  if (TEAM_KEYS.length === 0) {
-    return null;
-  }
-
-  const alternation = TEAM_KEYS.map(escapeRegex).join("|");
-  const group = TEAM_KEYS.length > 1 ? `(?:${alternation})` : alternation;
-  return new RegExp(`\\b${group}-\\d+\\b`, "g");
-})();
+// `null` when no issue keys are configured (the empty-alternation guard lives in
+// buildIssueRe). The matcher construction is the canonical, vendored
+// lib/issue-keys.mjs (ADR-0004) — shared with linear-sync / cleanup-repo.
+const ISSUE_RE = buildIssueRe(TEAM_KEYS);
 const FENCE_RE = /```[\s\S]*?```/g;
 const INLINE_CODE_RE = /`[^`]*`/g;
 const ALREADY_LINKED_RE = /\[[^\]]*\]\([^)]*\)/g;

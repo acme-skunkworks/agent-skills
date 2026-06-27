@@ -10,6 +10,7 @@
  * keeps the preflight skill portable — a consuming repo edits at most one small
  * file, and usually none.
  */
+import { detectBaseBranch as detectBaseBranchVendored } from "./vendor/base-branch.mjs";
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -188,23 +189,15 @@ export function detectWorkspaces(root = ROOT) {
 }
 
 /**
- * Resolve the base branch to diff against. Detects the default branch from
- * `origin/HEAD` (e.g. `main`, `master`, `develop`); falls back to `main` when the
- * symbolic ref is absent (common on fresh clones / shallow CI checkouts).
+ * Resolve the base branch to diff against. Delegates to the canonical, vendored
+ * lib/base-branch.mjs (ADR-0004) — detects the default branch from `origin/HEAD`
+ * (e.g. `main`, `master`, `develop`), falling back to `main` when the symbolic
+ * ref is absent (common on fresh clones / shallow CI checkouts).
  * @param {string} [root]
  * @returns {string}
  */
 export function detectBaseBranch(root = ROOT) {
-  const result = spawnSync(
-    "git",
-    ["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"],
-    { cwd: root, encoding: "utf8" },
-  );
-  if (result.status === 0 && result.stdout.trim()) {
-    return result.stdout.trim().replace(/^refs\/remotes\/origin\//, "");
-  }
-
-  return DEFAULT_BASE_BRANCH;
+  return detectBaseBranchVendored(root, DEFAULT_BASE_BRANCH);
 }
 
 /**
