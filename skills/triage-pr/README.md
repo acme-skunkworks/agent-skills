@@ -25,7 +25,7 @@ Edit [`config.json`](config.json) in your installed copy:
 | `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback (matched on `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match). Edit to match your install — review-bot logins vary per repo. `github-actions` is excluded by default (it posts CI/release comments, not code review); add it only if your install posts review-type comments via the Actions bot. | `["claude", "cursor", "coderabbitai"]` |
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers — bounds the fix-and-watch loop. | `5` |
 | `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before the thread is resolved (the audit trail). `false` resolves accepted threads silently; declines always reply with reasoning regardless. | `true` |
-| `promoteOnGreen` | When `true`, after Phase A finishes with every required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-off**: unset, the skill stops at green and leaves the flip to the human. Gated on proven-green CI, no unresolved human review threads, and no unresolved base drift; `--promote` / `--no-promote` override it per run, and `--ci-only` / `--dry-run` never promote. | `false` |
+| `promoteOnGreen` | When `true`, after Phase A finishes with every required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**: set `false` (or pass `--no-promote`) to stop at green and leave the flip to the human. Gated on proven-green CI, no unresolved human review threads, and no unresolved base drift; `--promote` / `--no-promote` override it per run, and `--ci-only` / `--dry-run` never promote. | `true` |
 
 ## Requirements
 
@@ -49,12 +49,12 @@ Two phases, chosen from the PR's draft state:
    anything, fix the valid ones, decline the invalid ones with technical
    reasoning, then loop back through Phase A.
 
-**By default the skill never flips the PR from draft to ready** — that is the human's
-call, and the gate that turns AI review on. An opt-in (`promoteOnGreen` / `--promote`,
-default-off) lets it promote a cleanly-green draft and carry on into Phase B, gated on
-proven-green CI, no unresolved human review threads, and no unresolved base drift. It
-actions only the configured `reviewBots`; human review comments are surfaced in the
-report but left for the human.
+**By default the skill promotes a cleanly-green draft to ready** (`promoteOnGreen` is
+on) — it runs `gh pr ready` once Phase A proves CI green and carries on into Phase B;
+set `promoteOnGreen: false` (or pass `--no-promote`) to stop at green and leave the
+flip to the human. Promotion is gated on proven-green CI, no unresolved human review
+threads, and no unresolved base drift. It actions only the configured `reviewBots`;
+human review comments are surfaced in the report but left for the human.
 
 The review-discipline rules folded into Phase B (verify before implementing, no
 sycophancy, evidence before claims) live in

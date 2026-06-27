@@ -34,9 +34,10 @@ stats:
 
 ## Required fields
 
-`validate-changelog.mjs` requires: `title`, `created_at`, `branch`, `author`,
-`category`, `breaking`, `co_authors`, and a `stats` object. Other fields are
-validated **by type when present** but may be blank placeholders until enrichment.
+`validate-changelog.mjs` requires exactly four fields: `title`, `created_at`,
+`category`, and `breaking`. Every other field — including `branch`, `author`,
+`co_authors`, and `stats` — is validated **by type when present** but may be
+omitted or left as a blank placeholder until enrichment.
 
 ## Field types and rules
 
@@ -54,7 +55,7 @@ validated **by type when present** but may be blank placeholders until enrichmen
 | `co_authors` | Array of strings (`[]` when none). |
 | `category` | One of `feature`, `fix`, `chore`, `docs`, `refactor`, `perf`. |
 | `breaking` | Boolean. If `true`, the body MUST contain a `## Breaking` section. |
-| `issues` | Array of strings, each matching `[A-Z]{2,}-\d+`. |
+| `issues` | Array of strings, each matching `[A-Z]+-\d+` (a one-or-more-letter team key, e.g. `A-123`). |
 | `affected_packages` | Array of strings (`[]` when unpopulated). Monorepo-gated — emitted only when `affectedPackages: true` in `config.json`; absent (and clean) for single-package repos. |
 | `stats.{files_changed,loc_added,loc_removed}` | Non-negative integers when set; blank until release. |
 
@@ -114,8 +115,9 @@ Only include `Added` / `Changed` / `Fixed` headings that have entries.
   default), which omits `affected_packages` and makes `set-affected-packages.mjs`
   a no-op — there is only one package, so the field is write-only noise. The
   validator treats `affected_packages` as optional-when-present, so leaving it out
-  is fine — but if you keep `validate-changelog.mjs` as shipped, it still requires
-  `branch`, `author`, `co_authors`, and `stats`.
+  is fine. As shipped, `validate-changelog.mjs` requires only `title`, `created_at`,
+  `category`, and `breaking`; `branch`, `author`, `co_authors`, and `stats` are
+  validated by type when present but are not required.
 - **Adding a `version` field.** A single-versioned package may add `version` to
   record the release each entry shipped in; that is owned by the release step,
   alongside the other post-merge fields.

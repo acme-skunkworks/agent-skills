@@ -37,10 +37,10 @@ Per-repo slash-command names are a consumer choice. A consumer can expose this a
   preview, then `apply()` **after** worktree removal — so the apply pass may sweep a
   worktree parent (e.g. `.claude/worktrees/`) that the pre-removal preview could not
   yet see. The skill predicts these in the preview from the worktree-removal list.
-- **Merge-detection base branch is hardcoded to `origin/main`.** Both passes (git
-  ancestry and merged-PR lookup) assume `main`; a consumer defaulting to `master` or
-  `develop` must edit the skill. A future minor bump should add a `mainBranch` config
-  key alongside `protectedBranches`.
+- **Configurable merge-detection base branch.** *(Landed since v1 — no longer a
+  non-goal.)* Both passes (git ancestry and merged-PR lookup) diff against
+  `origin/<mainBranch>`, defaulting to `main`; the `mainBranch` config key (beside
+  `protectedBranches`) covers `master` / `develop` trunks.
 
 ## Future extensions (out of scope, enabled by the name)
 

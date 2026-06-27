@@ -33,6 +33,7 @@ are structural and keep generic, overridable defaults.
 | `linearWorkspaceSlug` | Linear workspace slug for issue links (`https://linear.app/<slug>/issue/<id>`). | **required** |
 | `baseBranch` | Trunk the branch diff is taken against (`origin/<baseBranch>`); `BASE_REF` env overrides per-run. | `"main"` |
 | `changelogDir` | Directory the dated entries live in (scanned and validated). | `"changelog"` |
+| `affectedPackages` | Monorepo gate. When `true`, emit and maintain `affected_packages` from the branch diff; single-package repos leave it `false`, which omits the field and makes `set-affected-packages.mjs` a no-op. | `false` |
 | `packageRoots` | Monorepo dir prefixes mapping `<root>/<x>/…` → package `<x>` for `affected_packages`. | `["apps", "packages", "services"]` |
 | `fallbackPackage` | Package name for changed paths matching no `packageRoots` prefix. | `"infrastructure"` |
 
