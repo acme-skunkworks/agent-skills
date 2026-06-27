@@ -1,0 +1,33 @@
+---
+title: Default the triage-pr skill to promoting a green draft PR to ready-for-review
+release_note: 'The triage-pr skill now promotes a draft PR to ready-for-review by default once Phase A CI is cleanly green, flipping the promoteOnGreen config default from false to true. The existing safety gates are unchanged — promotion is still suppressed unless the green is proven, there are no unresolved human review threads, and there is no unresolved base drift. Pass --no-promote (or set promoteOnGreen: false) to opt out and leave the flip to a human.'
+created_at: '2026-06-27T15:26:44Z'
+merged_at:
+branch: a-526-triage-pr-promote-default
+pr:
+commit:
+merge_strategy:
+author: rob@acmeskunkworks.io
+co_authors: []
+category: feature
+breaking: false
+issues:
+  - A-526
+stats:
+  files_changed:
+  loc_added:
+  loc_removed:
+---
+
+## Changed
+
+- **`triage-pr` promotes a green draft PR to ready-for-review by default ([A-526](https://linear.app/acme-skunkworks/issue/A-526)).**
+  The `promoteOnGreen` knob in the skill's `config.json` now defaults to `true`, so
+  a cleanly-green Phase A automatically runs `gh pr ready <pr>` — the gate that turns
+  AI review on — and continues into Phase B, rather than stopping at green and
+  leaving the flip to a human. The promotion gate is unchanged: the flip is still
+  suppressed unless the green is *proven* (the watched rollup, never "no failures
+  yet"), there are **no unresolved human review threads**, and `mergeStateStatus`
+  shows no unresolved base drift (`BEHIND` / `DIRTY`). Pass `--no-promote` (or set
+  `promoteOnGreen: false`) to opt out; `--ci-only` and `--dry-run` never promote, as
+  before. Bundled as `triage-pr@0.4.0`.
