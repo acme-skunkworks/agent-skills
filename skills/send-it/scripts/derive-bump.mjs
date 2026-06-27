@@ -94,7 +94,11 @@ Env:
   BASE_REF   Override the base ref (default: origin/main, then main).`;
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (process.argv.slice(2).some((arg) => arg === "--help" || arg === "-h")) {
+  if (
+    process.argv
+      .slice(2)
+      .some((argument) => argument === "--help" || argument === "-h")
+  ) {
     console.log(USAGE);
   } else {
     main();

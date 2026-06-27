@@ -220,7 +220,11 @@ Config-gated: a no-op ({ configured: false }) unless send-it's config.json
 carries a bundleVersioning block.`;
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (process.argv.slice(2).some((arg) => arg === "--help" || arg === "-h")) {
+  if (
+    process.argv
+      .slice(2)
+      .some((argument) => argument === "--help" || argument === "-h")
+  ) {
     console.log(USAGE);
   } else {
     main();

@@ -173,7 +173,10 @@ export function createDetectors({
     // Reuse the memoised packageRoots detection rather than re-reading
     // pnpm-workspace.yaml a second time.
     shippablePaths: () => ({
-      value: detectShippablePaths(repoRoot, detect("packageRoots")?.value ?? []),
+      value: detectShippablePaths(
+        repoRoot,
+        detect("packageRoots")?.value ?? [],
+      ),
     }),
     // preflight self-detects its workspace map at runtime; never write it.
     workspaces: () => null,

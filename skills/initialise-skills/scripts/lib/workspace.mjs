@@ -152,5 +152,7 @@ export function detectPackageRoots(root) {
     }
   }
 
-  return DEFAULT_PACKAGE_ROOTS.filter((dir) => existsSync(join(root, dir)));
+  return DEFAULT_PACKAGE_ROOTS.filter((directory) =>
+    existsSync(join(root, directory)),
+  );
 }

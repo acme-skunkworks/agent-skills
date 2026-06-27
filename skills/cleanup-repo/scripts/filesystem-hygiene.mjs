@@ -393,6 +393,7 @@ function main() {
     console.log(USAGE);
     return;
   }
+
   if (argv.includes("--self-test")) {
     selfTest();
     return;
