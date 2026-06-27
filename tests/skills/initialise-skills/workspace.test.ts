@@ -52,6 +52,30 @@ describe("detectPackageRoots", () => {
     expect(detectPackageRoots(dir)).toEqual(["apps"]);
   });
 
+  it("treats a catalogs-only pnpm-workspace.yaml as authoritative (no invented roots)", () => {
+    // A `catalogs:`-only file (pnpm ≥9.5) declares a workspace with no package
+    // globs. The manifest is authoritative: return [] rather than falling through
+    // to the package.json / default-dir guess. Stack the deck — a workspaces
+    // field AND an on-disk default candidate that the old fall-through would have
+    // picked up — to prove the manifest short-circuits both.
+    writeFileSync(
+      join(dir, "pnpm-workspace.yaml"),
+      "catalogs:\n  react18:\n    react: ^18.3.1\n",
+    );
+    writeFileSync(
+      join(dir, "package.json"),
+      JSON.stringify({ workspaces: ["modules/*"] }),
+    );
+    mkdirSync(join(dir, "packages"));
+    expect(detectPackageRoots(dir)).toEqual([]);
+  });
+
+  it("treats an empty packages: list as authoritative []", () => {
+    writeFileSync(join(dir, "pnpm-workspace.yaml"), "packages: []\n");
+    mkdirSync(join(dir, "apps"));
+    expect(detectPackageRoots(dir)).toEqual([]);
+  });
+
   it("falls back to the default candidates that actually exist on disk", () => {
     // No manifest; only one of the default candidates is present.
     mkdirSync(join(dir, "packages"));
