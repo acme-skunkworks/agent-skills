@@ -23,7 +23,22 @@ function run(cmd, argv) {
   }
 }
 
+const USAGE = `preflight-lint-fix — scoped eslint --fix / markdownlint --fix on branch-changed paths
+
+Usage:
+  node lint-fix.mjs          Auto-fix lint on the files the branch changed
+  node lint-fix.mjs --help   Show this message (alias: -h)`;
+
 function main() {
+  if (
+    process.argv
+      .slice(2)
+      .some((argument) => argument === "--help" || argument === "-h")
+  ) {
+    console.log(USAGE);
+    return;
+  }
+
   const scope = getBranchScope();
 
   if (!scope.codeChanged && !scope.markdownChanged) {

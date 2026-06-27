@@ -259,7 +259,23 @@ function buildSummary(scope, results, classified) {
   };
 }
 
+const USAGE = `preflight — change-gated, branch-scoped lint preflight
+
+Usage:
+  node preflight.mjs            Lint the categories the branch changed
+  node preflight.mjs --dry-run  Report categories + scoped files without classifying (writes nothing)
+  node preflight.mjs --help     Show this message (alias: -h)`;
+
 function main() {
+  if (
+    process.argv
+      .slice(2)
+      .some((argument) => argument === "--help" || argument === "-h")
+  ) {
+    console.log(USAGE);
+    return;
+  }
+
   const scope = getBranchScope();
   const { baseBranch } = resolveConfig();
 
