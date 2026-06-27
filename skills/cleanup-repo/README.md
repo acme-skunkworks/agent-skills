@@ -1,8 +1,8 @@
 # cleanup-repo
 
 Clean up a Git repository's merged branches and worktrees, then prune filesystem
-cruft (recursively-empty directories and orphaned `node_modules/`) — behind a
-single confirmation gate, with a `--dry-run` preview.
+cruft (recursively-empty directories and orphaned `node_modules/`) — behind
+per-pass confirmation gates, with a `--dry-run` preview.
 
 ## Install
 
@@ -44,7 +44,8 @@ template — copy it over `config.json` and fill in your values, or edit
 
 ## What it does
 
-Two passes, one confirmation:
+Two passes, confirmed separately (accept or decline each; `--branches-only` /
+`--fs-only` run just one):
 
 1. **Branch/worktree pass** — fetches and prunes, removes merged worktrees
    (guarding ones with uncommitted changes), deletes merged local and remote

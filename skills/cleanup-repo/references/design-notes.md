@@ -17,7 +17,7 @@ Per-repo slash-command names are a consumer choice. A consumer can expose this a
 ## Initial scope
 
 - Merged-worktree and merged-branch cleanup (two-pass detection), an opt-in Linear
-  `Done` writeback, a single confirmation gate, and a `--dry-run` preview — at
+  `Done` writeback, per-pass confirmation gates, and a `--dry-run` preview — at
   parity with `/cleanup-branches`.
 - **New:** a filesystem-hygiene pass — recursively-empty directory pruning and
   orphan `node_modules/` pruning.
