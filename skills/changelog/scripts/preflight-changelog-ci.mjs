@@ -108,7 +108,78 @@ function readNvmrc() {
   return version;
 }
 
+const USAGE = `preflight-changelog-ci — confirm Node satisfies the repo policy, then pnpm install --frozen-lockfile
+
+Checks the active Node against package.json engines.node and .nvmrc, then runs
+\`pnpm install --frozen-lockfile\`. Optional and pnpm-specific — skip it if the
+consumer repo doesn't use pnpm.
+
+Usage:
+  node preflight-changelog-ci.mjs            Run the Node-policy check + frozen install
+  node preflight-changelog-ci.mjs --self-test  Run the built-in offline smoke test
+  node preflight-changelog-ci.mjs --help     Show this message (alias: -h)`;
+
+// Offline smoke test: exercise the pure version helpers — no filesystem, no
+// pnpm. The exhaustive cases live in the repo's vitest suite
+// (tests/skills/changelog/preflight-changelog-ci.test.ts).
+function selfTest() {
+  const cases = [
+    {
+      name: "parseVersion pads a bare major to [22, 0, 0]",
+      ok: JSON.stringify(parseVersion("22")) === JSON.stringify([22, 0, 0]),
+    },
+    {
+      name: "parseVersion strips a leading v",
+      ok:
+        JSON.stringify(parseVersion("v22.5.1")) === JSON.stringify([22, 5, 1]),
+    },
+    {
+      name: "coerceMinVersion reads the lower bound from a range",
+      ok:
+        JSON.stringify(coerceMinVersion(">=22 <23")) ===
+        JSON.stringify([22, 0, 0]),
+    },
+    {
+      name: "coerceMinVersion treats 22.x as [22, 0, 0]",
+      ok:
+        JSON.stringify(coerceMinVersion("22.x")) === JSON.stringify([22, 0, 0]),
+    },
+    {
+      name: "satisfiesGte is true for an equal-or-greater version",
+      ok: satisfiesGte([22, 5, 0], [22, 0, 0]) === true,
+    },
+    {
+      name: "satisfiesGte is false for a lesser version",
+      ok: satisfiesGte([20, 0, 0], [22, 0, 0]) === false,
+    },
+  ];
+
+  let failed = 0;
+  for (const { name, ok } of cases) {
+    if (ok) {
+      console.log(`  ok    ${name}`);
+    } else {
+      failed += 1;
+      console.log(`  FAIL  ${name}`);
+    }
+  }
+
+  console.log(`\n${cases.length - failed}/${cases.length} passed`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
 function main() {
+  const args = process.argv.slice(2);
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(USAGE);
+    return;
+  }
+
+  if (args.includes("--self-test")) {
+    selfTest();
+    return;
+  }
+
   const active = parseVersion(process.version);
   if (!active) {
     console.error(

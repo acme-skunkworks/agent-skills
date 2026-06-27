@@ -189,7 +189,101 @@ export function makeResolver(run) {
   };
 }
 
+const USAGE = `finalise-changelog — release-time enrich + version-stamp the dated changelog/ entries
+
+Run by the release orchestrator right after \`release-please release-pr\`. Reads the
+just-bumped version from package.json, then for every un-finalised entry: resolves
+its merged PR via \`gh\`/\`git\` to enrich (merged_at/commit/pr/merge_strategy/stats),
+stamps \`version\`, and rewrites bare Linear IDs to links. WRITES to changelog/ files.
+
+Usage:
+  node finalise-changelog.mjs            Finalise every un-finalised entry (writes; needs gh/git)
+  node finalise-changelog.mjs --self-test  Run the built-in offline smoke test
+  node finalise-changelog.mjs --help     Show this message (alias: -h)`;
+
+// Offline smoke-test resolver — a fixed fake PR, no gh/git.
+function fakeResolver() {
+  return {
+    additions: "10",
+    changedFiles: "2",
+    deletions: "3",
+    mergedAt: "2026-01-02T00:00:00Z",
+    mergeSha: "abcdef1234567890",
+    mergeStrategy: "squash",
+    prNumber: "42",
+  };
+}
+
+// Offline smoke test: exercise the pure finaliseEntry with a fake resolver — no
+// gh, no git, no real package.json, no filesystem writes. The exhaustive cases
+// live in the repo's vitest suite (infrastructure/tests/finalise-changelog.test.ts).
+function selfTest() {
+  const cases = [];
+
+  const unfinalised = `---
+title: Sample
+created_at: '2026-01-01T00:00:00Z'
+merged_at:
+branch: a-1-sample
+pr:
+commit:
+merge_strategy:
+version:
+category: feature
+breaking: false
+stats:
+  files_changed:
+  loc_added:
+  loc_removed:
+---
+
+## Added
+
+- A thing.
+`;
+  const finalised = finaliseEntry(unfinalised, "1.2.3", fakeResolver);
+  cases.push({
+    name: "an un-finalised entry is rewritten",
+    ok: typeof finalised === "string" && finalised !== unfinalised,
+  });
+  cases.push({
+    name: "the bumped version is stamped",
+    ok: typeof finalised === "string" && finalised.includes("version: 1.2.3"),
+  });
+
+  // An already-stamped entry is a no-op (returns null).
+  const alreadyDone = (finalised ?? unfinalised).replace(/\n$/, "\n");
+  cases.push({
+    name: "an already-finalised entry returns null (no rewrite)",
+    ok: finaliseEntry(alreadyDone, "1.2.3", fakeResolver) === null,
+  });
+
+  let failed = 0;
+  for (const { name, ok } of cases) {
+    if (ok) {
+      console.log(`  ok    ${name}`);
+    } else {
+      failed += 1;
+      console.log(`  FAIL  ${name}`);
+    }
+  }
+
+  console.log(`\n${cases.length - failed}/${cases.length} passed`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
 function main() {
+  const args = argv.slice(2);
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(USAGE);
+    return;
+  }
+
+  if (args.includes("--self-test")) {
+    selfTest();
+    return;
+  }
+
   const config = loadConfig();
   const version = readPackageVersion(readFileSync("package.json", "utf8"));
   const resolvePr = makeResolver(realRunner);

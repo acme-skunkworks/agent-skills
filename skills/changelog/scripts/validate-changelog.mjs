@@ -254,6 +254,78 @@ export function validateEntry(name, raw) {
   return errors;
 }
 
+const USAGE = `validate-changelog — validate the dated changelog/ entries against the contract
+
+Usage:
+  node validate-changelog.mjs            Validate every changelog/<ts>-<slug>.md entry
+  node validate-changelog.mjs --self-test  Run the built-in offline smoke test
+  node validate-changelog.mjs --help     Show this message (alias: -h)
+
+Exits 1 when an entry is invalid, 2 when the changelog directory is missing.`;
+
+// Offline smoke test: run the pure validateEntry over a known-good and a
+// known-bad entry. The exhaustive cases live in the repo's vitest suite
+// (infrastructure/tests/validate-changelog.test.ts); this is a light check that
+// the exported logic is wired up, with no filesystem or network access.
+function selfTest() {
+  const cases = [];
+
+  const goodName = "20260101-000000-a-1-sample.md";
+  const goodRaw = `---
+title: A sample entry
+created_at: '2026-01-01T00:00:00Z'
+category: feature
+breaking: false
+---
+
+## Added
+
+- Something.
+`;
+  cases.push({
+    name: "a well-formed entry produces no errors",
+    ok: validateEntry(goodName, goodRaw).length === 0,
+  });
+
+  cases.push({
+    name: "a bad filename is rejected",
+    ok: validateEntry("not-a-valid-name.md", goodRaw).length > 0,
+  });
+
+  const badCategory = goodRaw.replace("category: feature", "category: nope");
+  cases.push({
+    name: "an unknown category is rejected",
+    ok: validateEntry(goodName, badCategory).length > 0,
+  });
+
+  const missingSection = `---
+title: No body section
+created_at: '2026-01-01T00:00:00Z'
+category: docs
+breaking: false
+---
+
+Just prose, no heading.
+`;
+  cases.push({
+    name: "a body with no recognised section is rejected",
+    ok: validateEntry(goodName, missingSection).length > 0,
+  });
+
+  let failed = 0;
+  for (const { name, ok } of cases) {
+    if (ok) {
+      console.log(`  ok    ${name}`);
+    } else {
+      failed += 1;
+      console.log(`  FAIL  ${name}`);
+    }
+  }
+
+  console.log(`\n${cases.length - failed}/${cases.length} passed`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
 function listEntries(directory) {
   let stat;
   try {
@@ -274,6 +346,17 @@ function listEntries(directory) {
 }
 
 function main() {
+  const args = argv.slice(2);
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(USAGE);
+    return;
+  }
+
+  if (args.includes("--self-test")) {
+    selfTest();
+    return;
+  }
+
   const files = listEntries(loadConfig().changelogDir);
   const errors = [];
   for (const file of files) {
