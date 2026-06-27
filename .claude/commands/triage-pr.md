@@ -22,8 +22,12 @@ unresolved AI review threads once it is ready), with the constraints below.
    invalid ones with technical reasoning. After each push, **loop back to the CI
    phase** — a push re-fires both CI and AI review — until CI is green and no
    unresolved AI threads remain.
-3. **Never flip the PR from draft to ready** — that is the human's call and the
-   gate that turns AI review on.
+3. **The draft → ready flip follows the skill's `promoteOnGreen` config**, the
+   single control for it. In this repo it is on, so an enabled config *is* the
+   authorisation: once Phase A is proven-green (no unresolved human threads, no base
+   drift), flip the PR to ready (the gate that turns AI review on) and continue into
+   Phase B — don't stop to seek a separate human sign-off. An explicit user prompt,
+   or `--no-promote`, opts out. Merge to `main` stays the human's call.
 
 ## Flags
 
