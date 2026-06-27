@@ -91,6 +91,14 @@ jobs:
         # metadata drifting silently (skills version out-of-band — ADR-0002).
         run: pnpm validate:skills
 
+      - name: 🧬 Vendor drift-check
+        # Drift gate (ADR-0004 / A-534): each bundle's scripts/lib/vendor/ copy
+        # must be byte-identical to its canonical lib/*.mjs source. Bundles stay
+        # independently installable (no cross-bundle imports), so shared logic is
+        # vendored by `pnpm vendor:sync`; this fails the build if a copy drifts
+        # (e.g. the canonical file changed without re-running the sync).
+        run: pnpm vendor:check
+
       # Changelog-completeness gate (SK-380): a release-triggering PR title
       # (feat/fix/breaking) must carry a dated changelog/ entry. Restores the
       # no-changeset-no-release coupling now that the bump is inferred from the
