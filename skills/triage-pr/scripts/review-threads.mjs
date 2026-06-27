@@ -20,6 +20,11 @@
 // The network layer (gh) is kept separate from the pure transform so the
 // transform is unit-tested by `--self-test` with no network access.
 //
+// This script is READ-ONLY — it only fetches and prints — so it has no
+// `--dry-run` flag (there is nothing to preview; running it changes nothing).
+// The write side lives in `respond-threads.mjs`, which is where `--dry-run`
+// belongs.
+//
 // Usage:
 //   node review-threads.mjs <pr-number-or-url>                 # minimal JSON to stdout
 //   node review-threads.mjs <pr> --bots "a[bot],b[bot]"        # override review-bot logins

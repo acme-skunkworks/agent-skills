@@ -84,6 +84,23 @@ function main() {
   );
 }
 
+const USAGE = `derive-bump — print the slug/bump/body send-it derives from the branch commits
+
+Usage:
+  node derive-bump.mjs            Print { slug, bump, body } as JSON to stdout (read-only)
+  node derive-bump.mjs --help     Show this message (alias: -h)
+
+Env:
+  BASE_REF   Override the base ref (default: origin/main, then main).`;
+
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
+  if (
+    process.argv
+      .slice(2)
+      .some((argument) => argument === "--help" || argument === "-h")
+  ) {
+    console.log(USAGE);
+  } else {
+    main();
+  }
 }

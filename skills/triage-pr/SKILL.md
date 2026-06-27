@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.3.1
+  version: 0.3.2
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
 ---
 
@@ -216,6 +216,10 @@ value is `config.reviewBots` joined by commas:
 ```bash
 node scripts/review-threads.mjs <pr> --bots "claude,cursor,coderabbitai"
 ```
+
+This fetcher is **read-only** (it only fetches and prints), so it has no
+`--dry-run` flag — running it never changes anything. The write side is
+`respond-threads.mjs` (Step 8), which is where `--dry-run` lives.
 
 It prints minimal JSON with three groups:
 

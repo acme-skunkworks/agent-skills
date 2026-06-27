@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Imports the BUNDLE script directly (the distributed `.mjs`). The two boolean
 // detectors return repo-independent constants, so a dummy repoRoot is fine —
@@ -26,5 +30,39 @@ describe("createDetectors — triage-pr boolean defaults", () => {
     const { detect } = detectorsFor();
     expect(detect("promoteOnGreen")).not.toBeNull();
     expect(detect("replyOnAccept")).not.toBeNull();
+  });
+});
+
+// Regression cover for SK-460: packageRoots must signal "couldn't detect" (null)
+// when there's no workspace manifest and none of the default candidates exist,
+// rather than reporting a fabricated `["apps","packages","services"]`.
+describe("createDetectors — packageRoots", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "detectors-roots-"));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("returns null when no manifest and no default candidate exists on disk", () => {
+    const { detect } = createDetectors({ repoRoot: dir });
+    expect(detect("packageRoots")).toBeNull();
+  });
+
+  it("returns the declared roots when a pnpm workspace is present", () => {
+    writeFileSync(join(dir, "pnpm-workspace.yaml"), 'packages:\n  - "apps/*"\n');
+    const { detect } = createDetectors({ repoRoot: dir });
+    expect(detect("packageRoots")).toEqual({ value: ["apps"] });
+  });
+
+  it("does not throw deriving shippablePaths when packageRoots is null", () => {
+    // No package.json `files`, no manifest → packageRoots is null; shippablePaths
+    // must null-guard rather than dereference `.value` on null.
+    const { detect } = createDetectors({ repoRoot: dir });
+    expect(() => detect("shippablePaths")).not.toThrow();
+    expect(detect("shippablePaths")).toEqual({ value: [] });
   });
 });

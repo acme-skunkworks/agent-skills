@@ -210,6 +210,23 @@ function main() {
   console.log(JSON.stringify({ bumped, configured: true, unbumped }, null, 2));
 }
 
+const USAGE = `check-skill-bumps — list skill bundles changed on this branch without a version bump
+
+Usage:
+  node check-skill-bumps.mjs       Print { configured, unbumped, bumped } as JSON to stdout (read-only)
+  node check-skill-bumps.mjs --help  Show this message (alias: -h)
+
+Config-gated: a no-op ({ configured: false }) unless send-it's config.json
+carries a bundleVersioning block.`;
+
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
+  if (
+    process.argv
+      .slice(2)
+      .some((argument) => argument === "--help" || argument === "-h")
+  ) {
+    console.log(USAGE);
+  } else {
+    main();
+  }
 }

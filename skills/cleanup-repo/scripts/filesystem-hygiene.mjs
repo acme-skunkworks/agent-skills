@@ -25,6 +25,7 @@
 //   node filesystem-hygiene.mjs [root] --json     # same, explicit
 //   node filesystem-hygiene.mjs [root] --apply    # remove the detected set, print JSON
 //   node filesystem-hygiene.mjs --self-test       # run built-in fixtures
+//   node filesystem-hygiene.mjs --help            # print usage (alias: -h)
 
 import {
   existsSync,
@@ -378,8 +379,22 @@ function selfTest() {
   process.exit(failed === 0 ? 0 : 1);
 }
 
+const USAGE = `filesystem-hygiene — detect (and optionally remove) recursively-empty dirs and orphan node_modules
+
+Usage:
+  node filesystem-hygiene.mjs [root]            Print detection JSON (default: cwd; read-only)
+  node filesystem-hygiene.mjs [root] --json     Same, explicit
+  node filesystem-hygiene.mjs [root] --apply    Remove the detected set, then print JSON
+  node filesystem-hygiene.mjs --self-test       Run the built-in offline fixtures
+  node filesystem-hygiene.mjs --help            Show this message (alias: -h)`;
+
 function main() {
   const argv = process.argv.slice(2);
+  if (argv.includes("--help") || argv.includes("-h")) {
+    console.log(USAGE);
+    return;
+  }
+
   if (argv.includes("--self-test")) {
     selfTest();
     return;
