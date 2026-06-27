@@ -1,4 +1,4 @@
-import { validateEntry } from "../scripts/validate-changelog.js";
+import { validateEntry } from "../../skills/changelog/scripts/validate-changelog.mjs";
 import { describe, expect, it } from "vitest";
 
 const VALID_NAME = "20260523-145537-v1-0-3.md";
@@ -201,6 +201,29 @@ describe("validateEntry", () => {
     );
     expect(validateEntry(VALID_NAME, raw)).toEqual([
       expect.stringMatching(/must match \[A-Z\]/),
+    ]);
+  });
+
+  it("accepts a string-array affected_packages (monorepo enrichment)", () => {
+    const raw = entry(
+      'title: "x"\ncreated_at: "2026-05-23T14:55:37Z"\ncategory: fix\nbreaking: false\naffected_packages: ["changelog", "send-it"]',
+    );
+    expect(validateEntry(VALID_NAME, raw)).toEqual([]);
+  });
+
+  it("accepts an empty affected_packages placeholder", () => {
+    const raw = entry(
+      'title: "x"\ncreated_at: "2026-05-23T14:55:37Z"\ncategory: fix\nbreaking: false\naffected_packages: []',
+    );
+    expect(validateEntry(VALID_NAME, raw)).toEqual([]);
+  });
+
+  it("rejects an affected_packages that isn't a string array", () => {
+    const raw = entry(
+      'title: "x"\ncreated_at: "2026-05-23T14:55:37Z"\ncategory: fix\nbreaking: false\naffected_packages: 3',
+    );
+    expect(validateEntry(VALID_NAME, raw)).toEqual([
+      expect.stringMatching(/affected_packages must be an array of strings/),
     ]);
   });
 });

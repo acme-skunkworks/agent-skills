@@ -1,7 +1,26 @@
-import { finaliseEntry, makeResolver } from "../scripts/finalise-changelog.js";
-import type { ResolvedPr, Runner } from "../scripts/finalise-changelog.js";
-import matter from "gray-matter";
+import {
+  finaliseEntry,
+  makeResolver,
+} from "../../skills/changelog/scripts/finalise-changelog.mjs";
+// Exercises the BUNDLE script directly (the distributed `.mjs`). finaliseEntry
+// links bare Linear IDs via the bundle's own config.json (workspace
+// `goose-and-hobbes`, keys ASW/AKW/SKW/SK).
+import { parseFrontmatter } from "../../skills/changelog/scripts/lib/frontmatter.mjs";
 import { describe, expect, it } from "vitest";
+
+// The .mjs carries these shapes as JSDoc typedefs (no exported TS types); mirror
+// them locally so the test fixtures and the runner stay typed.
+type ResolvedPr = {
+  additions: null | string;
+  changedFiles: null | string;
+  deletions: null | string;
+  mergedAt: string;
+  mergeSha: string;
+  mergeStrategy: null | string;
+  prNumber: string;
+};
+
+type Runner = (cmd: string, args: readonly string[]) => string;
 
 const PR: ResolvedPr = {
   additions: "10",
@@ -39,7 +58,7 @@ describe("finaliseEntry", () => {
   it("enriches, stamps version, and links an un-finalised entry", () => {
     const out = finaliseEntry(placeholderEntry(), "1.2.0", () => PR);
     expect(out).not.toBeNull();
-    const { content, data } = matter(out as string);
+    const { content, data } = parseFrontmatter(out as string);
     expect(data.version).toBe("1.2.0");
     expect(data.merged_at).toBe("2026-05-24T09:00:00Z");
     expect(data.commit).toBe("abc1234");
@@ -51,7 +70,7 @@ describe("finaliseEntry", () => {
       loc_removed: 2,
     });
     expect(content).toContain(
-      "[ASW-123](https://linear.app/acme-skunkworks/issue/ASW-123)",
+      "[ASW-123](https://linear.app/goose-and-hobbes/issue/ASW-123)",
     );
   });
 
@@ -62,7 +81,7 @@ describe("finaliseEntry", () => {
 
   it("stamps + links even when no PR is found (resolver returns null)", () => {
     const out = finaliseEntry(placeholderEntry(), "1.2.0", () => null);
-    const { data } = matter(out as string);
+    const { data } = parseFrontmatter(out as string);
     expect(data.version).toBe("1.2.0");
     expect(data.merged_at ?? "").toBe(""); // not enriched
     expect(data.pr ?? "").toBe("");
@@ -79,7 +98,7 @@ describe("finaliseEntry", () => {
       return PR;
     });
     expect(called).toBe(false);
-    expect(matter(out as string).data.version).toBe("9.9.9");
+    expect(parseFrontmatter(out as string).data.version).toBe("9.9.9");
   });
 });
 

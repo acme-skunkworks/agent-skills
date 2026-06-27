@@ -1,4 +1,4 @@
-#!/usr/bin/env -S npx tsx
+#!/usr/bin/env node
 // Release-time finalisation of changelog entries — run by the orchestrator
 // right after `release-please release-pr` (SK-380/SK-376), so the result is
 // committed into the release PR (no separate workflow, no bot push to main).
@@ -12,48 +12,52 @@
 //
 // The pure `finaliseEntry(raw, version, resolvePr)` is unit-testable with a fake
 // resolver; main() wires the real `gh`/`git` resolver and walks the directory.
+//
+// Zero-dep: composes the bundle's own modules (lib/enrich, lib/stamp,
+// add-links) and the vendored frontmatter parser — no gray-matter, no tsx — so
+// `pnpm changelog:finalise` runs under bare `node` (the orchestrator runs it
+// with `--ignore-scripts`). The Linear workspace/issue keys come from config.json
+// via add-links, not hardcoded constants.
 
-import { rewriteBody, splitFrontmatter } from "./add-links-changelog.js";
-import { enrichFrontmatter } from "./enrich-changelog.js";
-import { readPackageVersion, stampVersion } from "./stamp-changelog-version.js";
-import matter from "gray-matter";
+import { rewriteBody, splitFrontmatter } from "./add-links.mjs";
+import { loadConfig } from "./lib/config.mjs";
+import { enrichFrontmatter } from "./lib/enrich.mjs";
+import { parseFrontmatter } from "./lib/frontmatter.mjs";
+import { readPackageVersion, stampVersion } from "./lib/stamp.mjs";
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-
-export const CHANGELOG_DIR = "changelog";
-
-export type ResolvedPr = {
-  additions: null | string;
-  changedFiles: null | string;
-  deletions: null | string;
-  mergedAt: string;
-  mergeSha: string;
-  mergeStrategy: null | string;
-  prNumber: string;
-};
+import { argv } from "node:process";
 
 /**
- * Resolve the merged PR for a branch, or null when none is found.
+ * @typedef {object} ResolvedPr
+ * @property {null | string} additions Lines added (string), null when gh omits it.
+ * @property {null | string} changedFiles Files changed (string), null when gh omits it.
+ * @property {null | string} deletions Lines removed (string), null when gh omits it.
+ * @property {string} mergedAt PR merged_at timestamp (ISO 8601 UTC).
+ * @property {string} mergeSha Merge commit SHA (full or short).
+ * @property {null | string} mergeStrategy Inferred merge strategy, or null.
+ * @property {string} prNumber PR number as a string.
  */
-export type PrResolver = (branch: string) => null | ResolvedPr;
 
-export type Runner = (cmd: string, args: readonly string[]) => string;
-
-function blank(value: unknown): boolean {
+/**
+ * True when a value is unset (null/undefined/"").
+ * @param {unknown} value
+ */
+function blank(value) {
   return value === null || value === undefined || value === "";
 }
 
 /**
  * Finalise one entry's raw markdown for release. Returns the rewritten markdown,
  * or null when nothing changed (already finalised).
+ * @param {string} raw entry markdown
+ * @param {string} version version to stamp
+ * @param {Function} resolvePr resolves a branch to its merged PR, or null
+ * @returns {null | string}
  */
-export function finaliseEntry(
-  raw: string,
-  version: string,
-  resolvePr: PrResolver,
-): null | string {
-  const fm = matter(raw).data as Record<string, unknown>;
+export function finaliseEntry(raw, version, resolvePr) {
+  const fm = parseFrontmatter(raw).data;
   if (!blank(fm.version)) {
     return null; // already shipped in a release
   }
@@ -86,7 +90,12 @@ export function finaliseEntry(
   return next === raw ? null : next;
 }
 
-function realRunner(cmd: string, args: readonly string[]): string {
+/**
+ * @param {string} cmd command to run
+ * @param {string[]} args command arguments
+ * @returns {string} stdout
+ */
+function realRunner(cmd, args) {
   return execFileSync(cmd, args, {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "inherit"],
@@ -99,9 +108,15 @@ function realRunner(cmd: string, args: readonly string[]): string {
 
 /**
  * Build a PR resolver backed by `gh` + `git` (injectable runner for tests).
+ * @param {Function} run runs a command (cmd, args) and returns stdout
+ * @returns {Function} resolver mapping a branch to its merged PR, or null
  */
-export function makeResolver(run: Runner): PrResolver {
-  function resolve(branch: string): null | ResolvedPr {
+export function makeResolver(run) {
+  /**
+   * @param {string} branch
+   * @returns {null | ResolvedPr}
+   */
+  function resolve(branch) {
     const json = run("gh", [
       "pr",
       "list",
@@ -114,15 +129,7 @@ export function makeResolver(run: Runner): PrResolver {
       "--json",
       "number,mergedAt,additions,deletions,changedFiles,mergeCommit,headRefOid",
     ]);
-    const list = JSON.parse(json) as Array<{
-      additions?: number;
-      changedFiles?: number;
-      deletions?: number;
-      headRefOid?: string;
-      mergeCommit?: { oid?: string };
-      mergedAt?: string;
-      number?: number;
-    }>;
+    const list = JSON.parse(json);
     if (list.length === 0) {
       return null;
     }
@@ -137,7 +144,7 @@ export function makeResolver(run: Runner): PrResolver {
     // "rebase" branch below is effectively unreachable. This repo squash-merges
     // anyway, and merge_strategy is only record-keeping metadata, so the
     // imprecision is harmless.
-    let mergeStrategy: null | string = null;
+    let mergeStrategy = null;
     if (mergeSha) {
       const parents = (
         run("git", ["cat-file", "-p", mergeSha]).match(/^parent /gm) ?? []
@@ -163,7 +170,7 @@ export function makeResolver(run: Runner): PrResolver {
     };
   }
 
-  return (branch: string): null | ResolvedPr => {
+  return (branch) => {
     // Enrichment is best-effort metadata: a gh/git failure here must NOT abort
     // the release-please release-PR build and block the release. On any error,
     // warn and return null — the entry still gets version-stamped, just without
@@ -172,20 +179,21 @@ export function makeResolver(run: Runner): PrResolver {
       return resolve(branch);
     } catch (error) {
       console.warn(
-        `⚠️  Could not resolve PR for branch ${branch}: ${(error as Error).message}`,
+        `⚠️  Could not resolve PR for branch ${branch}: ${error.message}`,
       );
       return null;
     }
   };
 }
 
-function main(): void {
+function main() {
+  const config = loadConfig();
   const version = readPackageVersion(readFileSync("package.json", "utf8"));
   const resolvePr = makeResolver(realRunner);
 
-  const files = readdirSync(CHANGELOG_DIR)
+  const files = readdirSync(config.changelogDir)
     .filter((name) => name.endsWith(".md") && name !== "README.md")
-    .map((name) => join(CHANGELOG_DIR, name));
+    .map((name) => join(config.changelogDir, name));
 
   let finalised = 0;
   for (const file of files) {
@@ -202,6 +210,8 @@ function main(): void {
   );
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Only run the filesystem pass when invoked as a CLI, not when imported (e.g.
+// by unit tests exercising finaliseEntry/makeResolver).
+if (argv[1] && import.meta.filename === argv[1]) {
   main();
 }
