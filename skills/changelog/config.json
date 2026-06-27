@@ -1,6 +1,6 @@
 {
   "issueKeys": ["A"],
-  "linearWorkspaceSlug": "goose-and-hobbes",
+  "linearWorkspaceSlug": "acme-skunkworks",
   "baseBranch": "main",
   "changelogDir": "changelog",
   "packageRoots": ["skills"],

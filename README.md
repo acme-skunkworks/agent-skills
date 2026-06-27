@@ -45,7 +45,7 @@ To deploy the shared set across a target repo — wipe its bespoke skill/command
 └── package.json
 ```
 
-The `skills/<name>/` convention may be refined by ADR-0001 (tracked in [A-133](https://linear.app/goose-and-hobbes/issue/A-133)) once skills.sh's expected layout is double-checked.
+The `skills/<name>/` convention may be refined by ADR-0001 (tracked in [A-133](https://linear.app/acme-skunkworks/issue/A-133)) once skills.sh's expected layout is double-checked.
 
 ## Architecture decisions
 

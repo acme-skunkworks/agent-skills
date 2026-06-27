@@ -32,16 +32,16 @@ describe("deepEqual", () => {
 
 describe("sameSet / valuesEqual", () => {
   it("treats issueKeys order-insensitively but other arrays order-sensitively", () => {
-    expect(sameSet(["ASW", "SK"], ["SK", "ASW"])).toBe(true);
-    expect(valuesEqual("issueKeys", ["ASW", "SK"], ["SK", "ASW"])).toBe(true);
+    expect(sameSet(["ABC", "XYZ"], ["XYZ", "ABC"])).toBe(true);
+    expect(valuesEqual("issueKeys", ["ABC", "XYZ"], ["XYZ", "ABC"])).toBe(true);
     expect(
       valuesEqual("packageRoots", ["apps", "packages"], ["packages", "apps"]),
     ).toBe(false);
   });
 
   it("compares as true sets — duplicates don't mask a difference", () => {
-    expect(sameSet(["ASW", "ASW"], ["ASW", "SK"])).toBe(false);
-    expect(sameSet(["ASW", "SK"], ["SK", "ASW", "SK"])).toBe(true);
+    expect(sameSet(["ABC", "ABC"], ["ABC", "XYZ"])).toBe(false);
+    expect(sameSet(["ABC", "XYZ"], ["XYZ", "ABC", "XYZ"])).toBe(true);
   });
 });
 
@@ -77,9 +77,9 @@ describe("classifyKey", () => {
         "linearWorkspaceSlug",
         "your-workspace-slug",
         "your-workspace-slug",
-        detected("goose-and-hobbes"),
+        detected("acme-skunkworks"),
       ),
-    ).toEqual({ status: "inferred", write: "goose-and-hobbes" });
+    ).toEqual({ status: "inferred", write: "acme-skunkworks" });
   });
 
   it("needs-manual-input — placeholder kept when no detector", () => {
@@ -114,7 +114,12 @@ describe("classifyKey", () => {
 
   it("issueKeys reordered is unchanged, not drift", () => {
     expect(
-      classifyKey("issueKeys", ["ABC"], ["SK", "ASW"], detected(["ASW", "SK"])),
+      classifyKey(
+        "issueKeys",
+        ["ABC"],
+        ["XYZ", "ABC"],
+        detected(["ABC", "XYZ"]),
+      ),
     ).toEqual({ status: "unchanged" });
   });
 });
@@ -125,7 +130,7 @@ function detect(facts: Record<string, unknown> = {}) {
   return (key: string) => {
     const table: Record<string, unknown> = {
       baseBranch: "main",
-      issueKeys: ["ASW", "SK"],
+      issueKeys: ["DEF", "GHI"],
       ...facts,
     };
     return key in table ? { value: table[key] } : null;
@@ -154,7 +159,7 @@ describe("mergeConfig", () => {
     expect(results.issueKeys.status).toBe("inferred");
     expect(results.linearTeamName.status).toBe("needs-manual-input");
     expect(data.baseBranch).toBe("trunk"); // drift preserved
-    expect(data.issueKeys).toEqual(["ASW", "SK"]);
+    expect(data.issueKeys).toEqual(["DEF", "GHI"]);
     expect(changed).toBe(true);
   });
 

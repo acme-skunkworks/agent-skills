@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 // Imports the BUNDLE script directly (the distributed `.mjs`). `rewriteBody`
-// reads the bundle's own config.json (workspace `goose-and-hobbes`, keys
-// ASW/AKW/SKW/SK). Reference-style label masking is covered against the bundle
+// reads the bundle's own config.json (workspace `acme-skunkworks`, key
+// A). Reference-style label masking is covered against the bundle
 // in infrastructure/tests/add-links-reference-masking.test.ts; this suite
 // covers the issue-key rewrite happy path plus inline-code / fenced-block
 // masking and the splitFrontmatter contract.
@@ -11,7 +11,7 @@ import {
   splitFrontmatter,
 } from "../../../skills/changelog/scripts/add-links.mjs";
 
-const url = (id: string) => `https://linear.app/goose-and-hobbes/issue/${id}`;
+const url = (id: string) => `https://linear.app/acme-skunkworks/issue/${id}`;
 
 describe("rewriteBody — issue-key linking (happy path)", () => {
   it("links a bare issue ID for each configured team key", () => {
@@ -63,10 +63,10 @@ describe("rewriteBody — masking", () => {
   });
 
   it("links a bare ID whilst leaving a fenced/inline-code occurrence masked", () => {
-    const body = "Closes A-12; see `A-12` and:\n```\nASW-12\n```\n";
+    const body = "Closes A-12; see `A-12` and:\n```\nA-12\n```\n";
     expect(rewriteBody(body)).toBe(
       `Closes [A-12](${url("A-12")}); see \`A-12\` and:\n` +
-        "```\nASW-12\n```\n",
+        "```\nA-12\n```\n",
     );
   });
 });

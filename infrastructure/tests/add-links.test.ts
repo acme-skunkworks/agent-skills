@@ -1,6 +1,6 @@
 // Exercises the BUNDLE script directly (the distributed `.mjs`). `rewriteBody`
 // links bare Linear IDs via the bundle's own config.json (workspace
-// `goose-and-hobbes`, keys ASW/AKW/SKW/SK). Reference-style label masking lives
+// `acme-skunkworks`, key A). Reference-style label masking lives
 // in add-links-reference-masking.test.ts; this covers core linking, code/link
 // masking, and splitFrontmatter.
 import {
@@ -10,9 +10,9 @@ import {
 import { describe, expect, it } from "vitest";
 
 describe("rewriteBody", () => {
-  it("links bare ASW and AKW issue IDs", () => {
+  it("links bare A- issue IDs", () => {
     expect(rewriteBody("Closes A-123 and A-7.")).toBe(
-      "Closes [A-123](https://linear.app/goose-and-hobbes/issue/A-123) and [A-7](https://linear.app/goose-and-hobbes/issue/A-7).",
+      "Closes [A-123](https://linear.app/acme-skunkworks/issue/A-123) and [A-7](https://linear.app/acme-skunkworks/issue/A-7).",
     );
   });
 
@@ -23,12 +23,12 @@ describe("rewriteBody", () => {
   });
 
   it("leaves IDs inside fenced code blocks untouched", () => {
-    const body = "```\nASW-123\n```\n";
+    const body = "```\nA-123\n```\n";
     expect(rewriteBody(body)).toBe(body);
   });
 
   it("does not double-link an already-linked ID", () => {
-    const body = "[A-123](https://linear.app/goose-and-hobbes/issue/A-123)";
+    const body = "[A-123](https://linear.app/acme-skunkworks/issue/A-123)";
     expect(rewriteBody(body)).toBe(body);
   });
 
@@ -45,7 +45,7 @@ describe("rewriteBody", () => {
 
   it("links an ID even when a mask-token-like string is also present", () => {
     expect(rewriteBody("FENCE0 — closes A-9.")).toBe(
-      "FENCE0 — closes [A-9](https://linear.app/goose-and-hobbes/issue/A-9).",
+      "FENCE0 — closes [A-9](https://linear.app/acme-skunkworks/issue/A-9).",
     );
   });
 });
