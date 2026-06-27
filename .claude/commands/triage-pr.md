@@ -27,8 +27,8 @@ unresolved AI review threads once it is ready), with the constraints below.
    authorisation: once Phase A is proven-green (no unresolved human threads, no base
    drift), flip the PR to ready (the gate that turns AI review on) and continue into
    Phase B — don't stop to seek a separate human sign-off. When `false`, stop at green.
-   An explicit user prompt, or `--no-promote`, overrides per run. Merge to `main` stays
-   the human's call.
+   An explicit user prompt, or `--promote` / `--no-promote`, overrides per run. Merge to
+   `main` stays the human's call.
 
 ## Flags
 
