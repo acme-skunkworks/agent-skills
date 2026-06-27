@@ -7,15 +7,15 @@ description: >-
   finished worktrees, delete branches whose PRs have already merged (including
   squash-merges), or sweep empty directories and leftover node_modules. Two-pass
   merge detection (git ancestry plus merged GitHub PRs), an uncommitted-changes
-  guard on worktrees, an optional Linear "Done" writeback, a single confirmation
-  gate, and a --dry-run preview. Protected branches are never touched.
+  guard on worktrees, an optional Linear "Done" writeback, per-pass confirmation
+  gates, and a --dry-run preview. Protected branches are never touched.
 license: MIT
 compatibility: >-
   Requires the `git` and `gh` CLIs. The optional Linear status check needs the
   Linear MCP server; if it is unavailable, skip that step silently. The
   filesystem pass needs Node.js ≥22.
 metadata:
-  version: 0.2.3
+  version: 0.3.0
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -23,7 +23,7 @@ allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__
 # cleanup-repo
 
 Remove merged Git worktrees and branches, then run a filesystem-hygiene pass —
-all behind a single confirmation gate, with a `--dry-run` preview.
+each pass behind its own confirmation gate, with a `--dry-run` preview.
 
 The branch/worktree pass mirrors the behaviour of the `/cleanup-branches`
 slash command it was extracted from. The filesystem-hygiene pass (recursively-empty
@@ -60,20 +60,39 @@ optional `Done` writeback silently — they are not required for branch cleanup.
 cleanup-repo --dry-run
 ```
 
-**Normal** — preview, then delete after a single confirmation:
+**Normal** — preview, then delete after confirmation:
 
 ```bash
 cleanup-repo
 ```
 
-These are skill invocations, not a standalone CLI: `cleanup-repo` is the skill and
-`--dry-run` is passed through `$ARGUMENTS` (the agent reads it from there), so a bare
-`cleanup-repo --dry-run` in a shell does nothing.
+**Scope flags** — run only one pass when you don't want the other (mutually
+exclusive):
 
-There is one bulk confirmation gate (Step 8) covering both the branch/worktree
-pass and the filesystem pass. `--dry-run` short-circuits before that gate.
+```bash
+cleanup-repo --branches-only   # branch/worktree pass only; skip the filesystem pass
+cleanup-repo --fs-only         # filesystem pass only; skip branches/worktrees
+```
+
+These are skill invocations, not a standalone CLI: `cleanup-repo` is the skill and
+the flags are passed through `$ARGUMENTS` (the agent reads them from there), so a
+bare `cleanup-repo --dry-run` in a shell does nothing.
+
+The branch/worktree pass and the filesystem pass are confirmed **separately** (Step
+8). Their blast radii differ — a branch prune is recoverable (reflog, re-push, the
+PR still exists) and an orphan `node_modules/` reinstalls, but a swept
+empty-directory tree may be something you meant to keep — so you can accept one pass
+and decline the other. `--dry-run` short-circuits before any confirmation;
+`--branches-only` / `--fs-only` drop the other pass (and its preview and prompt)
+entirely.
 
 ## Process
+
+> **Scope flags.** Under `--branches-only`, skip Step 5 (filesystem detection) and
+> the filesystem removal — run only the branch/worktree pass. Under `--fs-only`,
+> skip Steps 2–4 and 9.1–9.4 (worktrees, branches, remotes, Linear) — run only the
+> filesystem pass. The two flags are mutually exclusive; with neither, both passes
+> run and are confirmed separately (Step 8).
 
 ### Step 1 — Fetch latest from remote
 
@@ -115,16 +134,29 @@ are never ancestors of `origin/<mainBranch>` and `git branch --merged` misses it
 For each local branch **not** caught in Pass 1 (and not protected):
 
 ```bash
-gh pr list --head <branch-name> --state merged --json number,title --limit 1
+gh pr list --head <branch-name> --base <mainBranch> --state merged \
+  --json number,title,headRefOid --limit 1
 ```
 
 `gh` auto-detects the repository from the current directory's remote, so no
 `--repo` flag is needed.
 
-- A non-empty result means the branch has a merged PR — treat it as merged and
-  add it to the cleanup list.
+- **`--base <mainBranch>` is required.** `gh pr list --head` does **not** filter on
+  base on its own, so without it a branch merged into a *different* base (a
+  stacked/feature base, not the trunk) would be wrongly counted as merged-to-trunk
+  and deleted. Scoping to `--base <mainBranch>` (default `main`) restricts the match
+  to PRs actually merged into the trunk.
+- A non-empty result means the branch has a merged-to-trunk PR. Record its `number`
+  and `title` (for the summary) and its `headRefOid` (the exact commit the PR
+  merged).
+- **Guard against post-merge commits.** Compare the local tip to the merged PR's
+  head: `git rev-parse <branch-name>` vs `headRefOid`.
+  - **Equal** → the branch is fully merged; add it to the squash-merged cleanup
+    list (Step 9.3 force-deletes it, which is safe because the tip matched).
+  - **Not equal** → the local branch carries commits added **after** the PR merged.
+    Do **not** delete it; add it to a *"Skipped — local tip ahead of merged PR"*
+    group so a plain `-D` can't silently discard unpushed work.
 - An empty result means the branch is genuinely unmerged — leave it alone.
-- Record the PR number and title for the summary so the user can verify.
 
 ### Step 4 — Check Linear issue status for merged branches
 
@@ -192,6 +224,11 @@ eyeball them:
 - A-9-button-styling (squash-merged, PR #42 "Fix button styling")
 - chore-update-deps (merged)
 
+## Local Branches Skipped — Tip Ahead of Merged PR (1)
+- A-15-extra-tweaks (squash-merged PR #50, but local tip has commits added after
+  the merge; delete manually with `git branch -D A-15-extra-tweaks` if they're
+  disposable)
+
 ## Remote Branches to Delete (2)
 - A-7-as-acquired
 - A-9-button-styling
@@ -213,8 +250,24 @@ exit without changing anything.
 
 ### Step 8 — Confirmation (normal mode only)
 
-Ask once: `Do you want to delete these worktrees, branches, and files? (yes/no)`.
-Proceed only if the user answers `yes`; otherwise exit without deleting.
+Confirm the two passes **separately** — their blast radii and reversibility differ,
+so the user may accept one and decline the other:
+
+1. **Branch/worktree pass** — ask `Delete these worktrees and branches (local +
+   remote)? (yes/no)`. On `no`, skip the worktree/branch/remote deletion (Step
+   9.1–9.4) and the Linear `Done` writeback (Step 10).
+2. **Filesystem pass** — ask `Remove these empty directories and orphan
+   node_modules? (yes/no)`. On `no`, skip the filesystem removal (Step 9.5).
+
+Rules:
+
+- Skip the prompt for a pass a scope flag already excluded (`--branches-only` drops
+  prompt 2; `--fs-only` drops prompt 1) — that pass never ran or previewed.
+- Skip the prompt for a pass that has nothing to do (all its Step 6 lists empty);
+  note it and move on.
+- If both passes are declined (or empty), exit without deleting.
+
+Proceed to Step 9 with only the passes the user confirmed.
 
 ### Step 9 — Execute, in order
 
@@ -234,13 +287,23 @@ runs **after** worktree removal so a just-emptied worktree parent (e.g.
    git worktree prune
    ```
 
-3. **Delete local branches:**
+3. **Delete local branches** (skip this whole sub-step if the branch/worktree pass
+   was declined or excluded by `--fs-only`):
 
    ```bash
    git branch -d <branch-name>   # Pass 1 (git-merged) — safe delete
-   git branch -D <branch-name>   # Pass 2 (squash-merged) — force is safe: a
-                                 # merged PR was confirmed via the GitHub API
+   git branch -D <branch-name>   # Pass 2 (squash-merged) — force is safe ONLY for
+                                 # branches whose local tip matched the merged PR's
+                                 # headRefOid in Step 3
    ```
+
+   Force-delete (`-D`) only the squash-merged branches confirmed in Step 3 — those
+   whose local tip equalled the merged PR's `headRefOid`. Branches in the *"Skipped
+   — local tip ahead of merged PR"* group are **never** force-deleted here: they
+   carry commits added after the merge, and `-D` would discard them. The base-scoped
+   `gh pr list --base <mainBranch>` and the tip check together are what make the
+   force safe; without them `-D` could drop a branch merged into a different base or
+   one with unpushed work.
 
    The branch you are currently on — or one checked out in a worktree — cannot be
    deleted: `git branch -d` fails by design. The per-item error handling catches it
@@ -291,10 +354,17 @@ set to `Done` (if any). List the names of deleted items.
 ## Important rules
 
 - **Dry-run** previews without deleting (`--dry-run`).
-- **Confirmation required** before any deletion (single bulk gate).
+- **Confirmation required** before any deletion — the branch/worktree pass and the
+  filesystem pass are confirmed **separately**, so each can be accepted or declined
+  on its own.
+- **Scope flags**: `--branches-only` runs only the branch/worktree pass; `--fs-only`
+  runs only the filesystem pass (mutually exclusive).
 - **Protected branches** (`protectedBranches`) are never touched.
 - **Merged only**: a branch is deleted only if merged into the trunk
-  (`origin/<mainBranch>`) via git ancestry **or** a merged GitHub PR (squash merges).
+  (`origin/<mainBranch>`) via git ancestry **or** a merged GitHub PR whose **base is
+  `<mainBranch>`** (squash merges). A squash-merged branch is force-deleted only
+  when its local tip still matches the merged PR's head commit — a branch with
+  post-merge commits is surfaced and skipped, never `-D`'d.
 - **Worktrees first**, then branches; filesystem pass last.
 - **Uncommitted worktrees** are never force-removed automatically.
 - **`.git/` and the main worktree** are never touched.
