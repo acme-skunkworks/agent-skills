@@ -63,10 +63,10 @@ describe("rewriteBody — masking", () => {
   });
 
   it("links a bare ID whilst leaving a fenced/inline-code occurrence masked", () => {
-    const body = "Closes A-12; see `A-12` and:\n```\nASW-12\n```\n";
+    const body = "Closes A-12; see `A-12` and:\n```\nA-12\n```\n";
     expect(rewriteBody(body)).toBe(
       `Closes [A-12](${url("A-12")}); see \`A-12\` and:\n` +
-        "```\nASW-12\n```\n",
+        "```\nA-12\n```\n",
     );
   });
 });
