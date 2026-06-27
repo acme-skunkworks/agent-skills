@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.4.0
+  version: 0.4.1
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
 ---
@@ -231,7 +231,11 @@ It prints minimal JSON with three groups:
 - `humanThreads` — the same shape, for unresolved threads **not** raised by a
   review bot. Surface these in the report for the human; do not auto-action them.
 - `aiSummaryComments` — the sticky issue-level summary the review action posts via
-  `track_progress` / `use_sticky_comment`. Surface it **separately**: it is an
+  `track_progress` / `use_sticky_comment`. At most **one per review bot** is kept:
+  the bot's first issue comment, upgraded to a later one carrying a sticky marker
+  (walkthrough / `use_sticky_comment` / `track_progress` / "Summary by …") if the
+  first had none — so an "I'll review" ack, command acknowledgements, and chatter
+  don't masquerade as the headline review. Surface it **separately**: it is an
   issue comment, **not** a review thread, so it has no `isResolved` and never
   appears in `unresolvedThreads`. Missing it would mean missing the headline
   review.

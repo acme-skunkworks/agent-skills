@@ -83,6 +83,65 @@ function shapeThread(node) {
   };
 }
 
+// Markers that identify a review bot's **sticky summary** comment (the headline
+// review, posted/edited in place via `track_progress` / `use_sticky_comment` or a
+// walkthrough) as opposed to chatter — "I'll review", command acknowledgements,
+// "resolved" replies. Matched case-insensitively against the comment body.
+const STICKY_MARKERS = [
+  /use_sticky_comment/i,
+  /track_progress/i,
+  /\bwalkthrough\b/i,
+  /auto-generated comment/i,
+  /\bsummary by\b/i,
+];
+
+/**
+ * Whether a comment body carries a sticky-summary marker.
+ * @param {string} body
+ * @returns {boolean}
+ */
+export function hasStickyMarker(body) {
+  return STICKY_MARKERS.some((marker) => marker.test(body ?? ""));
+}
+
+/**
+ * Pick at most one summary comment per review bot. Filtering issue comments by
+ * `isBot` alone surfaces *every* bot comment — walkthrough chatter, command
+ * acknowledgements — as "the headline review", inflating Phase B context. Instead:
+ * keep each bot's **first** comment, but upgrade to a later one that carries a
+ * sticky marker if the first had none (the real summary is often edited in after
+ * an initial "reviewing…" ack). Input order is GitHub's chronological order.
+ * @param {Array<{author?: {login?: string}, body?: string, id?: string}>} commentNodes
+ * @param {(login: string|undefined) => boolean} isBot
+ */
+export function selectSummaryComments(commentNodes, isBot) {
+  /** @type {Map<string, {author: string, body: string, commentId: string}>} */
+  const byAuthor = new Map();
+  for (const node of commentNodes ?? []) {
+    const login = node.author?.login;
+    if (!isBot(login)) {
+      continue;
+    }
+
+    const shaped = {
+      author: login ?? "unknown",
+      body: node.body ?? "",
+      commentId: node.id,
+    };
+    const existing = byAuthor.get(shaped.author);
+    if (!existing) {
+      byAuthor.set(shaped.author, shaped);
+    } else if (
+      !hasStickyMarker(existing.body) &&
+      hasStickyMarker(shaped.body)
+    ) {
+      byAuthor.set(shaped.author, shaped);
+    }
+  }
+
+  return [...byAuthor.values()];
+}
+
 /**
  * Build the minimal result from raw GraphQL nodes. Splitting bot threads from
  * human threads honours the skill's "AI bots only" contract while still
@@ -113,13 +172,7 @@ export function buildResult({
     }
   }
 
-  const aiSummaryComments = (commentNodes ?? [])
-    .filter((commentNode) => isBot(commentNode.author?.login))
-    .map((commentNode) => ({
-      author: commentNode.author?.login ?? "unknown",
-      body: commentNode.body ?? "",
-      commentId: commentNode.id,
-    }));
+  const aiSummaryComments = selectSummaryComments(commentNodes, isBot);
 
   return {
     aiSummaryComments,
@@ -395,6 +448,24 @@ function selfTest() {
       body: "## Review summary",
       id: "IC_summary",
     },
+    // Later chatter from the same bot — a command acknowledgement, not a summary.
+    {
+      author: { login: "coderabbitai" },
+      body: "@coderabbitai resolved",
+      id: "IC_chatter",
+    },
+    // A bot whose first comment is an ack and whose real summary (with a sticky
+    // marker) lands later — the marker comment should win.
+    {
+      author: { login: "claude" },
+      body: "On it — reviewing now.",
+      id: "IC_ack",
+    },
+    {
+      author: { login: "claude" },
+      body: "<!-- use_sticky_comment -->\n## Walkthrough\n…",
+      id: "IC_sticky",
+    },
     { author: { login: "bob" }, body: "lgtm", id: "IC_human" },
   ];
   const bots = DEFAULT_BOTS;
@@ -471,6 +542,26 @@ function selfTest() {
       ok: !result.aiSummaryComments.some(
         (comment) => comment.commentId === "IC_human",
       ),
+    },
+    {
+      name: "later bot chatter is dropped — one summary per bot",
+      ok:
+        !result.aiSummaryComments.some(
+          (comment) => comment.commentId === "IC_chatter",
+        ) &&
+        result.aiSummaryComments.filter(
+          (comment) => comment.author === "coderabbitai",
+        ).length === 1,
+    },
+    {
+      name: "a marker-bearing comment wins over an earlier acknowledgement",
+      ok:
+        result.aiSummaryComments.some(
+          (comment) => comment.commentId === "IC_sticky",
+        ) &&
+        !result.aiSummaryComments.some(
+          (comment) => comment.commentId === "IC_ack",
+        ),
     },
   ];
 
