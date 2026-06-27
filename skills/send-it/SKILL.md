@@ -22,6 +22,7 @@ compatibility: >-
   needs the Linear MCP server (via `linear-sync`); it is skipped if unavailable.
 metadata:
   version: 0.3.2
+  author: Rob Easthope
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
@@ -50,6 +51,18 @@ composition, push, and the PR — and delegates the rest:
 The delegated skills auto-detect their own scope, so monorepo features
 (per-workspace ESLint fan-out, changelog `affected_packages`) no-op cleanly in a
 single-package repo. send-it configures nothing about them.
+
+> **Install the delegated skills alongside `send-it`.** This bundle invokes and
+> links its siblings by relative path (`../preflight/SKILL.md`,
+> `../changelog/SKILL.md`, `../linear-sync/SKILL.md`), so a `--skill send-it`-only
+> install leaves the lint, changelog, and Linear steps unavailable and those links
+> dangling. Install them together:
+>
+> ```bash
+> npx skills add https://github.com/acme-skunkworks/agent-skills \
+>   --skill send-it --skill preflight --skill changelog --skill linear-sync \
+>   --agent claude-code --agent cursor --copy
+> ```
 
 This flow intentionally does **not** run typecheck, tests, or format checks — CI
 handles those. The only gate it runs is the change-gated `preflight` lint.

@@ -20,6 +20,7 @@ compatibility: >-
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
   version: 0.3.2
+  author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
 ---
 

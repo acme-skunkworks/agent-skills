@@ -16,6 +16,7 @@ compatibility: >-
   filesystem pass needs Node.js ≥22.
 metadata:
   version: 0.2.2
+  author: Rob Easthope
 allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 

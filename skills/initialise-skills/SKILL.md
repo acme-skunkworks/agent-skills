@@ -22,6 +22,7 @@ compatibility: >-
   change here.
 metadata:
   version: 0.3.2
+  author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(git:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---
 
