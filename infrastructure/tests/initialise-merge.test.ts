@@ -114,7 +114,12 @@ describe("classifyKey", () => {
 
   it("issueKeys reordered is unchanged, not drift", () => {
     expect(
-      classifyKey("issueKeys", ["ABC"], ["XYZ", "ABC"], detected(["ABC", "XYZ"])),
+      classifyKey(
+        "issueKeys",
+        ["ABC"],
+        ["XYZ", "ABC"],
+        detected(["ABC", "XYZ"]),
+      ),
     ).toEqual({ status: "unchanged" });
   });
 });
