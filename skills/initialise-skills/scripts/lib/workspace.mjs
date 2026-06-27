@@ -117,7 +117,14 @@ export function globsFromWorkspacesField(workspaces) {
 
 /**
  * Detect monorepo package roots for a host repo: pnpm-workspace.yaml wins, else
- * the root package.json `workspaces` field, else the generic default.
+ * the root package.json `workspaces` field, else the generic default filtered to
+ * the candidates that actually exist on disk.
+ *
+ * The fallback is a *guess*, not a declaration, so it must not invent roots: a
+ * repo with no workspace manifest and none of the default dirs returns `[]`, and
+ * the caller (detectors.mjs) maps that to "couldn't detect" rather than writing
+ * fabricated directories into a config. Declared globs, by contrast, are
+ * authoritative and returned verbatim even if currently empty on disk.
  * @param {string} root
  * @returns {string[]}
  */
@@ -145,5 +152,5 @@ export function detectPackageRoots(root) {
     }
   }
 
-  return DEFAULT_PACKAGE_ROOTS;
+  return DEFAULT_PACKAGE_ROOTS.filter((dir) => existsSync(join(root, dir)));
 }

@@ -154,7 +154,13 @@ export function createDetectors({
     // tooling treats as the base, so a master/develop repo cleans up correctly.
     mainBranch: () => ({ value: detect("baseBranch").value }),
     maxCiRounds: () => ({ value: MAX_CI_ROUNDS }),
-    packageRoots: () => ({ value: detectPackageRoots(repoRoot) }),
+    // Declared workspace roots → value; no manifest and none of the default
+    // candidates on disk → null ("couldn't detect"), so the merge keeps the
+    // existing value / flags needs-manual-input rather than writing a guess.
+    packageRoots: () => {
+      const roots = detectPackageRoots(repoRoot);
+      return roots.length > 0 ? { value: roots } : null;
+    },
     // No repo signal; emit triage-pr's opt-in-off default (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
     promoteOnGreen: () => ({ value: false }),
     // Protect the detected default branch, not a hard-coded "main", so a
@@ -167,7 +173,7 @@ export function createDetectors({
     // Reuse the memoised packageRoots detection rather than re-reading
     // pnpm-workspace.yaml a second time.
     shippablePaths: () => ({
-      value: detectShippablePaths(repoRoot, detect("packageRoots").value),
+      value: detectShippablePaths(repoRoot, detect("packageRoots")?.value ?? []),
     }),
     // preflight self-detects its workspace map at runtime; never write it.
     workspaces: () => null,
