@@ -15,7 +15,7 @@ compatibility: >-
   read needs the `git` CLI. If the Linear MCP server is unavailable the skill
   cannot run — it has no non-MCP fallback.
 metadata:
-  version: 0.2.1
+  version: 0.3.0
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -68,10 +68,29 @@ Under `--dry-run` the resolve + read steps still run (they are read-only), so th
 preview is accurate; only the `save_issue` write in the transition step is
 skipped. End the report with `DRY RUN — no issues were changed.`
 
-## Resolving state IDs (do this once per run)
+## Resolving the target state (do this once per run)
 
 Call `mcp__linear-server__list_issue_statuses` with `team: <linearTeamName>`
-**once** to resolve the live state IDs for the target state(s).
+**once** to fetch the team's live workflow states. Each carries a stable `type`
+(`triage` / `backlog` / `unstarted` / `started` / `completed` / `canceled`), a
+display `name`, an `id`, and a `position`.
+
+**Resolve the target by `type`, not by display name.** Display names are
+customisable — a consumer may rename `In Progress` → `Doing` or `In Review` →
+`Code Review` — so matching the literal name silently fails to find the state (the
+biggest correctness gap for adopters). Map each transition to a concrete state:
+
+- **In Progress** → the `started` state named "In Progress" (case-insensitive);
+  else the **earliest** `started` by `position`.
+- **In Review** → the `started` state whose name matches "In Review" / "Review";
+  else, when there are ≥2 `started` states, the **latest** `started` by `position`;
+  else the In Progress state.
+- **Done** → the `completed` state named "Done"; else the **earliest** `completed`
+  by `position`.
+
+`started` covers both In Progress and In Review, so the name match (then `position`)
+is what separates them; a team with a single `started` state resolves both targets
+to it. Use the resolved `id` in the `save_issue` call.
 
 **Pass the team _name_, not the key.** Linear state IDs are per-team, and a
 workspace's team can be renamed over its lifetime (e.g. CAT → WTF → AKW → ASW),
@@ -94,19 +113,33 @@ one), use that instead of re-extracting.
 
 ## Transition rules
 
-For each issue ID, call `mcp__linear-server__get_issue` to read its current
-state, then apply the rule for the target transition. All transitions are
-**idempotent** — an issue already at or past the target state is skipped
-silently.
+For each issue ID, call `mcp__linear-server__get_issue` to read its current state
+(use its `type`, not its display name). Decide using the **progression order** of
+state types:
 
-| Target          | Apply when current state is …                           | Skip when current state is …                                | Fired by                     |
-| --------------- | ------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------- |
-| **In Progress** | `Triage`, `Backlog`, `Todo`                             | `In Progress`, `In Review`, `Done`, `Canceled`, `Duplicate` | Starting work on an issue    |
-| **In Review**   | `Triage`, `Backlog`, `Todo`, `In Progress`              | `In Review`, `Done`, `Canceled`, `Duplicate`                | PR open/update (a ship flow) |
-| **Done**        | `Triage`, `Backlog`, `Todo`, `In Progress`, `In Review` | `Done`, `Canceled`, `Duplicate`                             | Branch cleanup               |
+```text
+triage < backlog < unstarted < started < completed
+```
 
-Apply a transition by calling `mcp__linear-server__save_issue` with
-`state: "<target>"` (or the resolved state ID).
+`canceled` (which also covers a `Duplicate` state) is terminal and sits outside the
+line. Within `started`, order by `position`, so In Progress precedes In Review. All
+transitions are **idempotent**: apply only when the current state is **earlier** in
+the progression than the resolved target; **skip** silently when the issue is
+already **at or past** it, or when its current type is `completed` or `canceled`
+(terminal states are never advanced automatically).
+
+- **In Progress** (fired when starting work on an issue) — apply from `triage` /
+  `backlog` / `unstarted`; skip from any `started`, `completed`, or `canceled`.
+- **In Review** (fired on PR open/update inside a ship flow) — apply from `triage` /
+  `backlog` / `unstarted`, or from a `started` state **earlier** by `position` than
+  the resolved In Review (e.g. In Progress); skip once at or past In Review, or
+  `completed` / `canceled`.
+- **Done** (fired on branch cleanup) — apply from `triage` / `backlog` /
+  `unstarted` / `started`; skip from `completed` / `canceled`.
+
+Apply a transition with `mcp__linear-server__save_issue` using the **resolved state
+`id`** — it is unambiguous across renames. The display-name form
+`state: "<target>"` works only when the consumer kept Linear's default state names.
 
 **Under `--dry-run`, skip this `save_issue` call.** Still read each issue's
 current state with `get_issue` and decide whether it _would_ transition, but
