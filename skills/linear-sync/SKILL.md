@@ -15,7 +15,7 @@ compatibility: >-
   read needs the `git` CLI. If the Linear MCP server is unavailable the skill
   cannot run — it has no non-MCP fallback.
 metadata:
-  version: 0.3.0
+  version: 0.3.1
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -99,14 +99,27 @@ This is the canonical gotcha for adopters — resolve by name, every run.
 
 ## Extracting issue IDs from the branch
 
-Build the issue-ID regex by joining `issueKeys` with `|`:
-`\bA-\d+\b` for the default above. Match it against the
-**upper-cased** branch name — branches like `asw-7-as-acquired` carry the key in
-lower case, and a flow such as `--issue=A-7` produces upper-case branch names
-like `A-7-as-acquired`. Keeping the legacy keys means leftover branches from
-before a team-key rename are still recognised. Deduplicate the matches. Bogus or
-malformed IDs simply error on lookup and are skipped with a warning — no separate
-validation pass.
+Build the issue-ID regex **deterministically** — mirror the canonical, tested
+construction in the changelog bundle's
+[`scripts/add-links.mjs`](../changelog/scripts/add-links.mjs) (`ISSUE_RE`), which
+exists for exactly this job:
+
+1. **Escape regex metacharacters** in each key (a configured key such as `C++`
+   would otherwise throw or silently widen the match).
+2. **Group the alternation.** Wrap the keys in `(?:…)` whenever there is more than
+   one, so the `-\d+` binds to the whole alternation: `\b(?:A|B)-\d+\b`. The naive
+   join `\bA|B-\d+\b` is **wrong** — it parses as `\bA` _or_ `B-\d+\b`, matching a
+   bare `A` and missing `A-7`. A single key needs no wrapper: `\bA-\d+\b`.
+3. **Guard the empty case.** With no configured keys, match nothing — never build
+   an empty alternation (it would match the empty string before every `-<digits>`
+   and inject bogus IDs like `-2`).
+
+Match the result (with the `g` flag) against the **upper-cased** branch name —
+branches like `asw-7-as-acquired` carry the key in lower case, and a flow such as
+`--issue=A-7` produces upper-case branch names like `A-7-as-acquired`. Keeping the
+legacy keys means leftover branches from before a team-key rename are still
+recognised. Deduplicate the matches. Bogus or malformed IDs simply error on lookup
+and are skipped with a warning — no separate validation pass.
 
 When a caller already has an `issues` list to hand (e.g. a changelog step emits
 one), use that instead of re-extracting.
