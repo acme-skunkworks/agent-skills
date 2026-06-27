@@ -1,5 +1,5 @@
-import { enrichFrontmatter } from "../../skills/changelog/scripts/lib/enrich.mjs";
-import { parseFrontmatter } from "../../skills/changelog/scripts/lib/frontmatter.mjs";
+import { enrichFrontmatter } from "../../../skills/changelog/scripts/lib/enrich.mjs";
+import { parseFrontmatter } from "../../../skills/changelog/scripts/lib/frontmatter.mjs";
 import { describe, expect, it } from "vitest";
 
 // The .mjs carries EnrichInput as a JSDoc typedef (no exported TS type); mirror

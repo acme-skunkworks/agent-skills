@@ -2,7 +2,7 @@ import {
   classifyBundles,
   collectTouchedSkills,
   incrementVersion,
-} from "../../skills/send-it/scripts/check-skill-bumps.mjs";
+} from "../../../skills/send-it/scripts/check-skill-bumps.mjs";
 import { describe, expect, it } from "vitest";
 
 // `paths` stub mirrors main()'s closure shape for the classify tests.

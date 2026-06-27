@@ -1,8 +1,8 @@
-import { parseFrontmatter } from "../../skills/changelog/scripts/lib/frontmatter.mjs";
+import { parseFrontmatter } from "../../../skills/changelog/scripts/lib/frontmatter.mjs";
 import {
   readPackageVersion,
   stampVersion,
-} from "../../skills/changelog/scripts/lib/stamp.mjs";
+} from "../../../skills/changelog/scripts/lib/stamp.mjs";
 import { describe, expect, it } from "vitest";
 
 function entry(versionLine: string): string {

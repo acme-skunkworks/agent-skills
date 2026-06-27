@@ -1,10 +1,10 @@
-import { createDetectors } from "../../skills/initialise-skills/scripts/lib/detectors.mjs";
-import { parseIssueKeysFromBranches } from "../../skills/initialise-skills/scripts/lib/git.mjs";
+import { createDetectors } from "../../../skills/initialise-skills/scripts/lib/detectors.mjs";
+import { parseIssueKeysFromBranches } from "../../../skills/initialise-skills/scripts/lib/git.mjs";
 import {
   globsFromWorkspacesField,
   parseWorkspaceGlobs,
   rootsFromGlobs,
-} from "../../skills/initialise-skills/scripts/lib/workspace.mjs";
+} from "../../../skills/initialise-skills/scripts/lib/workspace.mjs";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

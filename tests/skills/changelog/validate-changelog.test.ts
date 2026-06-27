@@ -1,4 +1,4 @@
-import { validateEntry } from "../../skills/changelog/scripts/validate-changelog.mjs";
+import { validateEntry } from "../../../skills/changelog/scripts/validate-changelog.mjs";
 import { describe, expect, it } from "vitest";
 
 const VALID_NAME = "20260523-145537-v1-0-3.md";

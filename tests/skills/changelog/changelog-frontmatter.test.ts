@@ -1,8 +1,8 @@
-import { findEntryByBranch } from "../../skills/changelog/scripts/lib/changelog.mjs";
+import { findEntryByBranch } from "../../../skills/changelog/scripts/lib/changelog.mjs";
 // Imports the BUNDLE scripts directly (the distributed `.mjs`), the same
 // pattern as derive-packages.test.ts.
-import { parseFrontmatter } from "../../skills/changelog/scripts/lib/frontmatter.mjs";
-import { buildAffectedPackagesFrontmatter } from "../../skills/changelog/scripts/set-affected-packages.mjs";
+import { parseFrontmatter } from "../../../skills/changelog/scripts/lib/frontmatter.mjs";
+import { buildAffectedPackagesFrontmatter } from "../../../skills/changelog/scripts/set-affected-packages.mjs";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

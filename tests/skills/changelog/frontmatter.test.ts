@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 //
 // Edge-case throws (unterminated inline arrays, blank block scalars, missing
 // colons) are covered against the bundle in
-// infrastructure/tests/changelog-frontmatter.test.ts; this suite covers the
+// ./changelog-frontmatter.test.ts; this suite covers the
 // broad happy-path parse + stringify round-trips that the changelog frontmatter
 // relies on.
 import {

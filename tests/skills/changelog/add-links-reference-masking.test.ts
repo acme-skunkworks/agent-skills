@@ -1,6 +1,6 @@
 // Imports the BUNDLE script directly (the distributed `.mjs`). `rewriteBody`
 // uses the bundle's own config.json (workspace `acme-skunkworks`, key A).
-import { rewriteBody } from "../../skills/changelog/scripts/add-links.mjs";
+import { rewriteBody } from "../../../skills/changelog/scripts/add-links.mjs";
 import { describe, expect, it } from "vitest";
 
 describe("rewriteBody — reference-style link masking (bug 4)", () => {

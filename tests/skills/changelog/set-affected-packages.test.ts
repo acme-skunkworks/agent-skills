@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 // Imports the BUNDLE scripts directly (the distributed `.mjs`). The empty-data
 // overwrite guard and the canonical-slot insertion are covered against the
-// bundle in infrastructure/tests/changelog-frontmatter.test.ts; this suite
+// bundle in ./changelog-frontmatter.test.ts; this suite
 // covers the path->package derivation feeding the rebuild and the idempotent
 // overwrite of an existing affected_packages.
 import { buildAffectedPackagesFrontmatter } from "../../../skills/changelog/scripts/set-affected-packages.mjs";

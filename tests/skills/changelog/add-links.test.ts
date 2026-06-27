@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 // Imports the BUNDLE script directly (the distributed `.mjs`). `rewriteBody`
 // reads the bundle's own config.json (workspace `acme-skunkworks`, key
 // A). Reference-style label masking is covered against the bundle
-// in infrastructure/tests/add-links-reference-masking.test.ts; this suite
+// in ./add-links-reference-masking.test.ts; this suite
 // covers the issue-key rewrite happy path plus inline-code / fenced-block
 // masking and the splitFrontmatter contract.
 import {
@@ -67,6 +67,19 @@ describe("rewriteBody — masking", () => {
     expect(rewriteBody(body)).toBe(
       `Closes [A-12](${url("A-12")}); see \`A-12\` and:\n` +
         "```\nA-12\n```\n",
+    );
+  });
+
+  it("leaves literal text that looks like a mask token untouched", () => {
+    // Pre-sentinel, the restore pass would have mangled bare "FENCE0"/"LINK0".
+    expect(rewriteBody("Set placeholder FENCE0 and LINK0 in the doc.")).toBe(
+      "Set placeholder FENCE0 and LINK0 in the doc.",
+    );
+  });
+
+  it("links an ID even when a mask-token-like string is also present", () => {
+    expect(rewriteBody("FENCE0 — closes A-9.")).toBe(
+      `FENCE0 — closes [A-9](${url("A-9")}).`,
     );
   });
 });
