@@ -4,7 +4,7 @@ import {
 } from "../../skills/changelog/scripts/finalise-changelog.mjs";
 // Exercises the BUNDLE script directly (the distributed `.mjs`). finaliseEntry
 // links bare Linear IDs via the bundle's own config.json (workspace
-// `goose-and-hobbes`, keys ASW/AKW/SKW/SK).
+// `acme-skunkworks`, key A).
 import { parseFrontmatter } from "../../skills/changelog/scripts/lib/frontmatter.mjs";
 import { describe, expect, it } from "vitest";
 
@@ -70,7 +70,7 @@ describe("finaliseEntry", () => {
       loc_removed: 2,
     });
     expect(content).toContain(
-      "[A-123](https://linear.app/goose-and-hobbes/issue/A-123)",
+      "[A-123](https://linear.app/acme-skunkworks/issue/A-123)",
     );
   });
 

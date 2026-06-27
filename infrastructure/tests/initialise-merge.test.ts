@@ -77,9 +77,9 @@ describe("classifyKey", () => {
         "linearWorkspaceSlug",
         "your-workspace-slug",
         "your-workspace-slug",
-        detected("goose-and-hobbes"),
+        detected("acme-skunkworks"),
       ),
-    ).toEqual({ status: "inferred", write: "goose-and-hobbes" });
+    ).toEqual({ status: "inferred", write: "acme-skunkworks" });
   });
 
   it("needs-manual-input — placeholder kept when no detector", () => {

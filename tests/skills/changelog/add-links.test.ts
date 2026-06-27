@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 // Imports the BUNDLE script directly (the distributed `.mjs`). `rewriteBody`
-// reads the bundle's own config.json (workspace `goose-and-hobbes`, keys
-// ASW/AKW/SKW/SK). Reference-style label masking is covered against the bundle
+// reads the bundle's own config.json (workspace `acme-skunkworks`, key
+// A). Reference-style label masking is covered against the bundle
 // in infrastructure/tests/add-links-reference-masking.test.ts; this suite
 // covers the issue-key rewrite happy path plus inline-code / fenced-block
 // masking and the splitFrontmatter contract.
@@ -11,7 +11,7 @@ import {
   splitFrontmatter,
 } from "../../../skills/changelog/scripts/add-links.mjs";
 
-const url = (id: string) => `https://linear.app/goose-and-hobbes/issue/${id}`;
+const url = (id: string) => `https://linear.app/acme-skunkworks/issue/${id}`;
 
 describe("rewriteBody — issue-key linking (happy path)", () => {
   it("links a bare issue ID for each configured team key", () => {

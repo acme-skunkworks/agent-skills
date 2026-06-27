@@ -17,7 +17,7 @@ so the script auto-detects them when run from the repo root:
    and parse the report (`skills[]`, `driftKeys`, `manualKeys`, `totals`).
 2. For each `needs-manual-input` Linear key, fetch the team name / workspace slug
    via the Linear MCP (`mcp__linear-server__list_teams`), else ask. This repo's
-   values are team **ACME Skunkworks**, workspace slug **goose-and-hobbes**.
+   values are team **ACME Skunkworks**, workspace slug **acme-skunkworks**.
 3. Present the diff and gate on confirmation. For each `drift` key, ask whether to
    accept the detected value (per-key opt-in) and collect an `acceptDrift` map.
 4. Write, piping `{ facts, acceptDrift }` as stdin JSON to

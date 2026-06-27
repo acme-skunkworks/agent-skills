@@ -194,7 +194,7 @@ These only matter when you're on a headless host (or have no passkey) and stuck 
 
 ## Linear
 
-- Workspace slug: `goose-and-hobbes`. Team key: `A` (ACME Skunkworks).
+- Workspace slug: `acme-skunkworks`. Team key: `A` (ACME Skunkworks).
 - When starting work on an A-… issue, transition it to `In Progress` via the Linear MCP (`mcp__linear-server__save_issue`) — unless it's already In Progress or further along.
 - Transition to `In Review` when the PR opens. `Done` / `Canceled` stay manual or via Linear's GitHub integration on PR merge.
 
