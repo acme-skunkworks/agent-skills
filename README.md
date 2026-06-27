@@ -12,6 +12,10 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill <name> --
 
 `--copy` writes real files (not symlinks) so the skill is portable across machines. Don't use `-g` / `--global` — installs should live in the consumer repo.
 
+## Rolling the skills onto a repo
+
+To deploy the shared set across a target repo — wipe its bespoke skill/command shims, install the canonical set, reconcile config, and verify — follow the [fleet deployment runbook](docs/fleet-deployment.md). It also covers the install-set per repo type, pinning to a tag, and the re-install/upgrade path.
+
 ## Repo layout
 
 ```
