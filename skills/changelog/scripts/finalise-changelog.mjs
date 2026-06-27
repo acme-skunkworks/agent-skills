@@ -65,7 +65,10 @@ export function finaliseEntry(raw, version, resolvePr) {
   let next = raw;
 
   const branch = typeof fm.branch === "string" ? fm.branch : "";
-  const needsEnrich = blank(fm.merged_at) || blank(fm.commit) || blank(fm.pr);
+  // Include blank(fm.stats) so a hand-authored entry that pre-fills
+  // merged_at/commit/pr but leaves stats blank still gets stats from the PR.
+  const needsEnrich =
+    blank(fm.merged_at) || blank(fm.commit) || blank(fm.pr) || blank(fm.stats);
   if (branch && needsEnrich) {
     const pr = resolvePr(branch);
     if (pr) {

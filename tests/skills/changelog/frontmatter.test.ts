@@ -159,6 +159,19 @@ describe("stringifyFrontmatter — round-trips", () => {
     expect(parseFrontmatter(out).data).toEqual(data);
   });
 
+  it("round-trips an empty mapping as {} (not null)", () => {
+    // Regression: the serialiser used to emit a bare `stats:` for an empty
+    // object, which re-parsed as null — silently corrupting an empty `stats: {}`
+    // (e.g. an enriched entry with no stat inputs). It now emits `{}` and parses
+    // back to an empty object, mirroring `[]` for an empty array.
+    expect(parseFrontmatter("---\nstats: {}\n---\nbody\n").data.stats).toEqual(
+      {},
+    );
+    const out = stringifyFrontmatter("body\n", { stats: {} });
+    expect(out).toBe("---\nstats: {}\n---\nbody\n");
+    expect(parseFrontmatter(out).data).toEqual({ stats: {} });
+  });
+
   it("round-trips a multiline string via a quoted escape", () => {
     const data = { note: "line one\nline two" };
     const out = stringifyFrontmatter("body\n", data);

@@ -18,7 +18,7 @@
 //
 // Zero-dep: Node built-ins only — no tsx, so CI runs it under bare `node`.
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { argv } from "node:process";
 
 const RELEASE_TRIGGERING_TYPE = /^(feat|fix|perf|revert)(\([^)]+\))?:/;
@@ -81,9 +81,13 @@ export function checkCompleteness(prTitle, changedFiles) {
  * @returns {string[]}
  */
 function readChangedFiles(baseRef) {
-  const out = execSync(`git diff --name-only origin/${baseRef}...HEAD`, {
-    encoding: "utf8",
-  });
+  // execFileSync (argv array, no shell) rather than execSync — consistent with
+  // finalise-changelog.mjs and keeps `baseRef` (from env) out of a shell string.
+  const out = execFileSync(
+    "git",
+    ["diff", "--name-only", `origin/${baseRef}...HEAD`],
+    { encoding: "utf8" },
+  );
   return out
     .split("\n")
     .map((line) => line.trim())

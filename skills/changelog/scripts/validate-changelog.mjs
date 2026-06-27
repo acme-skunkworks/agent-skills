@@ -69,15 +69,10 @@ function isStringArray(value) {
 }
 
 function asIso(value) {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  return "";
+  // The vendored frontmatter parser only ever yields strings for timestamps
+  // (gray-matter parsed ISO strings into Date objects; this bundle does not), so
+  // a non-string is treated as absent.
+  return typeof value === "string" ? value : "";
 }
 
 /**
