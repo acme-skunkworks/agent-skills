@@ -15,7 +15,7 @@ compatibility: >-
   Linear MCP server; if it is unavailable, skip that step silently. The
   filesystem pass needs Node.js ≥22.
 metadata:
-  version: 0.3.0
+  version: 0.3.1
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -44,10 +44,14 @@ match the consuming repo:
 | `mainBranch` | The trunk a branch must be merged into to count as merged — both passes diff against `origin/<mainBranch>`. Set it for repos whose trunk is `master`, `develop`, or similar. | `"main"` |
 | `protectedBranches` | Branches that are **never** deleted, locally or remotely. | `["main"]` |
 
-Build the issue-ID regex by joining `issueKeys` with `|`:
-`\bA-\d+\b` for the default above. Match it against the
-**upper-cased** branch name (branches like `asw-7-as-acquired` carry the key in
-lower case).
+Build the issue-ID regex **deterministically**: escape each key's regex
+metacharacters, and when there is more than one key wrap the alternation in
+`(?:…)` so the `-\d+` binds to all of them — `\b(?:A|B)-\d+\b`, never the naive
+join `\bA|B-\d+\b` (which parses as `\bA` *or* `B-\d+\b`). A single key needs no
+wrapper: `\bA-\d+\b`. With no keys configured, match nothing. This mirrors the
+canonical `ISSUE_RE` in the changelog bundle's `scripts/add-links.mjs`. Match it
+against the **upper-cased** branch name (branches like `asw-7-as-acquired` carry
+the key in lower case).
 
 If the Linear MCP server is not available, skip the Linear status check and the
 optional `Done` writeback silently — they are not required for branch cleanup.
