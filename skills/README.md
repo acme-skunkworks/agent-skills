@@ -8,7 +8,7 @@ Consumers install a skill from this repo with:
 npx skills add https://github.com/acme-skunkworks/agent-skills --skill <name> --agent claude-code --agent cursor --copy
 ```
 
-Pass `--skill` more than once (or omit it to install them all), and add an `--agent` for each agent you want the bundle written into.
+Pass `--skill` more than once (or omit it to install them all), and add an `--agent` for each agent you want the bundle installed into.
 
 ## Available skills
 
@@ -22,8 +22,8 @@ Pass `--skill` more than once (or omit it to install them all), and add an `--ag
 | [`send-it`](send-it/SKILL.md) | The all-in-one ship finisher: commit, lint, changelog, Conventional Commits PR title, push, open/update the PR, and move linked Linear issues to In Review. |
 | [`triage-pr`](triage-pr/SKILL.md) | Drive a pull request from draft-with-failing-CI to merge-ready — fix in-scope CI failures, then action unresolved AI review feedback. |
 
-The orchestrator skills delegate to siblings: `send-it` uses `preflight`, `changelog`, and `linear-sync`, so install those alongside it (each skill's `compatibility` block names its dependencies).
+The orchestrator skills delegate to siblings: `send-it` uses `preflight`, `changelog`, and `linear-sync`, so install those alongside it (the `send-it` skill's `compatibility` block names the siblings it delegates to; the other bundles' `compatibility` blocks list only their infrastructure requirements).
 
 ## Supported agents
 
-These bundles are the open [Agent Skills](https://github.com/vercel-labs/skills) format (`SKILL.md` + YAML frontmatter), so [skills.sh](https://skills.sh) installs the **same** bundle into any of its 70+ supported agents. We officially target **Claude Code** and **Cursor**; the others (Codex, Cline, Windsurf, Copilot, Continue, Zed, Gemini CLI, OpenCode, …) install cleanly with no extra infrastructure. The only Claude-specific frontmatter is the `allowed-tools` values (`mcp__linear-server__*`, `Bash(gh:*)`); other agents ignore unknown frontmatter, and each skill's `compatibility` block documents the underlying `gh` / Linear-MCP requirements regardless of agent.
+These bundles are the open [Agent Skills](https://github.com/vercel-labs/skills) format (`SKILL.md` + YAML frontmatter), so [skills.sh](https://skills.sh) installs the **same** bundle into any of its 70+ supported agents. We officially target **Claude Code** and **Cursor**; the others (Codex, Cline, Windsurf, Copilot, Continue, Zed, Gemini CLI, OpenCode, …) install cleanly with no extra infrastructure. The only Claude-specific frontmatter is the `allowed-tools` key itself (with values like `mcp__linear-server__*` and `Bash(gh:*)`); other agents ignore unknown frontmatter, and each skill's `compatibility` block documents the underlying `gh` / Linear-MCP requirements regardless of agent.
