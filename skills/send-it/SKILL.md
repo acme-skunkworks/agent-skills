@@ -137,7 +137,7 @@ unchanged from whatever directory the session is in.
      - **Branch name resolution (in order):**
        1. `--branch=<name>` — use as-is.
        2. `--issue=<ID>` — use `<ID>-<slug>` **lower-cased** (e.g.
-          `asw-7-as-acquired`), matching Linear's `gitBranchName`.
+          `a-7-as-acquired`), matching Linear's `gitBranchName`.
        3. Otherwise — just `<slug>` (no `wip/` prefix).
      - If the chosen branch already exists locally or on `origin`, append `-2`,
        `-3`, … until unused.
@@ -422,7 +422,7 @@ Skip silently if `linear-sync` or the Linear MCP server is unavailable.
 - `--branch=<name>` — override the auto-derived branch name when running on the base
   branch with uncommitted changes.
 - `--issue=<ID>` — prefix the auto-derived slug with a Linear issue ID (e.g.
-  `--issue=A-7` → `asw-7-<slug>`, lower-cased). Ignored if `--branch` is given.
+  `--issue=A-7` → `a-7-<slug>`, lower-cased). Ignored if `--branch` is given.
 - `--base=<branch>` — override `config.json`'s `baseBranch` for this run. Applies
   everywhere the base is used: the `git fetch`, the branch diff
   (`origin/<base>...HEAD`), the PR `--base`, and the `BASE_REF=origin/<branch>` env

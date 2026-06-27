@@ -109,11 +109,11 @@ gh pr view <pr> --json number,isDraft,state,headRefName,baseRefName,mergeable,me
 - Resolve the PR from the argument, or from the current branch when none is
   given. If `gh pr view` finds no PR, stop and tell the user to open one with
   `/send-it` first.
-- `isDraft == true` → **Phase A only**. When CI is green, report and stop (do not
-  attempt Phase B; AI review has not run yet, and this skill never flips the PR
-  to ready) — **unless** promotion is enabled (`promoteOnGreen` / `--promote`), in
-  which case a cleanly-green draft is promoted at Step 6 and the run continues into
-  Phase B.
+- `isDraft == true` → **Phase A**. When CI is green, promotion (`promoteOnGreen`,
+  default on) flips the cleanly-green draft to ready at Step 6 and the run continues
+  into Phase B. With promotion disabled (`--no-promote` / `promoteOnGreen: false`),
+  report and stop instead — AI review has not run yet, and the skill leaves the flip
+  to the human.
 - `isDraft == false` → **Phase A** (confirm/clear CI), then **Phase B**.
 - Record `baseRefName` for the drift checks and `mergeStateStatus` for conflict
   detection.
@@ -369,11 +369,11 @@ Summarise:
 - **No sycophancy.** Decline with technical reasoning, not flattery.
 - **Evidence before claims.** Never say CI is green or a fix works without freshly
   running the proving command and reading its exit code.
-- **Draft → ready is opt-in and guarded.** By default the skill never flips the PR —
-  it reads draft state only to choose a phase, and the human promotes. With
-  `promoteOnGreen` / `--promote` enabled it flips **only** after a *proven*-green
-  Phase A, with **no unresolved human threads** and no unresolved base drift, then
-  continues into Phase B. Never greenwash to reach the flip; `--ci-only` never
+- **Draft → ready is guarded, and on by default.** With `promoteOnGreen` (default
+  on) the skill flips the PR **only** after a *proven*-green Phase A, with **no
+  unresolved human threads** and no unresolved base drift, then continues into
+  Phase B; set `promoteOnGreen: false` / pass `--no-promote` to stop at green and
+  leave the flip to the human. Never greenwash to reach the flip; `--ci-only` never
   promotes.
 - **Bounded loops.** Stop after `maxCiRounds` and escalate.
 

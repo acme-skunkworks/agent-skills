@@ -28,13 +28,12 @@ template — copy it over `config.json` and fill in your values, or edit
 | --- | --- | --- |
 | `linearTeamName` | Linear team **name** used to resolve the live `Done` state. Stable across team-key renames. | `"ACME Skunkworks"` |
 | `issueKeys` | Team-key prefixes that may appear in branch names; the issue-ID regex is built from these. | `["A"]` |
+| `mainBranch` | Trunk a branch must be merged into to count as merged; both passes diff against `origin/<mainBranch>`. Set it for repos whose trunk isn't `main` (`master`, `develop`, …). | `"main"` |
 | `protectedBranches` | Branches never deleted, locally or remotely. | `["main"]` |
 
-> **Base branch.** v1 assumes the trunk is `origin/main` — merge detection
-> (`git branch --merged origin/main`) is hard-coded to it. Repositories on
-> `master` / `develop` aren't supported yet; a `mainBranch` config key is noted
-> in [`references/design-notes.md`](references/design-notes.md) as a future
-> extension.
+> **Base branch.** The trunk defaults to `origin/main`; set the `mainBranch`
+> config key for repositories on `master` / `develop` / similar — both merge
+> passes (git ancestry and merged-PR lookup) diff against `origin/<mainBranch>`.
 
 ## Requirements
 
