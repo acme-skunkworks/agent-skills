@@ -1,5 +1,8 @@
 import { createDetectors } from "../../../skills/initialise-skills/scripts/lib/detectors.mjs";
-import { parseIssueKeysFromBranches } from "../../../skills/initialise-skills/scripts/lib/git.mjs";
+import {
+  currentIssueKeys,
+  parseIssueKeysFromBranches,
+} from "../../../skills/initialise-skills/scripts/lib/git.mjs";
 import {
   globsFromWorkspacesField,
   parseWorkspaceGlobs,
@@ -22,14 +25,51 @@ describe("parseIssueKeysFromBranches", () => {
     ).toEqual(["ABC", "QA"]);
   });
 
-  it("ignores branches without a leading <KEY>-<num> and single-letter prefixes", () => {
-    expect(parseIssueKeysFromBranches(["main", "v1-release", "x-1-y"])).toEqual(
-      [],
-    );
+  it("matches single-letter keys (e.g. Linear's A) — A-556", () => {
+    expect(parseIssueKeysFromBranches(["a-558-foo", "QA-3-bar"])).toEqual([
+      "A",
+      "QA",
+    ]);
+  });
+
+  it("ignores branches without a leading <KEY>-<num> (v<num>- and pathy names)", () => {
+    expect(
+      parseIssueKeysFromBranches(["main", "v1-release", "feature/x"]),
+    ).toEqual([]);
   });
 
   it("returns [] for an empty branch list", () => {
     expect(parseIssueKeysFromBranches([])).toEqual([]);
+  });
+});
+
+// A-556: prefer the current key from the most recent branch over the historical
+// union, so a renamed team (…→ASW→SK→A) yields the active key.
+describe("currentIssueKeys", () => {
+  it("returns the key of the most recently committed branch (recency-first input)", () => {
+    expect(
+      currentIssueKeys([
+        "a-558-promoteongreen",
+        "sk-99-old-thing",
+        "asw-3-older-thing",
+      ]),
+    ).toEqual(["A"]);
+  });
+
+  it("skips leading non-keyed branches until it finds one with a key", () => {
+    expect(
+      currentIssueKeys([
+        "main",
+        "dependabot/npm/foo",
+        "a-100-current",
+        "asw-1-historical",
+      ]),
+    ).toEqual(["A"]);
+  });
+
+  it("returns [] when no branch carries a key", () => {
+    expect(currentIssueKeys(["main", "release", "v1-foo"])).toEqual([]);
+    expect(currentIssueKeys([])).toEqual([]);
   });
 });
 
