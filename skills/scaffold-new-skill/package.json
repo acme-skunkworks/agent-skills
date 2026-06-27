@@ -1,0 +1,31 @@
+{
+  "name": "@acme-skunkworks/skill-scaffold-new-skill",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent skill: generate a spec-compliant new-skill skeleton (SKILL.md, package.json, config + example, an entry script wired to the standard dispatch idiom, a vitest stub, and a README) so bundles stop drifting.",
+  "keywords": [
+    "agent-skill",
+    "claude-code",
+    "cursor",
+    "scaffold",
+    "generator",
+    "meta-skill"
+  ],
+  "homepage": "https://github.com/acme-skunkworks/agent-skills/tree/main/skills/scaffold-new-skill#readme",
+  "bugs": {
+    "url": "https://github.com/acme-skunkworks/agent-skills/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acme-skunkworks/agent-skills.git",
+    "directory": "skills/scaffold-new-skill"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Rob Easthope",
+    "url": "https://github.com/RobEasthope"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
