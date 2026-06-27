@@ -15,7 +15,7 @@ compatibility: >-
   read needs the `git` CLI. If the Linear MCP server is unavailable the skill
   cannot run — it has no non-MCP fallback.
 metadata:
-  version: 0.3.1
+  version: 0.3.2
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -100,8 +100,8 @@ This is the canonical gotcha for adopters — resolve by name, every run.
 ## Extracting issue IDs from the branch
 
 Build the issue-ID regex **deterministically** — mirror the canonical, tested
-construction in the changelog bundle's
-[`scripts/add-links.mjs`](../changelog/scripts/add-links.mjs) (`ISSUE_RE`), which
+`buildIssueRe` in the repo-root [`lib/issue-keys.mjs`](../../lib/issue-keys.mjs),
+which `pnpm vendor:sync` copies into each consuming bundle (ADR-0004) and which
 exists for exactly this job:
 
 1. **Escape regex metacharacters** in each key (a configured key such as `C++`

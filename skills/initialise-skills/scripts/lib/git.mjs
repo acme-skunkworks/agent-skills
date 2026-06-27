@@ -1,14 +1,15 @@
 // Zero-dep git helpers for host-repo fact detection (A-409).
 //
-// `detectBaseBranch` mirrors the logic in the preflight bundle
-// (skills/preflight/scripts/lib/scope.mjs) — duplicated rather than imported
-// because installed bundles are vendored independently and must not reach across
-// each other. Keep the two in sync if the detection rule changes.
+// `detectBaseBranch` delegates to the canonical, vendored lib/base-branch.mjs
+// (ADR-0004 / A-534) — shared with the preflight bundle rather than hand-copied,
+// with `pnpm vendor:check` gating drift. Re-exported here (with this bundle's
+// own default) so callers keep importing it from `./git.mjs`.
 //
 // The pure parsers (`parseIssueKeysFromBranches`) take their input as arguments
 // so they are unit-testable without a real repository; only the thin `git*`
 // wrappers shell out.
 
+import { detectBaseBranch as detectBaseBranchVendored } from "./vendor/base-branch.mjs";
 import { spawnSync } from "node:child_process";
 
 const DEFAULT_BASE_BRANCH = "main";
@@ -20,16 +21,7 @@ const DEFAULT_BASE_BRANCH = "main";
  * @returns {string}
  */
 export function detectBaseBranch(root) {
-  const result = spawnSync(
-    "git",
-    ["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"],
-    { cwd: root, encoding: "utf8" },
-  );
-  if (result.status === 0 && result.stdout.trim()) {
-    return result.stdout.trim().replace(/^refs\/remotes\/origin\//, "");
-  }
-
-  return DEFAULT_BASE_BRANCH;
+  return detectBaseBranchVendored(root, DEFAULT_BASE_BRANCH);
 }
 
 /**
