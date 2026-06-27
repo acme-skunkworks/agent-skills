@@ -7,20 +7,63 @@
 // encoding they parse.
 
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 export const UNIT_SEP = "\u001F";
 export const RECORD_SEP = "\u001E";
 
+const CONFIG_PATH = new URL("../../config.json", import.meta.url);
+
 /**
- * Resolve the base ref to diff the branch against. BASE_REF (when set) is
- * tried first, then the defaults — so an unresolvable override still falls
- * back rather than silently yielding zero commits. Returns null when none of
- * the candidates exist (e.g. a fresh repo with no `main`).
+ * The configured trunk (`config.json` `baseBranch`), defaulting to `main` when
+ * the file is absent, unreadable, or the key is missing/blank.
+ * @returns {string}
+ */
+export function readBaseBranch() {
+  try {
+    const config = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+    return typeof config.baseBranch === "string" && config.baseBranch.trim()
+      ? config.baseBranch.trim()
+      : "main";
+  } catch {
+    return "main";
+  }
+}
+
+/**
+ * Ordered, de-duplicated base-ref candidates to probe. `BASE_REF` (a per-run
+ * override) wins, then the configured trunk (`origin/<baseBranch>` then the bare
+ * `<baseBranch>`), then the `origin/main` → `main` fallback so an unset or
+ * unresolvable `baseBranch` still resolves. With `baseBranch: "main"` the list
+ * collapses to the original `[BASE_REF, origin/main, main]`.
+ * @param {string} baseBranch
+ * @param {string|undefined} [environmentBaseRef]
+ * @returns {string[]}
+ */
+export function baseRefCandidates(
+  baseBranch,
+  environmentBaseRef = process.env.BASE_REF,
+) {
+  const trunk = (baseBranch || "main").trim() || "main";
+  const ordered = [
+    environmentBaseRef,
+    `origin/${trunk}`,
+    trunk,
+    "origin/main",
+    "main",
+  ];
+  return [...new Set(ordered.filter(Boolean))];
+}
+
+/**
+ * Resolve the base ref to diff the branch against. Honours `config.json`'s
+ * `baseBranch` (so a consumer whose trunk is `develop` diffs against
+ * `origin/develop`), with `BASE_REF` overriding per-run and `origin/main` →
+ * `main` as the final fallback. Returns null when none of the candidates exist
+ * (e.g. a fresh repo with no trunk).
  */
 export function resolveBaseRef() {
-  const candidates = [process.env.BASE_REF, "origin/main", "main"].filter(
-    Boolean,
-  );
+  const candidates = baseRefCandidates(readBaseBranch());
   for (const ref of candidates) {
     try {
       // execFileSync (no shell) — ref never reaches a shell, so a hostile
