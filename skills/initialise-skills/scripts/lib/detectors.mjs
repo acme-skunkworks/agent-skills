@@ -166,8 +166,8 @@ export function createDetectors({
       const roots = detectPackageRoots(repoRoot);
       return roots.length > 0 ? { value: roots } : null;
     },
-    // No repo signal; emit triage-pr's opt-in-off default (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
-    promoteOnGreen: () => ({ value: false }),
+    // No repo signal; emit triage-pr's default-on promotion default (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
+    promoteOnGreen: () => ({ value: true }),
     // Protect the detected default branch, not a hard-coded "main", so a
     // master/develop repo gets a consistent result.
     protectedBranches: () => ({ value: [detect("baseBranch").value] }),

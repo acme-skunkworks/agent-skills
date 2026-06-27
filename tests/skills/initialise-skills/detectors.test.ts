@@ -14,10 +14,10 @@ import { createDetectors } from "../../../skills/initialise-skills/scripts/lib/d
 const detectorsFor = () => createDetectors({ repoRoot: "/nonexistent" });
 
 describe("createDetectors — triage-pr boolean defaults", () => {
-  it("infers promoteOnGreen=false (auto-promotion is opt-in)", () => {
+  it("infers promoteOnGreen=true (auto-promotion is the default-on opt-out model)", () => {
     const { detect, has } = detectorsFor();
     expect(has("promoteOnGreen")).toBe(true);
-    expect(detect("promoteOnGreen")).toEqual({ value: false });
+    expect(detect("promoteOnGreen")).toEqual({ value: true });
   });
 
   it("infers replyOnAccept=true (matches triage-pr's own default)", () => {
