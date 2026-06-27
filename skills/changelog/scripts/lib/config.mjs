@@ -24,6 +24,10 @@ const CONFIG_PATH = fileURLToPath(CONFIG_URL);
 // every one is overridable in config.json. Mirrored in derive-packages.mjs so
 // that function can run standalone — keep the two in sync.
 const DEFAULTS = {
+  // `affected_packages` only earns its keep in a genuine monorepo. Default it
+  // off so single-package repos get clean entries; monorepo consumers (and
+  // initialise-skills, when it detects a workspace config) flip it on.
+  affectedPackages: false,
   baseBranch: "main",
   changelogDir: "changelog",
   fallbackPackage: "infrastructure",
@@ -58,6 +62,7 @@ function isStringArray(value) {
  *   changelogDir: string,
  *   packageRoots: string[],
  *   fallbackPackage: string,
+ *   affectedPackages: boolean,
  * }}
  */
 export function parseConfig(raw, source = CONFIG_PATH) {
@@ -108,6 +113,13 @@ export function parseConfig(raw, source = CONFIG_PATH) {
     !isNonEmptyString(parsed.fallbackPackage)
   ) {
     fail("`fallbackPackage`, when set, must be a non-empty string.", source);
+  }
+
+  if (
+    "affectedPackages" in parsed &&
+    typeof parsed.affectedPackages !== "boolean"
+  ) {
+    fail("`affectedPackages`, when set, must be a boolean.", source);
   }
 
   return { ...DEFAULTS, ...parsed };

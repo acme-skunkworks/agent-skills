@@ -66,3 +66,31 @@ describe("createDetectors — packageRoots", () => {
     expect(detect("shippablePaths")).toEqual({ value: [] });
   });
 });
+
+// A-461: affected_packages is monorepo-only. The detector mirrors the
+// packageRoots workspace signal so single-package repos get `false` (field
+// omitted) and genuine monorepos get `true`. It always emits a value (never
+// null) so it is never flagged needs-manual-input.
+describe("createDetectors — affectedPackages", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "detectors-affected-"));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("infers false when no workspace config is detected (single package)", () => {
+    const { detect, has } = createDetectors({ repoRoot: dir });
+    expect(has("affectedPackages")).toBe(true);
+    expect(detect("affectedPackages")).toEqual({ value: false });
+  });
+
+  it("infers true when a pnpm workspace is present (monorepo)", () => {
+    writeFileSync(join(dir, "pnpm-workspace.yaml"), 'packages:\n  - "apps/*"\n');
+    const { detect } = createDetectors({ repoRoot: dir });
+    expect(detect("affectedPackages")).toEqual({ value: true });
+  });
+});

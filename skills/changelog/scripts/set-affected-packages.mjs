@@ -106,6 +106,19 @@ function main() {
     .some((argument) => argument === "--check" || argument === "--dry-run");
 
   const config = loadConfig();
+
+  // `affected_packages` is monorepo-only. Single-package repos leave
+  // `affectedPackages: false` (the default) so entries stay clean — the field
+  // is write-only and redundant there, and the validator treats it as
+  // optional-when-present. No-op in both normal and --check modes so CI never
+  // demands a rewrite. Genuine monorepos opt in via `affectedPackages: true`.
+  if (!config.affectedPackages) {
+    console.log(
+      "affected_packages is disabled (affectedPackages: false). Nothing to set.",
+    );
+    process.exit(0);
+  }
+
   const BASE_REF =
     process.env.BASE_REF?.trim() || `origin/${config.baseBranch}`;
 

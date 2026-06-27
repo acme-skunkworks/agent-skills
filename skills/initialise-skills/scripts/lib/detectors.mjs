@@ -103,6 +103,11 @@ export function createDetectors({
   const cache = new Map();
 
   const registry = {
+    // Monorepo gate for changelog's `affected_packages` field. True only when a
+    // real workspace config was detected (the same signal `packageRoots` reads),
+    // so single-package repos get `false` and their entries stay clean. Always
+    // emits a value (`false` is a real signal, not "couldn't detect").
+    affectedPackages: () => ({ value: detect("packageRoots") !== null }),
     baseBranch: () => ({ value: detectBaseBranch(repoRoot) }),
     bundleVersioning: () => {
       const root = detectBundleRoot(repoRoot);

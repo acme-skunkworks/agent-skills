@@ -15,6 +15,7 @@ function raw(object: unknown): string {
 describe("parseConfig", () => {
   it("merges structural defaults over a minimal valid config", () => {
     expect(parseConfig(raw(VALID))).toEqual({
+      affectedPackages: false,
       baseBranch: "main",
       changelogDir: "changelog",
       fallbackPackage: "infrastructure",
@@ -22,6 +23,21 @@ describe("parseConfig", () => {
       linearWorkspaceSlug: "goose-and-hobbes",
       packageRoots: ["apps", "packages", "services"],
     });
+  });
+
+  it("defaults affectedPackages off and accepts an explicit boolean", () => {
+    // Off by default — single-package repos must not emit affected_packages.
+    expect(parseConfig(raw(VALID)).affectedPackages).toBe(false);
+    // Monorepos opt in.
+    expect(
+      parseConfig(raw({ ...VALID, affectedPackages: true })).affectedPackages,
+    ).toBe(true);
+  });
+
+  it("fails loudly when affectedPackages is not a boolean", () => {
+    expect(() =>
+      parseConfig(raw({ ...VALID, affectedPackages: "yes" })),
+    ).toThrow(/affectedPackages/);
   });
 
   it("lets config override the structural defaults", () => {

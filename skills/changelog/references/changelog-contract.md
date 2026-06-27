@@ -55,7 +55,7 @@ validated **by type when present** but may be blank placeholders until enrichmen
 | `category` | One of `feature`, `fix`, `chore`, `docs`, `refactor`, `perf`. |
 | `breaking` | Boolean. If `true`, the body MUST contain a `## Breaking` section. |
 | `issues` | Array of strings, each matching `[A-Z]{2,}-\d+`. |
-| `affected_packages` | Array of strings (`[]` when unpopulated). |
+| `affected_packages` | Array of strings (`[]` when unpopulated). Monorepo-gated — emitted only when `affectedPackages: true` in `config.json`; absent (and clean) for single-package repos. |
 | `stats.{files_changed,loc_added,loc_removed}` | Non-negative integers when set; blank until release. |
 
 The filename must match `YYYYMMDD-HHMMSS-<slug>.md` (slug `[a-z0-9-]+`), and the
@@ -69,9 +69,10 @@ Four owners, never overlapping:
 1. **The author (this skill).** `title`, `release_note`, `category`, `breaking`,
    `issues`, `co_authors`, `author`. Re-derived on every run.
 2. **The enrichment scripts (deterministic, pre-merge).** `affected_packages` —
-   `set-affected-packages.mjs` always overwrites it from the latest branch diff,
-   so it tracks added commits. `add-links.mjs` rewrites bare issue IDs in the body
-   to Linear links.
+   when `affectedPackages: true`, `set-affected-packages.mjs` always overwrites it
+   from the latest branch diff, so it tracks added commits; when `false` (the
+   single-package default) the field is never emitted and the script is a no-op.
+   `add-links.mjs` rewrites bare issue IDs in the body to Linear links.
 3. **The release-orchestrator (post-merge, privileged).** `merged_at`, `commit`,
    `merge_strategy`, and authoritative `stats`, plus the published `version` where
    a consumer adds one. Emit these as blank placeholders; never hand-edit them —
@@ -109,11 +110,12 @@ Only include `Added` / `Changed` / `Fixed` headings that have entries.
 
 ## Notes for adopters
 
-- **Single-package repos** can drop `affected_packages` from the schema (there is
-  only one package) and skip `set-affected-packages.mjs`. The validator treats
-  `affected_packages` as optional-when-present, so leaving it out is fine — but
-  if you keep `validate-changelog.mjs` as shipped, it still requires `branch`,
-  `author`, `co_authors`, and `stats`.
+- **Single-package repos** leave `affectedPackages: false` (the `config.json`
+  default), which omits `affected_packages` and makes `set-affected-packages.mjs`
+  a no-op — there is only one package, so the field is write-only noise. The
+  validator treats `affected_packages` as optional-when-present, so leaving it out
+  is fine — but if you keep `validate-changelog.mjs` as shipped, it still requires
+  `branch`, `author`, `co_authors`, and `stats`.
 - **Adding a `version` field.** A single-versioned package may add `version` to
   record the release each entry shipped in; that is owned by the release step,
   alongside the other post-merge fields.
