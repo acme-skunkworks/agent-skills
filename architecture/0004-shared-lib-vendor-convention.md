@@ -36,10 +36,13 @@ exactly one editable source of truth.
 
 ### Canonical `lib/`
 
-- Each shared module is a pure, zero-dependency `.mjs` file at the repo root, e.g.
-  `lib/issue-keys.mjs` (exports `buildIssueRe`) and `lib/base-branch.mjs` (exports
-  `detectBaseBranch`). Purity is the contract: the host bundle owns its config/I/O
-  and passes inputs in, so the same file works in every consumer.
+- Each shared module is a **zero-dependency** `.mjs` file at the repo root (Node
+  built-ins only — no npm deps, no build step), e.g. `lib/issue-keys.mjs` (exports
+  `buildIssueRe`) and `lib/base-branch.mjs` (exports `detectBaseBranch`). They take
+  their inputs as arguments — the host bundle owns its config and passes values in —
+  so the same file works in every consumer. Keep them as close to referentially pure
+  as the job allows: `issue-keys` is pure; `base-branch` shells out to `git` but
+  parameterises the repo root and the fallback, so it stays portable and testable.
 - `lib/` is **not** in `package.json` `files: ["skills/"]`, so it is never published.
   It is dev-time source; only the vendored copies (which live under `skills/`) ship.
 
