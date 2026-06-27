@@ -8,4 +8,22 @@ Consumers install a skill from this repo with:
 npx skills add https://github.com/acme-skunkworks/agent-skills --skill <name> --agent claude-code --agent cursor --copy
 ```
 
-No skills here yet — the first one (`cleanup-repo`) is tracked under [ASW-134](https://linear.app/goose-and-hobbes/issue/ASW-134). The exact bundle layout may be refined by ADR-0001 (ASW-133) once skills.sh's expected structure is double-checked.
+Pass `--skill` more than once (or omit it to install them all), and add an `--agent` for each agent you want the bundle written into.
+
+## Available skills
+
+| Skill | What it does |
+| --- | --- |
+| [`changelog`](changelog/SKILL.md) | Author, refresh, or repair the current branch's dated changelog entry, run the enrichment scripts, and validate it against the changelog contract. |
+| [`cleanup-repo`](cleanup-repo/SKILL.md) | Clean up merged Git branches and worktrees, then prune filesystem cruft, behind a single confirmation gate. |
+| [`initialise-skills`](initialise-skills/SKILL.md) | Scan the host repo and reconcile each installed skill's `config.json` with detected facts (base branch, package roots, changelog dir, Linear keys). |
+| [`linear-sync`](linear-sync/SKILL.md) | Transition the Linear issue(s) linked to the current branch to a target workflow state. |
+| [`preflight`](preflight/SKILL.md) | Run a change-gated, branch-scoped lint preflight (ESLint / markdownlint / actionlint) and classify each violation as introduced vs pre-existing. |
+| [`send-it`](send-it/SKILL.md) | The all-in-one ship finisher: commit, lint, changelog, Conventional Commits PR title, push, open/update the PR, and move linked Linear issues to In Review. |
+| [`triage-pr`](triage-pr/SKILL.md) | Drive a pull request from draft-with-failing-CI to merge-ready — fix in-scope CI failures, then action unresolved AI review feedback. |
+
+The orchestrator skills delegate to siblings: `send-it` uses `preflight`, `changelog`, and `linear-sync`, so install those alongside it (each skill's `compatibility` block names its dependencies).
+
+## Supported agents
+
+These bundles are the open [Agent Skills](https://github.com/vercel-labs/skills) format (`SKILL.md` + YAML frontmatter), so [skills.sh](https://skills.sh) installs the **same** bundle into any of its 70+ supported agents. We officially target **Claude Code** and **Cursor**; the others (Codex, Cline, Windsurf, Copilot, Continue, Zed, Gemini CLI, OpenCode, …) install cleanly with no extra infrastructure. The only Claude-specific frontmatter is the `allowed-tools` values (`mcp__linear-server__*`, `Bash(gh:*)`); other agents ignore unknown frontmatter, and each skill's `compatibility` block documents the underlying `gh` / Linear-MCP requirements regardless of agent.
