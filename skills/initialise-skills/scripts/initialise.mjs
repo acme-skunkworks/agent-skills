@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// initialise-skills CLI (SK-409).
+// initialise-skills CLI (A-409).
 //
 // Scans a host repo and reconciles every installed skill's config.json with
 // detected facts. Deterministic git/fs detection + a three-way merge live here

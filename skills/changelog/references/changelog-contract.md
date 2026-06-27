@@ -23,7 +23,7 @@ author: "you@example.com"
 co_authors: []
 category: feature
 breaking: false
-issues: ["ASW-123"]
+issues: ["A-123"]
 affected_packages: []
 stats:
   files_changed:

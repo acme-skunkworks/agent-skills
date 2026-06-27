@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Branch-scoped file classification for the preflight skill (originally ASW-282).
+ * Branch-scoped file classification for the preflight skill (originally A-282).
  * Shared by preflight.mjs, lint-fix.mjs, and classify-lint.mjs.
  *
  * Repo-specific configuration (linted workspaces + base branch) is auto-detected
- * rather than hardcoded (ASW-305, delivered under ASW-344): workspaces come from
+ * rather than hardcoded (A-305, delivered under A-344): workspaces come from
  * `pnpm-workspace.yaml` + each package's `lint` script, and the base branch from
  * `origin/HEAD`. A `preflight.config.json` at the repo root overrides both. This
  * keeps the preflight skill portable — a consuming repo edits at most one small
@@ -36,7 +36,7 @@ const DEFAULT_BASE_BRANCH = "main";
 
 /**
  * Minimal reader for the `packages:` block-sequence in `pnpm-workspace.yaml`.
- * Hand-rolled (no YAML dependency, per ASW-303) so the scripts travel without
+ * Hand-rolled (no YAML dependency, per A-303) so the scripts travel without
  * node_modules. Uses plain string operations rather than a backtracking regex.
  * @param {string} root
  * @returns {string[]}

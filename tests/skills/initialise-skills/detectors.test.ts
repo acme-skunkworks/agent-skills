@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Imports the BUNDLE script directly (the distributed `.mjs`). The two boolean
 // detectors return repo-independent constants, so a dummy repoRoot is fine —
-// they never touch the filesystem. Regression cover for SK-459: before this,
+// they never touch the filesystem. Regression cover for A-459: before this,
 // triage-pr's `promoteOnGreen` / `replyOnAccept` had no detector and were
 // reported `needs-manual-input` on every `initialise-skills` run.
 import { createDetectors } from "../../../skills/initialise-skills/scripts/lib/detectors.mjs";
@@ -33,7 +33,7 @@ describe("createDetectors — triage-pr boolean defaults", () => {
   });
 });
 
-// Regression cover for SK-460: packageRoots must signal "couldn't detect" (null)
+// Regression cover for A-460: packageRoots must signal "couldn't detect" (null)
 // when there's no workspace manifest and none of the default candidates exist,
 // rather than reporting a fabricated `["apps","packages","services"]`.
 describe("createDetectors — packageRoots", () => {

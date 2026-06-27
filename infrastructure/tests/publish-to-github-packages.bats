@@ -8,8 +8,8 @@
 # auth, no OIDC), so the fake lives on PATH rather than at $PNPM_HOME/npm.
 #
 # Unlike eslint-config's public variant this script carries a `private: true`
-# dormancy skip. Like it (since ASW-345 / the build-once split) it publishes the
-# prebuilt $TARBALL and hard-codes the registry host (ASW-330). The fixture
+# dormancy skip. Like it (since A-345 / the build-once split) it publishes the
+# prebuilt $TARBALL and hard-codes the registry host (A-330). The fixture
 # package.json sets `"private": false` to exercise the publish paths; a
 # dedicated test covers the dormant skip.
 
@@ -157,7 +157,7 @@ npm error 500 Internal Server Error'
 }
 
 @test "registry drift: a non-canonical GITHUB_PACKAGES_REGISTRY_URL aborts without publishing" {
-  # ASW-330: the publish target is hard-coded; the script fails closed rather
+  # A-330: the publish target is hard-coded; the script fails closed rather
   # than send the GITHUB_TOKEN to whatever host a config edit points it at.
   write_fake_npm 1
   export GITHUB_PACKAGES_REGISTRY_URL="https://evil.example.com"

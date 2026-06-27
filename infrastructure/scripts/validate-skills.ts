@@ -1,5 +1,5 @@
 #!/usr/bin/env -S npx tsx
-// Validates the per-skill bundle metadata under `skills/<name>/` (ASW-364).
+// Validates the per-skill bundle metadata under `skills/<name>/` (A-364).
 //
 // Skills are NOT npm-published and NOT Changesets-managed (ADR-0002): each
 // carries its own version OUT OF BAND, as a non-npm label. This guard makes

@@ -16,7 +16,7 @@ compatibility: >-
   `preflight-changelog-ci.mjs` step assumes the consumer repo uses pnpm with a
   committed lockfile; skip it if yours does not.
 metadata:
-  version: 0.4.0
+  version: 0.4.1
   author: Rob Easthope
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(node:*), Bash(pnpm:*)
 ---
@@ -54,7 +54,7 @@ keep generic, overridable defaults:
 
 | Key | Meaning | Default |
 | --- | --- | --- |
-| `issueKeys` | Team-key prefixes used to recognise issue IDs in the branch and body. The issue-ID regex is built from these; keep legacy keys so old branches still match. | **required** |
+| `issueKeys` | Team-key prefixes used to recognise issue IDs in the branch and body. The issue-ID regex is built from these. | **required** |
 | `linearWorkspaceSlug` | Linear workspace slug used to build issue links (`https://linear.app/<slug>/issue/<id>`). | **required** |
 | `baseBranch` | The trunk the branch diff is taken against (`origin/<baseBranch>`). Overridable per-run via the `BASE_REF` env var. | `"main"` |
 | `changelogDir` | Directory the dated entries live in (scanned by the enrichment + validation scripts). | `"changelog"` |

@@ -1,4 +1,4 @@
-// Detector registry keyed by config-KEY NAME, not by skill (SK-409).
+// Detector registry keyed by config-KEY NAME, not by skill (A-409).
 //
 // One detector per config key serves every skill that uses it — `baseBranch`
 // covers changelog + send-it + preflight; `issueKeys` covers changelog +
