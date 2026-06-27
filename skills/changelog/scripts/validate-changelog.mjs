@@ -1,12 +1,36 @@
 #!/usr/bin/env node
+// Validates the individual dated changelog entries under `changelog/`.
+//
+// The single authored changelog validator (SK-369): this is the only copy —
+// the root `validate:changelog` script and the `changelog` skill both run it.
+// Ported from the former infrastructure/scripts/validate-changelog.ts (dropping
+// gray-matter for the bundle's vendored parser) and unified with the bundle's
+// monorepo `affected_packages` check:
+//   - `version` is accepted (typed-when-present semver string).
+//   - `affected_packages` is accepted (typed-when-present string array) — owned
+//     by the merge-time set-affected-packages step on monorepo consumers.
+//   - the REQUIRED set is relaxed to title/created_at/category/breaking so that
+//     both backfilled historical entries (no branch/author/stats) and in-flight
+//     entries (no version/merged_at/pr/commit/stats until enriched) validate.
+//     /send-it is the guarantee that new entries get branch/author/co_authors;
+//     validation is the safety net, not the sole guard.
+//
+// The pure `validateEntry(name, raw)` returns an array of error strings (empty
+// means valid), so it's trivially unit-testable; main() walks the directory.
+// Zero-dep — Node built-ins + the bundle's frontmatter parser.
+
 import { loadConfig } from "./lib/config.mjs";
 import { parseFrontmatter } from "./lib/frontmatter.mjs";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
+import { argv } from "node:process";
 
-const CHANGELOG_DIR = loadConfig().changelogDir;
 const FILENAME_RE = /^(\d{8})-(\d{6})-([a-z0-9-]+)\.md$/;
 const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+// SemVer 2.0.0: prerelease and build identifiers are dot-separated and may
+// contain ASCII alphanumerics and hyphens (e.g. 1.2.3-rc-1, 1.2.3+build-45).
+const SEMVER_RE =
+  /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const SHA7_RE = /^[0-9a-f]{7}$/;
 const ISSUE_RE = /^[A-Z]{2,}-\d+$/;
 const CATEGORIES = new Set([
@@ -19,21 +43,15 @@ const CATEGORIES = new Set([
 ]);
 const MERGE_STRATEGIES = new Set(["merge", "rebase", "squash"]);
 const SECTION_RE = /^##\s+(Breaking|Added|Changed|Fixed)\b/m;
-const BREAKING_RE = /^##\s+Breaking\b/m;
 
-const REQUIRED = [
-  "title",
-  "created_at",
-  "branch",
-  "author",
-  "category",
-  "breaking",
-  "co_authors",
-];
+const REQUIRED = ["title", "created_at", "category", "breaking"];
 
-const errors = [];
-function fail(file, message) {
-  errors.push(`${file}: ${message}`);
+/**
+ * True when a value is set to something meaningful (not null/undefined/"").
+ * @param {unknown} value
+ */
+function present(value) {
+  return value !== null && value !== undefined && value !== "";
 }
 
 function isInt(value) {
@@ -50,23 +68,36 @@ function isStringArray(value) {
   );
 }
 
-function validateEntry(file, raw) {
-  const name = basename(file);
+function asIso(value) {
+  // The vendored frontmatter parser only ever yields strings for timestamps
+  // (gray-matter parsed ISO strings into Date objects; this bundle does not), so
+  // a non-string is treated as absent.
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * Validate one entry. Returns an array of human-readable error strings.
+ * @param {string} name entry filename (basename)
+ * @param {string} raw entry markdown
+ * @returns {string[]}
+ */
+export function validateEntry(name, raw) {
+  const errors = [];
+  function fail(message) {
+    errors.push(`${name}: ${message}`);
+  }
 
   if (!FILENAME_RE.test(name)) {
-    fail(
-      file,
-      "filename must match YYYYMMDD-HHMMSS-<slug>.md (slug: [a-z0-9-]+)",
-    );
-    return;
+    fail("filename must match YYYYMMDD-HHMMSS-<slug>.md (slug: [a-z0-9-]+)");
+    return errors;
   }
 
   let parsed;
   try {
     parsed = parseFrontmatter(raw);
   } catch (error) {
-    fail(file, `frontmatter unparseable: ${error.message}`);
-    return;
+    fail(`frontmatter unparseable: ${error.message}`);
+    return errors;
   }
 
   const fm = parsed.data ?? {};
@@ -74,7 +105,7 @@ function validateEntry(file, raw) {
 
   for (const key of REQUIRED) {
     if (!(key in fm)) {
-      fail(file, `missing required field: ${key}`);
+      fail(`missing required field: ${key}`);
     }
   }
 
@@ -82,7 +113,7 @@ function validateEntry(file, raw) {
     "title" in fm &&
     (typeof fm.title !== "string" || fm.title.trim() === "")
   ) {
-    fail(file, "title must be a non-empty string");
+    fail("title must be a non-empty string");
   }
 
   if (
@@ -90,113 +121,91 @@ function validateEntry(file, raw) {
     fm.release_note !== null &&
     typeof fm.release_note !== "string"
   ) {
-    fail(file, "release_note must be a string or null when present");
+    fail("release_note must be a string or null when present");
   }
 
-  if ("created_at" in fm) {
-    const value =
-      typeof fm.created_at === "string"
-        ? fm.created_at
-        : (fm.created_at?.toISOString?.() ?? "");
-    if (!ISO_UTC_RE.test(value)) {
-      fail(
-        file,
-        `created_at must be ISO 8601 UTC with Z suffix (got ${JSON.stringify(fm.created_at)})`,
-      );
-    }
+  if (
+    present(fm.version) &&
+    (typeof fm.version !== "string" || !SEMVER_RE.test(fm.version))
+  ) {
+    fail(
+      `version must be a semver string when set (got ${JSON.stringify(fm.version)})`,
+    );
   }
 
-  if ("merged_at" in fm && fm.merged_at !== null && fm.merged_at !== "") {
-    const value =
-      typeof fm.merged_at === "string"
-        ? fm.merged_at
-        : (fm.merged_at?.toISOString?.() ?? "");
-    if (!ISO_UTC_RE.test(value)) {
-      fail(file, "merged_at must be ISO 8601 UTC with Z suffix when set");
-    }
+  if ("created_at" in fm && !ISO_UTC_RE.test(asIso(fm.created_at))) {
+    fail(
+      `created_at must be ISO 8601 UTC with Z suffix (got ${JSON.stringify(fm.created_at)})`,
+    );
+  }
+
+  if (present(fm.merged_at) && !ISO_UTC_RE.test(asIso(fm.merged_at))) {
+    fail("merged_at must be ISO 8601 UTC with Z suffix when set");
   }
 
   if (
     "branch" in fm &&
     (typeof fm.branch !== "string" || fm.branch.trim() === "")
   ) {
-    fail(file, "branch must be a non-empty string");
+    fail("branch must be a non-empty string when present");
+  }
+
+  if (present(fm.pr) && !isInt(fm.pr)) {
+    fail("pr must be an integer when set");
+  }
+
+  if (present(fm.commit) && !SHA7_RE.test(String(fm.commit))) {
+    fail("commit must be a 7-char hex SHA when set");
   }
 
   if (
-    "pr" in fm &&
-    fm.pr !== null &&
-    fm.pr !== "" &&
-    (!isInt(fm.pr) || Number(fm.pr) <= 0)
+    present(fm.merge_strategy) &&
+    !MERGE_STRATEGIES.has(String(fm.merge_strategy))
   ) {
-    fail(file, "pr must be a positive integer when set");
-  }
-
-  if (
-    "commit" in fm &&
-    fm.commit !== null &&
-    fm.commit !== "" &&
-    !SHA7_RE.test(fm.commit)
-  ) {
-    fail(file, "commit must be a 7-char hex SHA when set");
-  }
-
-  if (
-    "merge_strategy" in fm &&
-    fm.merge_strategy !== null &&
-    fm.merge_strategy !== "" &&
-    !MERGE_STRATEGIES.has(fm.merge_strategy)
-  ) {
-    fail(
-      file,
-      `merge_strategy must be one of: ${[...MERGE_STRATEGIES].join(", ")}`,
-    );
+    fail(`merge_strategy must be one of: ${[...MERGE_STRATEGIES].join(", ")}`);
   }
 
   if (
     "author" in fm &&
     (typeof fm.author !== "string" || fm.author.trim() === "")
   ) {
-    fail(file, "author must be a non-empty string");
+    fail("author must be a non-empty string when present");
   }
 
   if ("co_authors" in fm && !isStringArray(fm.co_authors)) {
-    fail(file, "co_authors must be an array of strings (use [] when none)");
+    fail("co_authors must be an array of strings (use [] when none)");
   }
 
-  if ("category" in fm && !CATEGORIES.has(fm.category)) {
-    fail(file, `category must be one of: ${[...CATEGORIES].join(", ")}`);
+  if ("category" in fm && !CATEGORIES.has(String(fm.category))) {
+    fail(`category must be one of: ${[...CATEGORIES].join(", ")}`);
   }
 
   if ("breaking" in fm && typeof fm.breaking !== "boolean") {
-    fail(file, "breaking must be a boolean");
+    fail("breaking must be a boolean");
   }
 
   if ("issues" in fm) {
     if (isStringArray(fm.issues)) {
       for (const id of fm.issues) {
         if (!ISSUE_RE.test(id)) {
-          fail(
-            file,
-            `issues entry ${JSON.stringify(id)} must match [A-Z]{2,}-\\d+`,
-          );
+          fail(`issues entry ${JSON.stringify(id)} must match [A-Z]{2,}-\\d+`);
         }
       }
     } else {
-      fail(file, "issues must be an array of strings when present");
+      fail("issues must be an array of strings when present");
     }
   }
 
-  // affected_packages is owned by the post-merge enrich step. The author emits
-  // an empty array as a placeholder; the enrich step overwrites it with the
-  // canonical list derived from PR files. Only enforce structure (string array).
+  // affected_packages is owned by the merge-time set-affected-packages step on
+  // monorepo consumers. The author emits an empty array as a placeholder; the
+  // step overwrites it with the canonical list derived from the PR diff. Only
+  // enforce structure (string array) when present.
   if (
     "affected_packages" in fm &&
     fm.affected_packages !== null &&
     !isStringArray(fm.affected_packages)
   ) {
     fail(
-      file,
       "affected_packages must be an array of strings (use [] when unpopulated)",
     );
   }
@@ -205,74 +214,90 @@ function validateEntry(file, raw) {
   const statKeys = ["files_changed", "loc_added", "loc_removed"];
   for (const key of statKeys) {
     if (key in fm) {
-      fail(file, `${key} must be under stats, not top-level`);
+      fail(`${key} must be under stats, not top-level`);
     }
   }
 
-  if (!("stats" in fm) || fm.stats === null || fm.stats === undefined) {
-    fail(file, "missing required field: stats");
-  } else if (typeof fm.stats !== "object" || Array.isArray(fm.stats)) {
-    fail(file, "stats must be an object");
-  } else {
-    for (const key of statKeys) {
-      if (
-        key in fm.stats &&
-        fm.stats[key] !== null &&
-        fm.stats[key] !== "" &&
-        !isNonNegInt(fm.stats[key])
-      ) {
-        fail(file, `stats.${key} must be a non-negative integer when set`);
+  // stats is optional (filled by enrichment), but must be a well-formed object
+  // with non-negative integer values when present.
+  if (present(fm.stats)) {
+    if (typeof fm.stats !== "object" || Array.isArray(fm.stats)) {
+      fail("stats must be an object");
+    } else {
+      for (const key of statKeys) {
+        if (
+          key in fm.stats &&
+          present(fm.stats[key]) &&
+          !isNonNegInt(fm.stats[key])
+        ) {
+          fail(`stats.${key} must be a non-negative integer when set`);
+        }
       }
     }
   }
 
-  if (fm.breaking === true && !BREAKING_RE.test(body)) {
-    fail(file, 'breaking: true requires a "## Breaking" section in the body');
+  // The schema (changelog/README.md) requires "## Breaking" to be the FIRST
+  // body section when breaking: true — not merely present somewhere.
+  if (fm.breaking === true) {
+    const firstSection = body.match(/^##\s+([A-Za-z]+)\b/m)?.[1];
+    if (firstSection !== "Breaking") {
+      fail('breaking: true requires "## Breaking" as the first body section');
+    }
   }
 
   if (!SECTION_RE.test(body)) {
     fail(
-      file,
       "body must contain at least one of: ## Breaking | ## Added | ## Changed | ## Fixed",
     );
   }
+
+  return errors;
 }
 
-function listEntries() {
+function listEntries(directory) {
   let stat;
   try {
-    stat = statSync(CHANGELOG_DIR);
+    stat = statSync(directory);
   } catch {
-    console.error(`changelog directory not found: ${CHANGELOG_DIR}`);
+    console.error(`changelog directory not found: ${directory}`);
     process.exit(2);
   }
 
   if (!stat.isDirectory()) {
-    console.error(`${CHANGELOG_DIR} is not a directory`);
+    console.error(`${directory} is not a directory`);
     process.exit(2);
   }
 
-  return readdirSync(CHANGELOG_DIR)
+  return readdirSync(directory)
     .filter((name) => name.endsWith(".md") && name !== "README.md")
-    .map((name) => join(CHANGELOG_DIR, name));
+    .map((name) => join(directory, name));
 }
 
-const entries = listEntries();
-for (const file of entries) {
-  validateEntry(file, readFileSync(file, "utf8"));
-}
-
-if (errors.length > 0) {
-  console.error(
-    `Changelog validation failed with ${errors.length} error(s):\n`,
-  );
-  for (const error of errors) {
-    console.error(`  - ${error}`);
+function main() {
+  const files = listEntries(loadConfig().changelogDir);
+  const errors = [];
+  for (const file of files) {
+    errors.push(...validateEntry(basename(file), readFileSync(file, "utf8")));
   }
 
-  process.exit(1);
+  if (errors.length > 0) {
+    console.error(
+      `Changelog validation failed with ${errors.length} error(s):\n`,
+    );
+    for (const message of errors) {
+      console.error(`  - ${message}`);
+    }
+
+    process.exit(1);
+  }
+
+  console.log(
+    `Changelog validation passed (${files.length} entr${files.length === 1 ? "y" : "ies"} checked).`,
+  );
 }
 
-console.log(
-  `Changelog validation passed (${entries.length} entr${entries.length === 1 ? "y" : "ies"} checked).`,
-);
+// Only run the filesystem pass when invoked as a CLI, not when imported (e.g.
+// by unit tests exercising validateEntry).
+if (argv[1] && import.meta.filename === argv[1]) {
+  main();
+}

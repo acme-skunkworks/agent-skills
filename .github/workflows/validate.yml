@@ -93,7 +93,7 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           BASE_REF: ${{ github.base_ref }}
-        run: pnpm tsx infrastructure/scripts/check-changelog-completeness.ts
+        run: node skills/changelog/scripts/check-changelog-completeness.mjs
 
   yaml-lint:
     name: 📝 YAML & Workflows

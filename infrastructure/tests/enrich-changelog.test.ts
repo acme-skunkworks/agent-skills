@@ -1,7 +1,19 @@
-import { enrichFrontmatter } from "../scripts/enrich-changelog.js";
-import type { EnrichInput } from "../scripts/enrich-changelog.js";
-import matter from "gray-matter";
+import { enrichFrontmatter } from "../../skills/changelog/scripts/lib/enrich.mjs";
+import { parseFrontmatter } from "../../skills/changelog/scripts/lib/frontmatter.mjs";
 import { describe, expect, it } from "vitest";
+
+// The .mjs carries EnrichInput as a JSDoc typedef (no exported TS type); mirror
+// the fields the fixtures use locally.
+type EnrichInput = {
+  additions?: null | string;
+  branch: string;
+  changedFiles?: null | string;
+  deletions?: null | string;
+  mergedAt: string;
+  mergeSha: string;
+  mergeStrategy?: null | string;
+  prNumber?: null | string;
+};
 
 const BASE: EnrichInput = {
   additions: "10",
@@ -38,7 +50,7 @@ function placeholderEntry(): string {
 describe("enrichFrontmatter", () => {
   it("fills merged_at, commit (7 chars), merge_strategy, pr and overwrites stats", () => {
     const out = enrichFrontmatter(placeholderEntry(), BASE);
-    const { data } = matter(out);
+    const { data } = parseFrontmatter(out);
     expect(data.merged_at).toBe("2026-05-24T09:00:00Z");
     expect(data.commit).toBe("abc1234");
     expect(data.merge_strategy).toBe("squash");
@@ -59,7 +71,7 @@ describe("enrichFrontmatter", () => {
       mergeStrategy: "rebase",
       prNumber: "999",
     });
-    const { data } = matter(second);
+    const { data } = parseFrontmatter(second);
     expect(data.merged_at).toBe("2026-05-24T09:00:00Z");
     expect(data.commit).toBe("abc1234");
     expect(data.pr).toBe(42);
@@ -74,7 +86,7 @@ describe("enrichFrontmatter", () => {
       changedFiles: "9",
       deletions: "5",
     });
-    const { data } = matter(second);
+    const { data } = parseFrontmatter(second);
     expect(data.stats).toEqual({
       files_changed: 9,
       loc_added: 100,
@@ -84,12 +96,12 @@ describe("enrichFrontmatter", () => {
 
   it("leaves created_at untouched", () => {
     const out = enrichFrontmatter(placeholderEntry(), BASE);
-    expect(matter(out).data.created_at).toBe("2026-05-23T14:55:37Z");
+    expect(parseFrontmatter(out).data.created_at).toBe("2026-05-23T14:55:37Z");
   });
 
   it("does not introduce an affected_packages field", () => {
     const out = enrichFrontmatter(placeholderEntry(), BASE);
-    expect(matter(out).data).not.toHaveProperty("affected_packages");
+    expect(parseFrontmatter(out).data).not.toHaveProperty("affected_packages");
   });
 
   it("treats empty-string stat inputs as absent (no NaN written)", () => {
@@ -101,7 +113,7 @@ describe("enrichFrontmatter", () => {
       mergedAt: BASE.mergedAt,
       mergeSha: BASE.mergeSha,
     });
-    expect(matter(out).data.stats).toEqual({});
+    expect(parseFrontmatter(out).data.stats).toEqual({});
   });
 
   it("throws when created_at is missing", () => {
@@ -115,7 +127,7 @@ describe("enrichFrontmatter", () => {
       mergedAt: BASE.mergedAt,
       mergeSha: BASE.mergeSha,
     });
-    const { data } = matter(out);
+    const { data } = parseFrontmatter(out);
     expect(data.commit).toBe("abc1234");
     expect(data.merged_at).toBe(BASE.mergedAt);
     // pr/merge_strategy stay as their (null) placeholders; stats stays empty.

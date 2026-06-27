@@ -1,4 +1,4 @@
-#!/usr/bin/env -S npx tsx
+#!/usr/bin/env node
 // Changelog-completeness gate (SK-380). A release-triggering PR title
 // (`feat`/`fix`/breaking) MUST carry a dated `changelog/` entry. This restores
 // the coupling Changesets gave for free — no changeset → no release — now that
@@ -15,33 +15,47 @@
 //   BASE_REF — the base branch name (github.base_ref); defaults to "main"
 // Reads changed files from `git diff --name-only origin/<BASE_REF>...HEAD`.
 // Pure functions live exported for vitest.
+//
+// Zero-dep: Node built-ins only — no tsx, so CI runs it under bare `node`.
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
+import { argv } from "node:process";
 
 const RELEASE_TRIGGERING_TYPE = /^(feat|fix|perf|revert)(\([^)]+\))?:/;
 const BREAKING_SUBJECT = /^[a-z]+(\([^)]+\))?!:/;
 const CHANGELOG_ENTRY = /^changelog\/.+\.md$/;
 
-export function isReleaseTriggering(prTitle: string): boolean {
+/**
+ * @param {string} prTitle pull request title
+ * @returns {boolean}
+ */
+export function isReleaseTriggering(prTitle) {
   const title = prTitle.trim();
   return BREAKING_SUBJECT.test(title) || RELEASE_TRIGGERING_TYPE.test(title);
 }
 
-export function hasChangelogEntry(changedFiles: readonly string[]): boolean {
+/**
+ * @param {string[]} changedFiles changed file paths
+ * @returns {boolean}
+ */
+export function hasChangelogEntry(changedFiles) {
   return changedFiles.some(
     (file) => CHANGELOG_ENTRY.test(file) && file !== "changelog/README.md",
   );
 }
 
-export type CompletenessResult = {
-  ok: boolean;
-  reason: string;
-};
+/**
+ * @typedef {object} CompletenessResult
+ * @property {boolean} ok whether the gate passes
+ * @property {string} reason human-readable explanation
+ */
 
-export function checkCompleteness(
-  prTitle: string,
-  changedFiles: readonly string[],
-): CompletenessResult {
+/**
+ * @param {string} prTitle pull request title
+ * @param {string[]} changedFiles changed file paths
+ * @returns {CompletenessResult}
+ */
+export function checkCompleteness(prTitle, changedFiles) {
   if (!isReleaseTriggering(prTitle)) {
     return {
       ok: true,
@@ -62,17 +76,25 @@ export function checkCompleteness(
   };
 }
 
-function readChangedFiles(baseRef: string): string[] {
-  const out = execSync(`git diff --name-only origin/${baseRef}...HEAD`, {
-    encoding: "utf8",
-  });
+/**
+ * @param {string} baseRef
+ * @returns {string[]}
+ */
+function readChangedFiles(baseRef) {
+  // execFileSync (argv array, no shell) rather than execSync — consistent with
+  // finalise-changelog.mjs and keeps `baseRef` (from env) out of a shell string.
+  const out = execFileSync(
+    "git",
+    ["diff", "--name-only", `origin/${baseRef}...HEAD`],
+    { encoding: "utf8" },
+  );
   return out
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
 }
 
-function main(): void {
+function main() {
   const prTitle = process.env.PR_TITLE ?? "";
   const baseRef = process.env.BASE_REF || "main";
 
@@ -90,6 +112,8 @@ function main(): void {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Only run when invoked as a CLI, not when imported (e.g. by unit tests
+// exercising the pure functions).
+if (argv[1] && import.meta.filename === argv[1]) {
   main();
 }

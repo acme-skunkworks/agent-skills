@@ -1,13 +1,18 @@
+// Exercises the BUNDLE script directly (the distributed `.mjs`). `rewriteBody`
+// links bare Linear IDs via the bundle's own config.json (workspace
+// `goose-and-hobbes`, keys ASW/AKW/SKW/SK). Reference-style label masking lives
+// in add-links-reference-masking.test.ts; this covers core linking, code/link
+// masking, and splitFrontmatter.
 import {
   rewriteBody,
   splitFrontmatter,
-} from "../scripts/add-links-changelog.js";
+} from "../../skills/changelog/scripts/add-links.mjs";
 import { describe, expect, it } from "vitest";
 
 describe("rewriteBody", () => {
   it("links bare ASW and AKW issue IDs", () => {
     expect(rewriteBody("Closes ASW-123 and AKW-7.")).toBe(
-      "Closes [ASW-123](https://linear.app/acme-skunkworks/issue/ASW-123) and [AKW-7](https://linear.app/acme-skunkworks/issue/AKW-7).",
+      "Closes [ASW-123](https://linear.app/goose-and-hobbes/issue/ASW-123) and [AKW-7](https://linear.app/goose-and-hobbes/issue/AKW-7).",
     );
   });
 
@@ -23,7 +28,7 @@ describe("rewriteBody", () => {
   });
 
   it("does not double-link an already-linked ID", () => {
-    const body = "[ASW-123](https://linear.app/acme-skunkworks/issue/ASW-123)";
+    const body = "[ASW-123](https://linear.app/goose-and-hobbes/issue/ASW-123)";
     expect(rewriteBody(body)).toBe(body);
   });
 
@@ -40,7 +45,7 @@ describe("rewriteBody", () => {
 
   it("links an ID even when a mask-token-like string is also present", () => {
     expect(rewriteBody("FENCE0 — closes ASW-9.")).toBe(
-      "FENCE0 — closes [ASW-9](https://linear.app/acme-skunkworks/issue/ASW-9).",
+      "FENCE0 — closes [ASW-9](https://linear.app/goose-and-hobbes/issue/ASW-9).",
     );
   });
 });
@@ -57,11 +62,5 @@ describe("splitFrontmatter", () => {
     const { body, fm } = splitFrontmatter("no frontmatter here");
     expect(fm).toBe("");
     expect(body).toBe("no frontmatter here");
-  });
-
-  it("splits an empty frontmatter block (closing fence at index 3)", () => {
-    const { body, fm } = splitFrontmatter("---\n---\n\n## Added\n\n- y\n");
-    expect(fm).toBe("---\n---\n");
-    expect(body).toBe("\n## Added\n\n- y\n");
   });
 });

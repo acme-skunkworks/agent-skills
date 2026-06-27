@@ -20,7 +20,7 @@ describe("affected_packages derivation -> frontmatter", () => {
       [
         "skills/changelog/scripts/add-links.mjs",
         "skills/send-it/SKILL.md",
-        "infrastructure/scripts/finalise-changelog.ts",
+        "infrastructure/scripts/validate-skills.ts",
       ],
       DERIVE_OPTS,
     );

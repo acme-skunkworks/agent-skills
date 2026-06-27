@@ -48,8 +48,8 @@ adds its tests under `tests/skills/<name>/`, importing that skill's bundled
 
 ## Note on `validate-changelog.mjs`
 
-The bundled `validate-changelog.mjs` runs its validation loop at import time and
-does not export `validateEntry`, so it cannot be imported for unit testing
-without changing the shipped bundle. Its field-type and schema rules are covered
-against the `infrastructure/scripts/validate-changelog.ts` twin in
-`infrastructure/tests/validate-changelog.test.ts`.
+Since SK-369 the bundled `validate-changelog.mjs` is the single authored
+validator: it exports a pure `validateEntry(name, raw)` and guards its CLI
+walk behind an `import.meta` check, so it is imported directly for unit testing.
+Its field-type and schema rules are covered in
+`infrastructure/tests/validate-changelog.test.ts` (which imports the bundle).

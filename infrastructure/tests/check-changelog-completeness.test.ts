@@ -2,7 +2,7 @@ import {
   checkCompleteness,
   hasChangelogEntry,
   isReleaseTriggering,
-} from "../scripts/check-changelog-completeness.js";
+} from "../../skills/changelog/scripts/check-changelog-completeness.mjs";
 import { describe, expect, it } from "vitest";
 
 describe("isReleaseTriggering", () => {

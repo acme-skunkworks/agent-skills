@@ -266,7 +266,7 @@ jobs:
           # There is no root CHANGELOG.md (release-please runs with
           # skip-changelog — SK-380). Source the notes from the dated changelog/
           # entry/entries this release stamped with `version: <version>` (the
-          # orchestrator's finalise-changelog.ts sets it before the release PR
+          # orchestrator's finalise-changelog.mjs sets it before the release PR
           # merges). One release PR can bundle several feature merges, so
           # concatenate every matching entry's body.
           notes=""

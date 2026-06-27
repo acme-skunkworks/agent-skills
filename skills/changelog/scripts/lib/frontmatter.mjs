@@ -239,6 +239,16 @@ function parseMapping(lines, startIndent) {
       continue;
     }
 
+    // Inline empty mapping. The serialiser emits `{}` for an empty object (the
+    // symmetric counterpart of `[]` for an empty array); a non-empty mapping is
+    // always written in block form, so `{}` is the only inline object to parse.
+    // Without this, `stats: {}` would fall through to parseScalar and parse back
+    // as the literal string "{}", silently corrupting an empty stats object.
+    if (rest === "{}") {
+      data[key] = {};
+      continue;
+    }
+
     data[key] = parseScalar(rest);
   }
 
@@ -379,8 +389,17 @@ function serialiseValue(key, value, lines) {
   }
 
   if (value !== null && typeof value === "object") {
+    const childEntries = Object.entries(value);
+    // Emit `{}` for an empty mapping so it round-trips as an object, mirroring
+    // `[]` for an empty array. A bare `key:` would re-parse as null, silently
+    // turning an empty `stats: {}` into `stats: null`.
+    if (childEntries.length === 0) {
+      lines.push(`${key}: {}`);
+      return;
+    }
+
     lines.push(`${key}:`);
-    for (const [childKey, childValue] of Object.entries(value)) {
+    for (const [childKey, childValue] of childEntries) {
       const child = serialiseScalar(childValue);
       lines.push(child === "" ? `  ${childKey}:` : `  ${childKey}: ${child}`);
     }
