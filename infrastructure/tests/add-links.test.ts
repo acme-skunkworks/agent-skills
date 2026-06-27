@@ -1,6 +1,6 @@
 // Exercises the BUNDLE script directly (the distributed `.mjs`). `rewriteBody`
 // links bare Linear IDs via the bundle's own config.json (workspace
-// `goose-and-hobbes`, keys ASW/AKW/SKW/SK). Reference-style label masking lives
+// `goose-and-hobbes`, key A). Reference-style label masking lives
 // in add-links-reference-masking.test.ts; this covers core linking, code/link
 // masking, and splitFrontmatter.
 import {
@@ -10,7 +10,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 describe("rewriteBody", () => {
-  it("links bare ASW and AKW issue IDs", () => {
+  it("links bare A- issue IDs", () => {
     expect(rewriteBody("Closes A-123 and A-7.")).toBe(
       "Closes [A-123](https://linear.app/goose-and-hobbes/issue/A-123) and [A-7](https://linear.app/goose-and-hobbes/issue/A-7).",
     );
@@ -23,7 +23,7 @@ describe("rewriteBody", () => {
   });
 
   it("leaves IDs inside fenced code blocks untouched", () => {
-    const body = "```\nASW-123\n```\n";
+    const body = "```\nA-123\n```\n";
     expect(rewriteBody(body)).toBe(body);
   });
 

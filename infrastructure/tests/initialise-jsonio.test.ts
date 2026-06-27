@@ -56,7 +56,7 @@ describe("serialiseConfig", () => {
 
   it("round-trips a file with no changes byte-for-byte (idempotency)", () => {
     const raw =
-      '{\n  "issueKeys": [\n    "ASW"\n  ],\n  "baseBranch": "main"\n}\n';
+      '{\n  "issueKeys": [\n    "A"\n  ],\n  "baseBranch": "main"\n}\n';
     const parsed = parseConfig(raw);
     expect(serialiseConfig(parsed, parsed.data)).toBe(raw);
   });

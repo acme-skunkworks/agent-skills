@@ -4,7 +4,7 @@ import { parseConfig } from "../../skills/changelog/scripts/lib/config.mjs";
 import { describe, expect, it } from "vitest";
 
 const VALID = {
-  issueKeys: ["ASW"],
+  issueKeys: ["A"],
   linearWorkspaceSlug: "goose-and-hobbes",
 };
 
@@ -19,7 +19,7 @@ describe("parseConfig", () => {
       baseBranch: "main",
       changelogDir: "changelog",
       fallbackPackage: "infrastructure",
-      issueKeys: ["ASW"],
+      issueKeys: ["A"],
       linearWorkspaceSlug: "goose-and-hobbes",
       packageRoots: ["apps", "packages", "services"],
     });
@@ -60,10 +60,10 @@ describe("parseConfig", () => {
 
   it("rejects blank (whitespace-only) string values", () => {
     expect(() =>
-      parseConfig(raw({ issueKeys: ["ASW"], linearWorkspaceSlug: "   " })),
+      parseConfig(raw({ issueKeys: ["A"], linearWorkspaceSlug: "   " })),
     ).toThrow(/linearWorkspaceSlug/);
     expect(() =>
-      parseConfig(raw({ ...VALID, issueKeys: ["ASW", "  "] })),
+      parseConfig(raw({ ...VALID, issueKeys: ["A", "  "] })),
     ).toThrow(/issueKeys/);
     expect(() =>
       parseConfig(raw({ ...VALID, packageRoots: ["apps", ""] })),
@@ -83,13 +83,13 @@ describe("parseConfig", () => {
   });
 
   it("fails loudly when issueKeys contains a non-string", () => {
-    expect(() => parseConfig(raw({ ...VALID, issueKeys: ["ASW", 7] }))).toThrow(
+    expect(() => parseConfig(raw({ ...VALID, issueKeys: ["A", 7] }))).toThrow(
       /issueKeys/,
     );
   });
 
   it("fails loudly when linearWorkspaceSlug is missing or empty", () => {
-    expect(() => parseConfig(raw({ issueKeys: ["ASW"] }))).toThrow(
+    expect(() => parseConfig(raw({ issueKeys: ["A"] }))).toThrow(
       /linearWorkspaceSlug/,
     );
     expect(() =>
