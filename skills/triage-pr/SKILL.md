@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.3.2
+  version: 0.4.0
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
 ---
@@ -39,11 +39,11 @@ phases, choosing the phase from the PR's draft state:
   invalid ones with technical reasoning, then loop back through Phase A.
 
 This skill complements `/send-it` (which **opens** the draft PR). **By default it
-never flips the PR from draft to ready** — that is the human's call (and the gate
-that turns AI review on). An **opt-in** (`promoteOnGreen` / `--promote`, default-off)
-lets it flip *after* a cleanly-green Phase A — gated on proven-green CI, **no
-unresolved human review threads**, and no unresolved base drift — then continue into
-Phase B (see Step 6). See [`references/review-discipline.md`](references/review-discipline.md)
+flips the PR from draft to ready** *after* a cleanly-green Phase A — gated on
+proven-green CI, **no unresolved human review threads**, and no unresolved base
+drift — then continues into Phase B (the ready-flip is the gate that turns AI review
+on; see Step 6). Pass `--no-promote` (or set `promoteOnGreen: false`) to **opt out**
+and leave the flip to the human, stopping at green. See [`references/review-discipline.md`](references/review-discipline.md)
 for the full review-reception and verification rules folded into Phase B.
 
 ## Configuration
@@ -57,7 +57,7 @@ match the consuming repo's review bots.
 | `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback. Matched against `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match (the GraphQL API returns the bare form). Edit to match your install — review-bot logins vary per repo. `github-actions` is deliberately excluded by default: it posts CI status and release-PR comments, not code review, so Phase B would otherwise action them as findings; add it only if your install genuinely posts review-type comments via the Actions bot. | `["claude", "cursor", "coderabbitai"]` |
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers. Bounds the fix-and-watch loop so it can't spin forever. | `5` |
 | `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before the thread is resolved (the audit trail). `false` resolves accepted threads silently for maintainers who dislike bot-reply noise — declines always reply with reasoning regardless. | `true` |
-| `promoteOnGreen` | When `true`, after Phase A finishes with **every** required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-off**: unset, the skill stops at green and leaves the flip to the human, exactly as before. Promotion is suppressed unless the green is *proven* (Step 6's watched rollup, never "no failures yet"), there are **no unresolved human review threads**, and `mergeStateStatus` shows no unresolved base drift (`BEHIND` / `DIRTY`). `--promote` / `--no-promote` override this per run; `--ci-only` and `--dry-run` never promote. | `false` |
+| `promoteOnGreen` | When `true`, after Phase A finishes with **every** required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**: set `false` (or pass `--no-promote`) to stop at green and leave the flip to the human. Promotion is suppressed unless the green is *proven* (Step 6's watched rollup, never "no failures yet"), there are **no unresolved human review threads**, and `mergeStateStatus` shows no unresolved base drift (`BEHIND` / `DIRTY`). `--promote` / `--no-promote` override this per run; `--ci-only` and `--dry-run` never promote. | `true` |
 
 Only the configured `reviewBots` are actioned in Phase B. Human review comments
 are surfaced in the final report but never auto-actioned, replied to, or
@@ -183,8 +183,9 @@ gh pr checks <pr> --watch
 - **Bound the loop** by `maxCiRounds`. When exhausted, stop and report the
   remaining failures as blockers rather than looping forever.
 - Green **and ready** → continue to Phase B.
-- Green **and draft**, promotion **disabled** (default) → report green and **stop**.
-- Green **and draft**, promotion **enabled** (`promoteOnGreen` / `--promote`) → run
+- Green **and draft**, promotion **disabled** (`--no-promote` / `promoteOnGreen: false`)
+  → report green and **stop**.
+- Green **and draft**, promotion **enabled** (default, or `--promote`) → run
   the **promotion gate** before flipping. All three must hold:
   1. **Proven green** — the green is *this step's* watched-rollup green (not pending /
      "no failures yet"); apply the same exit-code discipline Phase A already enforces,
