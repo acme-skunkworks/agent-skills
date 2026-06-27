@@ -159,6 +159,32 @@ describe("configKeyParityErrors", () => {
     expect(errors.join("\n")).toContain("bundleVersioning.manifest");
   });
 
+  // A-555: bundleVersioning is config-only optional (single-package templates omit
+  // it). config.json may carry the whole subtree while the example omits it entirely.
+  it("exempts a config-only bundleVersioning subtree when the example omits it wholesale", () => {
+    const config = JSON.stringify({
+      baseBranch: "main",
+      bundleVersioning: {
+        manifest: "package.json",
+        root: "skills",
+        skillFile: "SKILL.md",
+      },
+    });
+    const example = JSON.stringify({ baseBranch: "main" });
+    expect(configKeyParityErrors("s", config, example)).toEqual([]);
+  });
+
+  // …but a partially-present block is still a genuine mismatch, not exempted.
+  it("still flags a partial bundleVersioning block (example has the top-level key)", () => {
+    const config = JSON.stringify({
+      bundleVersioning: { manifest: "package.json", root: "skills" },
+    });
+    const example = JSON.stringify({ bundleVersioning: { root: "skills" } });
+    expect(configKeyParityErrors("s", config, example).join("\n")).toContain(
+      "bundleVersioning.manifest",
+    );
+  });
+
   it("reports invalid JSON instead of throwing", () => {
     const errors = configKeyParityErrors("s", "{not json", JSON.stringify({}));
     expect(errors.some((error) => error.includes("not valid JSON"))).toBe(true);
