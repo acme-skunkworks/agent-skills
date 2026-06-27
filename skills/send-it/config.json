@@ -2,5 +2,6 @@
   "baseBranch": "main",
   "shippablePaths": ["skills/"],
   "shippableManifestKeys": ["name", "version", "files", "publishConfig"],
-  "bundleVersioning": { "root": "skills", "manifest": "package.json", "skillFile": "SKILL.md" }
+  "bundleVersioning": { "root": "skills", "manifest": "package.json", "skillFile": "SKILL.md" },
+  "changelog": true
 }

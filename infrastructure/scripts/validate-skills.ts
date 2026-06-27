@@ -118,6 +118,88 @@ export function validateSkill(
   return errors;
 }
 
+/**
+ * Every dotted key path in a JSON object (recursing into nested objects, but not
+ * arrays — array contents are values, not structure). `{a: 1, b: {c: 2}}` →
+ * `["a", "b", "b.c"]`.
+ */
+function keyPaths(value: unknown, prefix = ""): string[] {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  const out: string[] = [];
+  for (const [key, nested] of Object.entries(
+    value as Record<string, unknown>,
+  )) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    out.push(path, ...keyPaths(nested, path));
+  }
+
+  return out;
+}
+
+/**
+ * When a bundle ships BOTH `config.json` and `config.example.json`, their key
+ * structures must match — the example is the template a consumer copies over, so a
+ * key in one but not the other means an adopter silently gets a stale or
+ * incomplete config (A-538). Values may differ (the example carries placeholders);
+ * only the key sets are compared, recursively. Skills that ship only one file
+ * (e.g. `preflight`, whose config lives at the consumer root) are exempt. `*Raw`
+ * are null when the file is absent.
+ */
+export function configKeyParityErrors(
+  directory: string,
+  configRaw: null | string,
+  exampleRaw: null | string,
+): string[] {
+  if (configRaw === null || exampleRaw === null) {
+    return [];
+  }
+
+  const errors: string[] = [];
+  let config: unknown;
+  let example: unknown;
+  try {
+    config = JSON.parse(configRaw);
+  } catch (error) {
+    errors.push(
+      `${directory}: config.json is not valid JSON: ${(error as Error).message}`,
+    );
+  }
+
+  try {
+    example = JSON.parse(exampleRaw);
+  } catch (error) {
+    errors.push(
+      `${directory}: config.example.json is not valid JSON: ${(error as Error).message}`,
+    );
+  }
+
+  if (errors.length > 0) {
+    return errors;
+  }
+
+  const configKeys = new Set(keyPaths(config));
+  const exampleKeys = new Set(keyPaths(example));
+  const onlyInConfig = [...configKeys].filter((key) => !exampleKeys.has(key));
+  const onlyInExample = [...exampleKeys].filter((key) => !configKeys.has(key));
+
+  if (onlyInConfig.length > 0) {
+    errors.push(
+      `${directory}: config.json has keys missing from config.example.json: ${onlyInConfig.join(", ")}`,
+    );
+  }
+
+  if (onlyInExample.length > 0) {
+    errors.push(
+      `${directory}: config.example.json has keys missing from config.json: ${onlyInExample.join(", ")}`,
+    );
+  }
+
+  return errors;
+}
+
 function listSkillDirectories(directory: string): string[] {
   let stat;
   try {
@@ -160,6 +242,11 @@ function main(): void {
         directory,
         readOrNull(join(base, "package.json")),
         readOrNull(join(base, "SKILL.md")),
+      ),
+      ...configKeyParityErrors(
+        directory,
+        readOrNull(join(base, "config.json")),
+        readOrNull(join(base, "config.example.json")),
       ),
     );
   }
