@@ -36,7 +36,7 @@ function requireValue(flag, value) {
   return value;
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const options = {
     json: false,
     repoRoot: process.cwd(),
@@ -109,7 +109,7 @@ function readStdinPayload() {
  * Coerce an acceptDrift entry to a list of key names, tolerating malformed input
  * (non-array, or array with non-string members) without throwing.
  */
-function asKeyList(value) {
+export function asKeyList(value) {
   return Array.isArray(value)
     ? value.filter((key) => typeof key === "string")
     : [];
@@ -119,8 +119,12 @@ function asKeyList(value) {
  * Drift keys accepted for a given skill: keyed by skill name or its repo-relative
  * config path.
  */
-function acceptedDriftFor(skill, acceptDrift, repoRoot) {
-  const rel = relative(repoRoot, skill.configPath);
+export function acceptedDriftFor(skill, acceptDrift, repoRoot) {
+  // The acceptDrift contract uses POSIX-separated config paths (they come from
+  // hand-written JSON / Linear facts). `relative()` emits backslashes on
+  // Windows, so normalise to forward slashes before matching, or a path-keyed
+  // entry would silently fail to match there.
+  const rel = relative(repoRoot, skill.configPath).replaceAll("\\", "/");
   return [
     ...new Set([
       ...asKeyList(acceptDrift[skill.name]),

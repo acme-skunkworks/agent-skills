@@ -14,6 +14,7 @@ detector serves every skill that uses a key. A key found in a skill's
 | `changelogDir` | changelog | Structural default | `changelog` |
 | `packageRoots` | changelog | `pnpm-workspace.yaml` `packages:` globs → top dirs; else root `package.json` `workspaces` field | `["apps", "packages", "services"]` |
 | `fallbackPackage` | changelog | Structural default | `infrastructure` |
+| `affectedPackages` | changelog | `true` when a workspace config is detected (same signal as `packageRoots`); `false` otherwise — so single-package repos omit the redundant `affected_packages` field | `false` |
 | `mainBranch` | cleanup-repo | Same as `baseBranch` (the detected default branch) | `main` |
 | `protectedBranches` | cleanup-repo | Structural default | `["main"]` |
 | `shippablePaths` | send-it | Root `package.json` `files` field (paths npm ships), else detected package roots | `[]` |

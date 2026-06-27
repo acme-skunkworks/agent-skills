@@ -4,12 +4,12 @@
 // lockfile is honoured before validating. Assumes the consumer repo uses pnpm
 // with a committed lockfile; skip this step if yours does not.
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
 
-function parseVersion(raw) {
+export function parseVersion(raw) {
   // Accept full and partial versions: a bare `22` or `22.5` (common in
   // `.nvmrc`, which is what `nvm use` writes) pads the missing parts with 0.
   const match = String(raw)
@@ -27,7 +27,7 @@ function parseVersion(raw) {
 // without a semver dependency: `>=22`, `>=22.1.0`, `^22.0.0`, `~22.1`, `22.x`,
 // `>=22 <23`, or a bare `22`. We take the first version-like token (the lower
 // bound for the ranges we emit) and treat `x`/`*`/missing parts as 0.
-function coerceMinVersion(spec) {
+export function coerceMinVersion(spec) {
   const match = String(spec).match(/(\d+)(?:\.(\d+|[xX*]))?(?:\.(\d+|[xX*]))?/);
   if (!match) {
     return null;
@@ -40,7 +40,7 @@ function coerceMinVersion(spec) {
   return [Number(match[1]), part(match[2]), part(match[3])];
 }
 
-function compareVersions(a, b) {
+export function compareVersions(a, b) {
   for (let index = 0; index < 3; index++) {
     if (a[index] > b[index]) {
       return 1;
@@ -54,7 +54,7 @@ function compareVersions(a, b) {
   return 0;
 }
 
-function satisfiesGte(versionParts, minParts) {
+export function satisfiesGte(versionParts, minParts) {
   return compareVersions(versionParts, minParts) >= 0;
 }
 
@@ -108,48 +108,70 @@ function readNvmrc() {
   return version;
 }
 
-const active = parseVersion(process.version);
-if (!active) {
-  console.error(
-    `preflight-changelog-ci: could not parse active Node version "${process.version}"`,
-  );
-  process.exit(1);
+function main() {
+  const active = parseVersion(process.version);
+  if (!active) {
+    console.error(
+      `preflight-changelog-ci: could not parse active Node version "${process.version}"`,
+    );
+    process.exit(1);
+  }
+
+  const enginesMin = readEnginesNode();
+  const nvmrc = readNvmrc();
+
+  if (!satisfiesGte(active, enginesMin)) {
+    const required = enginesMin.join(".");
+    console.error(
+      `Active Node is ${process.version}; this repo requires >=${required} (see package.json engines and .nvmrc).`,
+    );
+    console.error("Switch Node (e.g. nvm use, fnm use) and re-run.");
+    process.exit(1);
+  }
+
+  if (!satisfiesGte(active, nvmrc)) {
+    const recommended = nvmrc.join(".");
+    console.error(
+      `Active Node is ${process.version}; .nvmrc recommends ${recommended}.`,
+    );
+    console.error("Switch Node (e.g. nvm use, fnm use) and re-run.");
+    process.exit(1);
+  }
+
+  const install = spawnSync("pnpm", ["install", "--frozen-lockfile"], {
+    cwd: ROOT,
+    shell: process.platform === "win32",
+    stdio: "inherit",
+  });
+
+  if (install.error) {
+    console.error(
+      `preflight-changelog-ci: could not run pnpm — ${install.error.message}`,
+    );
+    process.exit(1);
+  }
+
+  if (install.status !== 0) {
+    process.exit(install.status ?? 1);
+  }
 }
 
-const enginesMin = readEnginesNode();
-const nvmrc = readNvmrc();
+// Only run when invoked as a CLI, not when imported (e.g. by unit tests
+// exercising the pure version helpers). Compare realpath'd paths so symlinks
+// (macOS /var→/private/var, pnpm's store) don't cause a false negative that
+// skips main().
+function isCliEntry() {
+  if (!process.argv[1]) {
+    return false;
+  }
 
-if (!satisfiesGte(active, enginesMin)) {
-  const required = enginesMin.join(".");
-  console.error(
-    `Active Node is ${process.version}; this repo requires >=${required} (see package.json engines and .nvmrc).`,
-  );
-  console.error("Switch Node (e.g. nvm use, fnm use) and re-run.");
-  process.exit(1);
+  try {
+    return realpathSync(import.meta.filename) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
 }
 
-if (!satisfiesGte(active, nvmrc)) {
-  const recommended = nvmrc.join(".");
-  console.error(
-    `Active Node is ${process.version}; .nvmrc recommends ${recommended}.`,
-  );
-  console.error("Switch Node (e.g. nvm use, fnm use) and re-run.");
-  process.exit(1);
-}
-
-const install = spawnSync("pnpm", ["install", "--frozen-lockfile"], {
-  cwd: ROOT,
-  shell: process.platform === "win32",
-  stdio: "inherit",
-});
-
-if (install.error) {
-  console.error(
-    `preflight-changelog-ci: could not run pnpm — ${install.error.message}`,
-  );
-  process.exit(1);
-}
-
-if (install.status !== 0) {
-  process.exit(install.status ?? 1);
+if (isCliEntry()) {
+  main();
 }

@@ -105,6 +105,13 @@ describe("workspace pure parsers", () => {
     expect(parseWorkspaceGlobs(yaml)).toEqual(["apps/*", "packages/ui"]);
   });
 
+  it("parseWorkspaceGlobs strips quotes and keeps tab-indented list items (A-465)", () => {
+    // Tab-indented items must not be read as a new top-level key ending the
+    // block, and surrounding quotes are stripped.
+    const yaml = "packages:\n\t- 'apps/*'\n\t- \"packages/*\"\n";
+    expect(parseWorkspaceGlobs(yaml)).toEqual(["apps/*", "packages/*"]);
+  });
+
   it("rootsFromGlobs reduces globs to distinct top-level roots, skipping ., *, and negations", () => {
     expect(
       rootsFromGlobs(["apps/*", "packages/ui", ".", "*", "!packages/private/*"]),

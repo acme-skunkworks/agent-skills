@@ -4,5 +4,6 @@
   "baseBranch": "main",
   "changelogDir": "changelog",
   "packageRoots": ["apps", "packages", "services"],
-  "fallbackPackage": "infrastructure"
+  "fallbackPackage": "infrastructure",
+  "affectedPackages": true
 }

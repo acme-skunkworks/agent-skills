@@ -20,7 +20,7 @@ compatibility: >-
   Linear debt-issue step needs the Linear MCP server; skip it silently if
   unavailable.
 metadata:
-  version: 0.1.4
+  version: 0.1.5
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---

@@ -16,7 +16,7 @@ compatibility: >-
   `preflight-changelog-ci.mjs` step assumes the consumer repo uses pnpm with a
   committed lockfile; skip it if yours does not.
 metadata:
-  version: 0.4.1
+  version: 0.5.0
   author: Rob Easthope
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(node:*), Bash(pnpm:*)
 ---
@@ -60,6 +60,7 @@ keep generic, overridable defaults:
 | `changelogDir` | Directory the dated entries live in (scanned by the enrichment + validation scripts). | `"changelog"` |
 | `packageRoots` | Monorepo dir prefixes mapping `<root>/<x>/…` → package `<x>` when deriving `affected_packages`. | `["apps", "packages", "services"]` |
 | `fallbackPackage` | Package name for changed paths matching no `packageRoots` prefix. | `"infrastructure"` |
+| `affectedPackages` | Whether to emit the `affected_packages` field at all. Leave `false` for single-package repos (the field is write-only and redundant there — entries stay clean); set `true` in genuine monorepos. `initialise-skills` flips it on when it detects a workspace config. | `false` |
 
 All bundled scripts use only Node built-ins — no `npm install`, no build step.
 They operate on the **consumer repo's root `changelog/` directory** (run them
@@ -100,8 +101,10 @@ crux of the contract; see [`references/changelog-contract.md`](references/change
 for the full rules. In short:
 
 - **Authored here:** `title`, `release_note`, `category`, `breaking`, `issues`,
-  `co_authors`, `author`, and `affected_packages` (written by the enrichment
-  script in Step 5, not hand-edited).
+  `co_authors`, `author`, and — **only when `affectedPackages` is on** —
+  `affected_packages` (written by the enrichment script in Step 5, not
+  hand-edited). Single-package repos leave `affectedPackages: false` (the
+  default) and omit the field entirely.
 - **`created_at` is sacred** — set once on create (UTC time of first run); on
   update, preserve it verbatim.
 - **Never authored here:** `stats` (`files_changed`, `loc_added`, `loc_removed`)
@@ -144,8 +147,10 @@ leave `merged_at` / `commit` / `merge_strategy` / `stats` alone; update `pr` onl
 if it was blank and a PR now exists.
 
 Use the frontmatter field order shown in
-[`references/changelog-contract.md`](references/changelog-contract.md), emitting
-`affected_packages: []` as a placeholder — the script fills it in place.
+[`references/changelog-contract.md`](references/changelog-contract.md). **Only when
+`affectedPackages` is on**, emit `affected_packages: []` as a placeholder — the
+script fills it in place. When it is off (the single-package default), omit the
+field; `set-affected-packages.mjs` is a no-op.
 
 Then run the two deterministic enrichment scripts from the consumer repo root
 (both idempotent; they match the entry by its `branch:` frontmatter and leave the
