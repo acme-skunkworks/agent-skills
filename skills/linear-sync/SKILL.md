@@ -16,6 +16,7 @@ compatibility: >-
   cannot run — it has no non-MCP fallback.
 metadata:
   version: 0.2.0
+  author: Rob Easthope
 allowed-tools: Read, Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 

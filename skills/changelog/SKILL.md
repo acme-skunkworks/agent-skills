@@ -17,6 +17,7 @@ compatibility: >-
   committed lockfile; skip it if yours does not.
 metadata:
   version: 0.4.0
+  author: Rob Easthope
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(node:*), Bash(pnpm:*)
 ---
 

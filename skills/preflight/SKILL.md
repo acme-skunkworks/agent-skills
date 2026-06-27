@@ -21,6 +21,7 @@ compatibility: >-
   unavailable.
 metadata:
   version: 0.1.4
+  author: Rob Easthope
 allowed-tools: Read, Bash(git:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
