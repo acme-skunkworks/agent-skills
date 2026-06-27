@@ -56,7 +56,7 @@ Push back — with technical reasoning, not defensiveness — when the suggestio
 A declined finding still gets a reply explaining *why*, then the thread is
 resolved so it doesn't re-surface.
 
-## Symmetric reply + resolve — recorded decisions (SK-410)
+## Symmetric reply + resolve — recorded decisions (A-410)
 
 The reception above is symmetric on purpose. These are the decisions that settled
 how it is implemented, recorded so the SKILL.md steps have something to point at.

@@ -422,7 +422,7 @@ Skip silently if `linear-sync` or the Linear MCP server is unavailable.
 - `--branch=<name>` — override the auto-derived branch name when running on the base
   branch with uncommitted changes.
 - `--issue=<ID>` — prefix the auto-derived slug with a Linear issue ID (e.g.
-  `--issue=ASW-7` → `asw-7-<slug>`, lower-cased). Ignored if `--branch` is given.
+  `--issue=A-7` → `asw-7-<slug>`, lower-cased). Ignored if `--branch` is given.
 - `--base=<branch>` — override `config.json`'s `baseBranch` for this run. Applies
   everywhere the base is used: the `git fetch`, the branch diff
   (`origin/<base>...HEAD`), the PR `--base`, and the `BASE_REF=origin/<branch>` env

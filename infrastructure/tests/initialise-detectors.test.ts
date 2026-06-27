@@ -14,12 +14,12 @@ describe("parseIssueKeysFromBranches", () => {
   it("extracts and uppercases leading issue keys, de-duplicated and sorted", () => {
     expect(
       parseIssueKeysFromBranches([
-        "asw-12-foo",
-        "SK-3-bar",
-        "asw-99-baz",
+        "abc-12-foo",
+        "QA-3-bar",
+        "abc-99-baz",
         "feature/x",
       ]),
-    ).toEqual(["ASW", "SK"]);
+    ).toEqual(["ABC", "QA"]);
   });
 
   it("ignores branches without a leading <KEY>-<num> and single-letter prefixes", () => {

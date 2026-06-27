@@ -27,7 +27,7 @@ template — copy it over `config.json` and fill in your values, or edit
 | Key | Meaning | Default |
 | --- | --- | --- |
 | `linearTeamName` | Linear team **name** used to resolve the live `Done` state. Stable across team-key renames. | `"ACME Skunkworks"` |
-| `issueKeys` | Team-key prefixes that may appear in branch names; the issue-ID regex is built from these. Keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW"]` |
+| `issueKeys` | Team-key prefixes that may appear in branch names; the issue-ID regex is built from these. | `["A"]` |
 | `protectedBranches` | Branches never deleted, locally or remotely. | `["main"]` |
 
 > **Base branch.** v1 assumes the trunk is `origin/main` — merge detection

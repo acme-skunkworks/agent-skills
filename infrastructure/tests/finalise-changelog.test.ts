@@ -44,12 +44,12 @@ function placeholderEntry(): string {
     "commit:",
     "category: fix",
     "breaking: false",
-    'issues: ["ASW-123"]',
+    'issues: ["A-123"]',
     "---",
     "",
     "## Fixed",
     "",
-    "- A thing for ASW-123.",
+    "- A thing for A-123.",
     "",
   ].join("\n");
 }
@@ -70,7 +70,7 @@ describe("finaliseEntry", () => {
       loc_removed: 2,
     });
     expect(content).toContain(
-      "[ASW-123](https://linear.app/goose-and-hobbes/issue/ASW-123)",
+      "[A-123](https://linear.app/goose-and-hobbes/issue/A-123)",
     );
   });
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Publish the current package to npm via the upgraded npm at $PNPM_HOME/npm.
-# Called directly from release.yml's publish step (SK-380 dropped the
+# Called directly from release.yml's publish step (A-380 dropped the
 # changesets/action shell). Calling npm directly rather than `pnpm publish`:
-# diagnosed in eslint-config's ASW-174, pnpm's publish path fails OIDC Trusted
+# diagnosed in eslint-config's A-174, pnpm's publish path fails OIDC Trusted
 # Publishing even when `$PNPM_HOME` is on $PATH and `which npm` correctly
 # resolves to npm 11.x. Calling npm directly works.
 #
@@ -10,7 +10,7 @@
 # of re-publishing (which would 403/409). Lets release.yml retry safely
 # after the version commit lands but before npm has the artifact.
 #
-# Publishes the prebuilt $TARBALL (ASW-328) rather than re-packing the working
+# Publishes the prebuilt $TARBALL (A-328) rather than re-packing the working
 # tree, so the npm tarball, the GitHub Packages tarball, and the attested digest
 # are byte-identical — and no build-time code runs in this credential-holding
 # job. `--provenance` still works on a prebuilt tarball: npm derives the
@@ -83,7 +83,7 @@ printf '%s\n' "$publish_output"
 # npm masks an unauthorised write to an existing package as a 404 (and a missing
 # Trusted Publisher binding surfaces as E404/E403). The bare error gives no hint
 # at the real cause, so on a publish failure that looks like an auth/visibility
-# problem, point straight at the Trusted Publisher config. This is the ASW-174
+# problem, point straight at the Trusted Publisher config. This is the A-174
 # learning applied to `npm publish` rather than the `npm view` probe.
 if [ "$publish_status" -ne 0 ]; then
   if printf '%s' "$publish_output" | grep -qiE 'E404|404 Not Found|you do not have permission|E403|403 Forbidden'; then
@@ -98,7 +98,7 @@ Check npmjs.com → $NAME → Settings → Trusted Publisher and confirm it list
   • repository:  acme-skunkworks/agent-skills
   • workflow:    release.yml
   • environment: npm-release
-See CLAUDE.md "Flip-to-public checklist" / ASW-174.
+See CLAUDE.md "Flip-to-public checklist" / A-174.
 ──────────────────────────────────────────────────────────────────────────────
 EOF
   fi

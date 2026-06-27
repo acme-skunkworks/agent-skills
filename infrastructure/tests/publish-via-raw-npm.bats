@@ -7,7 +7,7 @@
 # package.json parsing) resolves normally.
 #
 # Unlike eslint-config's public variant this script carries a `private: true`
-# dormancy skip. Like it (since ASW-345 / the build-once split) it publishes the
+# dormancy skip. Like it (since A-345 / the build-once split) it publishes the
 # prebuilt $TARBALL with `--access public --provenance`. The fixture
 # package.json therefore sets `"private": false` to exercise the publish paths,
 # and a dedicated test covers the dormant skip.
@@ -24,7 +24,7 @@ setup() {
 { "name": "@test/pkg", "version": "1.0.0", "private": false }
 EOF
 
-  # The prebuilt tarball the workflow packs, uploads and downloads (ASW-328).
+  # The prebuilt tarball the workflow packs, uploads and downloads (A-328).
   # Contents are irrelevant — the fake npm never reads it.
   TARBALL_PATH="${BATS_TEST_TMPDIR}/test-pkg-1.0.0.tgz"
   printf 'fake tarball' > "$TARBALL_PATH"

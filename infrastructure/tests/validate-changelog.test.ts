@@ -36,7 +36,7 @@ describe("validateEntry", () => {
         "co_authors: []",
         "category: fix",
         "breaking: false",
-        'issues: ["ASW-123"]',
+        'issues: ["A-123"]',
         "stats:",
         "  files_changed: 3",
         "  loc_added: 10",

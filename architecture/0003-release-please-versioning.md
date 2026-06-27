@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-23
-- **Tracking:** [SK-380](https://linear.app/goose-and-hobbes/issue/SK-380)
+- **Tracking:** [A-380](https://linear.app/goose-and-hobbes/issue/A-380)
 - **Supersedes:** [ADR-0002](0002-repo-level-npm-versioning.md) *mechanism* only — Decision 4 (the Changesets package-name guard) in full, and the Changesets-engine framing in Decisions 1–2. ADR-0002's core decision (repo-level npm versioning; the root is the single published package; skills versioned out-of-band) **stands unchanged**.
 - **Superseded by:** —
 
@@ -10,7 +10,7 @@
 
 ADR-0002 settled *what* is versioned — the root `@acme-skunkworks/agent-skills` as a single repo-level package, with skills versioned out-of-band via `SKILL.md metadata.version`. It assumed **Changesets** as the engine that decides the bump: every PR wrote a root-named `.changeset/*.md`, a CI guard (`validate-changesets.ts`) rejected skill-named changesets, and the private `release-orchestrator` ran `changeset version` to cut the version PR.
 
-The `@acme-skunkworks` estate is standardising on **release-please** (Conventional Commits) for cross-repo consistency — the estate-wide ADR 0002 lives in eslint-config, ported to the siblings as SK-371 (eslint-config), SK-379 (markdownlint-config), and **SK-380 (this repo)**. release-please infers the bump from the merged Conventional-Commit **PR title** instead of an explicit changeset file, so the repo squash-merges and the title *is* the release declaration. Keeping Changesets here while the rest of the estate flips would leave one repo with a divergent release flow and a second engine to maintain.
+The `@acme-skunkworks` estate is standardising on **release-please** (Conventional Commits) for cross-repo consistency — the estate-wide ADR 0002 lives in eslint-config, ported to the siblings as A-371 (eslint-config), A-379 (markdownlint-config), and **A-380 (this repo)**. release-please infers the bump from the merged Conventional-Commit **PR title** instead of an explicit changeset file, so the repo squash-merges and the title *is* the release declaration. Keeping Changesets here while the rest of the estate flips would leave one repo with a divergent release flow and a second engine to maintain.
 
 The change is **strand A only**: it swaps the engine that decides the bump. Everything else ADR-0002 fixed — repo-level single package, `files: ["skills/"]` as the published surface, no `pnpm-workspace.yaml`, skills versioned by hand — is untouched.
 
@@ -33,7 +33,7 @@ The change is **strand A only**: it swaps the engine that decides the bump. Ever
 ## Rejected alternatives
 
 - **Keep Changesets here.** Rejected: it leaves this repo as the estate's lone divergent release flow, against the cross-repo-consistency driver of ADR-0002.
-- **Adopt release-please's own changelog (`skip-changelog: false`).** Rejected: the dated `changelog/` system (ADR-0002 / ASW-345) is richer (per-change frontmatter, enrichment, Linear links) and is what `release.yml` and consumers already read. release-please runs with `skip-changelog: true` so the two don't collide.
+- **Adopt release-please's own changelog (`skip-changelog: false`).** Rejected: the dated `changelog/` system (ADR-0002 / A-345) is richer (per-change frontmatter, enrichment, Linear links) and is what `release.yml` and consumers already read. release-please runs with `skip-changelog: true` so the two don't collide.
 
 ## Consequences
 

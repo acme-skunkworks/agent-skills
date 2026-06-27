@@ -15,7 +15,7 @@ compatibility: >-
   read needs the `git` CLI. If the Linear MCP server is unavailable the skill
   cannot run — it has no non-MCP fallback.
 metadata:
-  version: 0.2.0
+  version: 0.2.1
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -38,7 +38,7 @@ match the consuming repo:
 | Key | Meaning | Default |
 | --- | --- | --- |
 | `linearTeamName` | Linear team **name** used to resolve the live state IDs. Use the name, not the key — the key is renamed over time but the name is stable. | `"ACME Skunkworks"` |
-| `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. Keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW", "SK"]` |
+| `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. | `["A"]` |
 
 A neutral [`config.example.json`](config.example.json) ships alongside it as a
 template — copy it over `config.json` and fill in your values, or edit
@@ -81,10 +81,10 @@ This is the canonical gotcha for adopters — resolve by name, every run.
 ## Extracting issue IDs from the branch
 
 Build the issue-ID regex by joining `issueKeys` with `|`:
-`\b((?:ASW|AKW|SKW)-\d+)\b` for the defaults above. Match it against the
+`\bA-\d+\b` for the default above. Match it against the
 **upper-cased** branch name — branches like `asw-7-as-acquired` carry the key in
-lower case, and a flow such as `--issue=ASW-7` produces upper-case branch names
-like `ASW-7-as-acquired`. Keeping the legacy keys means leftover branches from
+lower case, and a flow such as `--issue=A-7` produces upper-case branch names
+like `A-7-as-acquired`. Keeping the legacy keys means leftover branches from
 before a team-key rename are still recognised. Deduplicate the matches. Bogus or
 malformed IDs simply error on lookup and are skipped with a warning — no separate
 validation pass.
@@ -110,8 +110,8 @@ Apply a transition by calling `mcp__linear-server__save_issue` with
 
 **Under `--dry-run`, skip this `save_issue` call.** Still read each issue's
 current state with `get_issue` and decide whether it _would_ transition, but
-report the intended move (e.g. `ASW-7: Todo → In Progress (would apply)` /
-`ASW-9: In Review (would skip — already at/past target)`) instead of writing it.
+report the intended move (e.g. `A-7: Todo → In Progress (would apply)` /
+`A-9: In Review (would skip — already at/past target)`) instead of writing it.
 
 > `Canceled` is the Linear API's own US spelling — keep it as-is when referenced
 > in code or config.

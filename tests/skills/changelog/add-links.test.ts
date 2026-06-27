@@ -15,23 +15,23 @@ const url = (id: string) => `https://linear.app/goose-and-hobbes/issue/${id}`;
 
 describe("rewriteBody — issue-key linking (happy path)", () => {
   it("links a bare issue ID for each configured team key", () => {
-    expect(rewriteBody("Closes ASW-12.")).toBe(
-      `Closes [ASW-12](${url("ASW-12")}).`,
+    expect(rewriteBody("Closes A-12.")).toBe(
+      `Closes [A-12](${url("A-12")}).`,
     );
-    expect(rewriteBody("Closes AKW-3.")).toBe(
-      `Closes [AKW-3](${url("AKW-3")}).`,
+    expect(rewriteBody("Closes A-3.")).toBe(
+      `Closes [A-3](${url("A-3")}).`,
     );
-    expect(rewriteBody("Closes SKW-9.")).toBe(
-      `Closes [SKW-9](${url("SKW-9")}).`,
+    expect(rewriteBody("Closes A-9.")).toBe(
+      `Closes [A-9](${url("A-9")}).`,
     );
-    expect(rewriteBody("Closes SK-401.")).toBe(
-      `Closes [SK-401](${url("SK-401")}).`,
+    expect(rewriteBody("Closes A-401.")).toBe(
+      `Closes [A-401](${url("A-401")}).`,
     );
   });
 
   it("links several IDs in one body", () => {
-    expect(rewriteBody("ASW-1 and SK-2 both landed.")).toBe(
-      `[ASW-1](${url("ASW-1")}) and [SK-2](${url("SK-2")}) both landed.`,
+    expect(rewriteBody("A-1 and A-2 both landed.")).toBe(
+      `[A-1](${url("A-1")}) and [A-2](${url("A-2")}) both landed.`,
     );
   });
 
@@ -41,31 +41,31 @@ describe("rewriteBody — issue-key linking (happy path)", () => {
   });
 
   it("is idempotent — a second pass does not double-link", () => {
-    const once = rewriteBody("Closes ASW-12.");
+    const once = rewriteBody("Closes A-12.");
     expect(rewriteBody(once)).toBe(once);
   });
 });
 
 describe("rewriteBody — masking", () => {
   it("does not link an ID inside inline code", () => {
-    const body = "Run `validate ASW-12` before merge.";
+    const body = "Run `validate A-12` before merge.";
     expect(rewriteBody(body)).toBe(body);
   });
 
   it("does not link an ID inside a fenced code block", () => {
-    const body = "```\nbranch ASW-12 created\n```\n";
+    const body = "```\nbranch A-12 created\n```\n";
     expect(rewriteBody(body)).toBe(body);
   });
 
   it("does not re-link an already-linked inline ID", () => {
-    const body = `See [ASW-12](${url("ASW-12")}) for detail.`;
+    const body = `See [A-12](${url("A-12")}) for detail.`;
     expect(rewriteBody(body)).toBe(body);
   });
 
   it("links a bare ID whilst leaving a fenced/inline-code occurrence masked", () => {
-    const body = "Closes ASW-12; see `ASW-12` and:\n```\nASW-12\n```\n";
+    const body = "Closes A-12; see `A-12` and:\n```\nASW-12\n```\n";
     expect(rewriteBody(body)).toBe(
-      `Closes [ASW-12](${url("ASW-12")}); see \`ASW-12\` and:\n` +
+      `Closes [A-12](${url("A-12")}); see \`A-12\` and:\n` +
         "```\nASW-12\n```\n",
     );
   });

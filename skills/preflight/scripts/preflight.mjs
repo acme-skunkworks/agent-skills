@@ -11,7 +11,7 @@ import {
   resolveConfig,
 } from "./lib/scope.mjs";
 /**
- * Change-gated, branch-scoped lint preflight (originally ASW-282).
+ * Change-gated, branch-scoped lint preflight (originally A-282).
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, realpathSync, writeFileSync } from "node:fs";

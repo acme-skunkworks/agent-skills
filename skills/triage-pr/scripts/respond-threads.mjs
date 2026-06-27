@@ -596,7 +596,7 @@ function selfTest() {
       title: "Add retry wrapper",
     },
     {
-      reference: "SK-411",
+      reference: "A-411",
       status: "out-of-scope",
       title: "Refactor fetch layer",
     },

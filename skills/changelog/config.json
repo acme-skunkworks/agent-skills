@@ -1,5 +1,5 @@
 {
-  "issueKeys": ["ASW", "AKW", "SKW", "SK"],
+  "issueKeys": ["A"],
   "linearWorkspaceSlug": "goose-and-hobbes",
   "baseBranch": "main",
   "changelogDir": "changelog",

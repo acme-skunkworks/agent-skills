@@ -1,5 +1,5 @@
 // Render the reconcile report — both a human-readable summary and the JSON shape
-// Claude parses to drive the Linear-fact and per-key drift-opt-in steps (SK-409).
+// Claude parses to drive the Linear-fact and per-key drift-opt-in steps (A-409).
 
 /**
  * Human-friendly labels + ordering for the per-key statuses.

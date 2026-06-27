@@ -20,17 +20,23 @@ function escapeRegex(source) {
 }
 
 // `null` when no issue keys are configured: an empty alternation would match the
-// empty string before every `-<digits>` and inject bogus links (e.g. `-2`).
-const ISSUE_RE =
-  TEAM_KEYS.length > 0
-    ? new RegExp(`\\b(?:${TEAM_KEYS.map(escapeRegex).join("|")})-\\d+\\b`, "g")
-    : null;
+// empty string before every `-<digits>` and inject bogus links (e.g. `-2`). A
+// single key needs no `(?:…)` wrapper — only wrap when there's an alternation.
+const ISSUE_RE = (() => {
+  if (TEAM_KEYS.length === 0) {
+    return null;
+  }
+
+  const alternation = TEAM_KEYS.map(escapeRegex).join("|");
+  const group = TEAM_KEYS.length > 1 ? `(?:${alternation})` : alternation;
+  return new RegExp(`\\b${group}-\\d+\\b`, "g");
+})();
 const FENCE_RE = /```[\s\S]*?```/g;
 const INLINE_CODE_RE = /`[^`]*`/g;
 const ALREADY_LINKED_RE = /\[[^\]]*\]\([^)]*\)/g;
-// Reference-link definition lines — `[ASW-123]: <url>`, plus any indented
+// Reference-link definition lines — `[A-123]: <url>`, plus any indented
 // continuation lines. The label here is the definition's key, not prose, so
-// masking it stops `ISSUE_RE` rewriting it into `[[ASW-123](url)]: <url>` and
+// masking it stops `ISSUE_RE` rewriting it into `[[A-123](url)]: <url>` and
 // breaking the reference. CommonMark allows up to three leading spaces before
 // the label (four or more would be an indented code block), so allow `{0,3}`.
 // Must run before `REFERENCE_LINKED_RE` so a definition is never partially
@@ -38,7 +44,7 @@ const ALREADY_LINKED_RE = /\[[^\]]*\]\([^)]*\)/g;
 const REFERENCE_DEFINITION_RE = /^ {0,3}\[[^\]]+\]:[^\n]*(?:\n[ \t][^\n]*)*/gm;
 // Reference-style links — `[text][ref]` and the collapsed `[text][]` — also
 // already point at a definition, so mask them too. Without this, `ISSUE_RE`
-// rewrites inside the label (`[ASW-1][1]` -> `[[ASW-1](url)][1]`) and re-runs
+// rewrites inside the label (`[A-1][1]` -> `[[A-1](url)][1]`) and re-runs
 // compound the corruption.
 const REFERENCE_LINKED_RE = /\[[^\]]*\]\[[^\]]*\]/g;
 

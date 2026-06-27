@@ -29,7 +29,7 @@ are structural and keep generic, overridable defaults.
 
 | Key | Meaning | Default |
 | --- | --- | --- |
-| `issueKeys` | Team-key prefixes used to recognise issue IDs in the branch and body. Keep legacy keys so old branches still match. | **required** |
+| `issueKeys` | Team-key prefixes used to recognise issue IDs in the branch and body. | **required** |
 | `linearWorkspaceSlug` | Linear workspace slug for issue links (`https://linear.app/<slug>/issue/<id>`). | **required** |
 | `baseBranch` | Trunk the branch diff is taken against (`origin/<baseBranch>`); `BASE_REF` env overrides per-run. | `"main"` |
 | `changelogDir` | Directory the dated entries live in (scanned and validated). | `"changelog"` |

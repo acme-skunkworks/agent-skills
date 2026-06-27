@@ -1,4 +1,4 @@
-// Three-way reconcile for a skill's config.json (SK-409).
+// Three-way reconcile for a skill's config.json (A-409).
 //
 // Per key we hold three values:
 //   base   — the placeholder from the skill's config.example.json (or undefined)
@@ -7,7 +7,7 @@
 //
 // The classifier decides, per key, whether to write the detected value, leave a
 // deliberate edit alone (drift), or flag a value the caller must supply. The
-// guiding rule (SK-409): NEVER clobber a deliberate manual edit. Drift is kept by
+// guiding rule (A-409): NEVER clobber a deliberate manual edit. Drift is kept by
 // default and only overwritten when the caller opts in per key (acceptDrift).
 //
 // `classifyKey` and `mergeConfig` are pure — no filesystem, no git — so the whole

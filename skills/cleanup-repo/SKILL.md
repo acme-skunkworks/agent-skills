@@ -15,7 +15,7 @@ compatibility: >-
   Linear MCP server; if it is unavailable, skip that step silently. The
   filesystem pass needs Node.js ≥22.
 metadata:
-  version: 0.2.2
+  version: 0.2.3
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -40,12 +40,12 @@ match the consuming repo:
 | Key | Meaning | Default |
 | --- | --- | --- |
 | `linearTeamName` | Linear team **name** used to resolve the live `Done` state. Use the name, not the key — the key is renamed over time but the name is stable. | `"ACME Skunkworks"` |
-| `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. Keep legacy keys so old branches still match. | `["ASW", "AKW", "SKW"]` |
+| `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. | `["A"]` |
 | `mainBranch` | The trunk a branch must be merged into to count as merged — both passes diff against `origin/<mainBranch>`. Set it for repos whose trunk is `master`, `develop`, or similar. | `"main"` |
 | `protectedBranches` | Branches that are **never** deleted, locally or remotely. | `["main"]` |
 
 Build the issue-ID regex by joining `issueKeys` with `|`:
-`\b((?:ASW|AKW|SKW)-\d+)\b` for the defaults above. Match it against the
+`\bA-\d+\b` for the default above. Match it against the
 **upper-cased** branch name (branches like `asw-7-as-acquired` carry the key in
 lower case).
 
@@ -179,25 +179,25 @@ eyeball them:
 
 ```text
 ## Worktrees to Remove (3)
-- /path/.claude/worktrees/ASW-7-as-acquired (merged)
-- /path/.claude/worktrees/ASW-9-button-styling (squash-merged, PR #42)
+- /path/.claude/worktrees/A-7-as-acquired (merged)
+- /path/.claude/worktrees/A-9-button-styling (squash-merged, PR #42)
 - /path/.claude/worktrees/orphan-detached (detached HEAD)
 
 ## Worktrees Skipped — Uncommitted Changes (1)
-- /path/.claude/worktrees/ASW-12-wip (merged, but `git status` is non-empty;
+- /path/.claude/worktrees/A-12-wip (merged, but `git status` is non-empty;
   remove manually with `git worktree remove --force <path>`)
 
 ## Local Branches to Delete (3)
-- ASW-7-as-acquired (merged)
-- ASW-9-button-styling (squash-merged, PR #42 "Fix button styling")
+- A-7-as-acquired (merged)
+- A-9-button-styling (squash-merged, PR #42 "Fix button styling")
 - chore-update-deps (merged)
 
 ## Remote Branches to Delete (2)
-- ASW-7-as-acquired
-- ASW-9-button-styling
+- A-7-as-acquired
+- A-9-button-styling
 
 ## Linear Issues Still Open (1)
-- ASW-9 "Button styling" — currently In Review (branch: ASW-9-button-styling)
+- A-9 "Button styling" — currently In Review (branch: A-9-button-styling)
 
 ## Empty Directories to Remove (1)
 - /path/.claude/worktrees   (predicted: empty once the worktrees above are removed)

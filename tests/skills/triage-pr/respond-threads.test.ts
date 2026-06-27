@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 // triage-pr bundle stays test-free whilst the symmetric reply/resolve +
 // idempotency logic is still covered in CI. The `gh` mutation layer is not
 // exercised here — only the pure planning/formatting functions, which is exactly
-// the surface SK-410's "verifiable without spamming a real PR" criterion needs.
+// the surface A-410's "verifiable without spamming a real PR" criterion needs.
 import {
   SUMMARY_MARKER,
   THREAD_MARKER,
@@ -132,7 +132,7 @@ describe("buildConsolidatedComment — issue-level acknowledgement", () => {
       title: "Read missing from allowed-tools",
     },
     { reference: "YAGNI", status: "declined", title: "Add a retry wrapper" },
-    { reference: "SK-411", status: "out-of-scope", title: "Refactor fetch" },
+    { reference: "A-411", status: "out-of-scope", title: "Refactor fetch" },
   ];
 
   it("maps each finding to its outcome + reference and carries the marker", () => {
@@ -141,7 +141,7 @@ describe("buildConsolidatedComment — issue-level acknowledgement", () => {
       "| Read missing from allowed-tools | Accepted | `abc1234` |",
     );
     expect(body).toContain("| Add a retry wrapper | Declined | YAGNI |");
-    expect(body).toContain("| Refactor fetch | Out of scope | SK-411 |");
+    expect(body).toContain("| Refactor fetch | Out of scope | A-411 |");
     expect(body).toContain(SUMMARY_MARKER);
   });
 

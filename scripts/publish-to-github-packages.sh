@@ -6,7 +6,7 @@
 # stdout doesn't match the changesets "🦋  info Published" pattern, so
 # changesets/action sets published=false. eslint-config's old
 # `if: steps.changesets.outputs.published == 'true'` gate therefore skipped
-# the GitHub Packages leg on every run (ASW-307). The corrected pattern, ported
+# the GitHub Packages leg on every run (A-307). The corrected pattern, ported
 # here, drops the gate entirely and leans on this script's idempotency instead.
 #
 # Relies on the preceding actions/setup-node (GitHub Packages) step having
@@ -34,7 +34,7 @@
 #   NODE_AUTH_TOKEN              — GitHub Packages auth (the GITHUB_TOKEN); read
 #                                  from .npmrc by npm
 #   GITHUB_PACKAGES_REGISTRY_URL — registry to target, from
-#                                  infrastructure/repo-config.yaml (ASW-330)
+#                                  infrastructure/repo-config.yaml (A-330)
 #   TARBALL                      — path to the .tgz produced by `npm pack` and
 #                                  attested by the workflow; this exact file is
 #                                  published so its digest matches the attestation
@@ -46,7 +46,7 @@ set -euo pipefail
 : "${GITHUB_PACKAGES_REGISTRY_URL:?GITHUB_PACKAGES_REGISTRY_URL is not set; pass it from infrastructure/repo-config.yaml}"
 : "${TARBALL:?TARBALL is not set; the workflow must npm pack and attest the tarball first}"
 
-# Hard-code the publish target and fail closed if repo-config drifts (ASW-330).
+# Hard-code the publish target and fail closed if repo-config drifts (A-330).
 # The ephemeral GITHUB_TOKEN is sent as a bearer credential to whatever registry
 # we publish to, so the host must never be data-driven from a config value an
 # attacker could redirect by merging an edit. repo-config.yaml still supplies the
@@ -74,7 +74,7 @@ fi
 # Pin the registry explicitly rather than leaning on setup-node's scoped
 # .npmrc: a misconfigured scope would silently send `npm view` to public npm —
 # where the version exists — so the skip path would fire forever and GitHub
-# Packages would go permanently stale. ASW-307 review.
+# Packages would go permanently stale. A-307 review.
 #
 # Capture the probe's exit code and output so we can tell "this version isn't
 # published yet" (a 404 — safe to publish) apart from a transient or auth

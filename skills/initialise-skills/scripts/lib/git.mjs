@@ -1,4 +1,4 @@
-// Zero-dep git helpers for host-repo fact detection (SK-409).
+// Zero-dep git helpers for host-repo fact detection (A-409).
 //
 // `detectBaseBranch` mirrors the logic in the preflight bundle
 // (skills/preflight/scripts/lib/scope.mjs) — duplicated rather than imported

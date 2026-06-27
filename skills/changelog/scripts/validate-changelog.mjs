@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Validates the individual dated changelog entries under `changelog/`.
 //
-// The single authored changelog validator (SK-369): this is the only copy —
+// The single authored changelog validator (A-369): this is the only copy —
 // the root `validate:changelog` script and the `changelog` skill both run it.
 // Ported from the former infrastructure/scripts/validate-changelog.ts (dropping
 // gray-matter for the bundle's vendored parser) and unified with the bundle's
@@ -32,7 +32,7 @@ const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
 const SEMVER_RE =
   /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const SHA7_RE = /^[0-9a-f]{7}$/;
-const ISSUE_RE = /^[A-Z]{2,}-\d+$/;
+const ISSUE_RE = /^[A-Z]+-\d+$/;
 const CATEGORIES = new Set([
   "chore",
   "docs",
@@ -188,7 +188,7 @@ export function validateEntry(name, raw) {
     if (isStringArray(fm.issues)) {
       for (const id of fm.issues) {
         if (!ISSUE_RE.test(id)) {
-          fail(`issues entry ${JSON.stringify(id)} must match [A-Z]{2,}-\\d+`);
+          fail(`issues entry ${JSON.stringify(id)} must match [A-Z]+-\\d+`);
         }
       }
     } else {
