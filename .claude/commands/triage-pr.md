@@ -12,7 +12,7 @@ unresolved AI review threads once it is ready), with the constraints below.
 ## Process
 
 1. Read the skill's [`config.json`](../../skills/triage-pr/config.json) for
-   `reviewBots` and `maxCiRounds`.
+   `reviewBots`, `maxCiRounds`, `replyOnAccept`, and `promoteOnGreen`.
 2. Follow the skill's Steps 1–10: locate the PR and detect its phase, inspect and
    classify failing checks (in-scope vs base drift), fix in-scope failures one at
    a time **without weakening any gate**, re-watch CI (bounded by `maxCiRounds`),
@@ -22,11 +22,18 @@ unresolved AI review threads once it is ready), with the constraints below.
    invalid ones with technical reasoning. After each push, **loop back to the CI
    phase** — a push re-fires both CI and AI review — until CI is green and no
    unresolved AI threads remain.
-3. **Never flip the PR from draft to ready** — that is the human's call and the
-   gate that turns AI review on.
+3. **The draft → ready flip is governed by `promoteOnGreen`** (read in step 1) — the
+   single control for it. When `true` (the default), an enabled config *is* the
+   authorisation: once Phase A is proven-green (no unresolved human threads, no base
+   drift), flip the PR to ready (the gate that turns AI review on) and continue into
+   Phase B — don't stop to seek a separate human sign-off. When `false`, stop at green.
+   An explicit user prompt, or `--promote` / `--no-promote`, overrides per run. Merge to
+   `main` stays the human's call.
 
 ## Flags
 
+- `--promote` / `--no-promote` — override the `promoteOnGreen` config for this run:
+  force the draft→ready flip on a cleanly-green Phase A, or force stop-at-green.
 - `--ci-only` — run Phase A and stop, even if the PR is ready.
 - `--dry-run` — report failing checks and unresolved findings and propose fixes,
   but change nothing (no commits, pushes, or thread replies).

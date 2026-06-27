@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.4.2
+  version: 0.4.3
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
 ---
@@ -33,18 +33,25 @@ phases, choosing the phase from the PR's draft state:
   Actions logs, and fix failures **in PR scope only**. Loop until CI is green or
   report blockers.
 - **Phase B — after the PR is ready-for-review:** AI review is gated on
-  `draft == false`, so once a human flips the PR, reviewers (Claude Code Review,
-  Bugbot) post feedback. Fetch the **unresolved** findings, validate each
+  `draft == false`, so once the PR is flipped to ready — by `promoteOnGreen` or a
+  human — reviewers (Claude Code Review, Bugbot) post feedback. Fetch the
+  **unresolved** findings, validate each
   against the codebase before changing anything, fix the valid ones, decline the
   invalid ones with technical reasoning, then loop back through Phase A.
 
-This skill complements `/send-it` (which **opens** the draft PR). **By default it
-flips the PR from draft to ready** *after* a cleanly-green Phase A — gated on
-proven-green CI, **no unresolved human review threads**, and no unresolved base
-drift — then continues into Phase B (the ready-flip is the gate that turns AI review
-on; see Step 6). Pass `--no-promote` (or set `promoteOnGreen: false`) to **opt out**
-and leave the flip to the human, stopping at green. See [`references/review-discipline.md`](references/review-discipline.md)
-for the full review-reception and verification rules folded into Phase B.
+This skill complements `/send-it` (which **opens** the draft PR). The draft→ready
+flip is governed by a single control — `promoteOnGreen` in [`config.json`](config.json)
+— and **an enabled config *is* the authorisation** for it: when `promoteOnGreen` is
+`true` (the default), human authorisation for the flip is **already acquired via the
+repo config**, so after a cleanly-green Phase A the skill flips the PR to ready and
+continues into Phase B without stopping to seek a separate sign-off (the ready-flip is
+the gate that turns AI review on; see Step 6). The flip stays **guarded** — gated on
+proven-green CI, **no unresolved human review threads**, and no unresolved base drift.
+Set `promoteOnGreen: false` (or pass `--no-promote`) to opt out and stop at green; an
+explicit user prompt — or the `--promote` / `--no-promote` flags — overrides the config
+for that run. Merge to `main` is never automated; that stays a human action. See
+[`references/review-discipline.md`](references/review-discipline.md) for the full
+review-reception and verification rules folded into Phase B.
 
 ## Configuration
 
@@ -57,7 +64,7 @@ match the consuming repo's review bots.
 | `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback. Matched against `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match (the GraphQL API returns the bare form). Edit to match your install — review-bot logins vary per repo. `github-actions` is deliberately excluded by default: it posts CI status and release-PR comments, not code review, so Phase B would otherwise action them as findings; add it only if your install genuinely posts review-type comments via the Actions bot. | `["claude", "cursor", "coderabbitai"]` |
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers. Bounds the fix-and-watch loop so it can't spin forever. | `5` |
 | `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before the thread is resolved (the audit trail). `false` resolves accepted threads silently for maintainers who dislike bot-reply noise — declines always reply with reasoning regardless. | `true` |
-| `promoteOnGreen` | When `true`, after Phase A finishes with **every** required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**: set `false` (or pass `--no-promote`) to stop at green and leave the flip to the human. Promotion is suppressed unless the green is *proven* (Step 6's watched rollup, never "no failures yet"), there are **no unresolved human review threads**, and `mergeStateStatus` shows no unresolved base drift (`BEHIND` / `DIRTY`). `--promote` / `--no-promote` override this per run; `--ci-only` and `--dry-run` never promote. | `true` |
+| `promoteOnGreen` | The single control for the draft→ready flip. When `true`, after Phase A finishes with **every** required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**, and an enabled config *is* the human authorisation for the flip: proceed on proven green without seeking a separate sign-off. Set `false` (or pass `--no-promote`) to opt out and stop at green. Promotion is suppressed unless the green is *proven* (Step 6's watched rollup, never "no failures yet"), there are **no unresolved human review threads**, and `mergeStateStatus` shows no unresolved base drift (`BEHIND` / `DIRTY`). An explicit user prompt — or `--promote` / `--no-promote` — overrides this per run; `--ci-only` and `--dry-run` never promote. | `true` |
 
 Only the configured `reviewBots` are actioned in Phase B. Human review comments
 are surfaced in the final report but never auto-actioned, replied to, or
@@ -373,12 +380,14 @@ Summarise:
 - **No sycophancy.** Decline with technical reasoning, not flattery.
 - **Evidence before claims.** Never say CI is green or a fix works without freshly
   running the proving command and reading its exit code.
-- **Draft → ready is guarded, and on by default.** With `promoteOnGreen` (default
-  on) the skill flips the PR **only** after a *proven*-green Phase A, with **no
-  unresolved human threads** and no unresolved base drift, then continues into
-  Phase B; set `promoteOnGreen: false` / pass `--no-promote` to stop at green and
-  leave the flip to the human. Never greenwash to reach the flip; `--ci-only` never
-  promotes.
+- **Draft → ready is guarded, and on by default.** `promoteOnGreen` is the single
+  control for the flip, and an enabled config *is* the authorisation: with it on (the
+  default) the skill flips the PR — **only** after a *proven*-green Phase A, with **no
+  unresolved human threads** and no unresolved base drift — then continues into Phase B,
+  without seeking a separate human sign-off. Set `promoteOnGreen: false` / pass
+  `--no-promote` to stop at green; an explicit user prompt or `--promote` /
+  `--no-promote` overrides the config per run. Never greenwash to reach the flip;
+  `--ci-only` never promotes. Merge stays a human action.
 - **Bounded loops.** Stop after `maxCiRounds` and escalate.
 
 ## Error handling
