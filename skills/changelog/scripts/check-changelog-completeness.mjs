@@ -94,7 +94,82 @@ function readChangedFiles(baseRef) {
     .filter(Boolean);
 }
 
+const USAGE = `check-changelog-completeness — gate a release-triggering PR on a dated changelog/ entry
+
+Reads PR_TITLE and BASE_REF (default "main") from the environment and the changed
+files from \`git diff --name-only origin/<BASE_REF>...HEAD\`. A feat/fix/breaking
+PR title with no changelog/*.md entry in the diff fails the gate (exit 1).
+
+Usage:
+  PR_TITLE=… node check-changelog-completeness.mjs   Run the gate
+  node check-changelog-completeness.mjs --self-test   Run the built-in offline smoke test
+  node check-changelog-completeness.mjs --help        Show this message (alias: -h)`;
+
+// Offline smoke test: exercise the pure checkCompleteness / isReleaseTriggering
+// over representative inputs — no env, no git. The exhaustive cases live in the
+// repo's vitest suite (infrastructure/tests/check-changelog-completeness.test.ts).
+function selfTest() {
+  const cases = [
+    {
+      name: "feat: title is release-triggering",
+      ok: isReleaseTriggering("feat: add a thing") === true,
+    },
+    {
+      name: "docs: title is not release-triggering",
+      ok: isReleaseTriggering("docs: tidy the readme") === false,
+    },
+    {
+      name: "breaking ! marker is release-triggering",
+      ok: isReleaseTriggering("feat(api)!: drop the old endpoint") === true,
+    },
+    {
+      name: "feat with a changelog entry passes the gate",
+      ok:
+        checkCompleteness("feat: x", ["changelog/20260101-000000-a-1-x.md"])
+          .ok === true,
+    },
+    {
+      name: "feat with no changelog entry fails the gate",
+      ok:
+        checkCompleteness("feat: x", ["skills/changelog/SKILL.md"]).ok ===
+        false,
+    },
+    {
+      name: "changelog/README.md does not satisfy the gate",
+      ok: checkCompleteness("fix: y", ["changelog/README.md"]).ok === false,
+    },
+    {
+      name: "non-release-triggering title passes with no entry",
+      ok: checkCompleteness("chore: z", []).ok === true,
+    },
+  ];
+
+  let failed = 0;
+  for (const { name, ok } of cases) {
+    if (ok) {
+      console.log(`  ok    ${name}`);
+    } else {
+      failed += 1;
+      console.log(`  FAIL  ${name}`);
+    }
+  }
+
+  console.log(`\n${cases.length - failed}/${cases.length} passed`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
 function main() {
+  const args = argv.slice(2);
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(USAGE);
+    return;
+  }
+
+  if (args.includes("--self-test")) {
+    selfTest();
+    return;
+  }
+
   const prTitle = process.env.PR_TITLE ?? "";
   const baseRef = process.env.BASE_REF || "main";
 

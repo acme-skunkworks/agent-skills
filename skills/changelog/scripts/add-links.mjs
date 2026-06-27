@@ -93,13 +93,96 @@ export function splitFrontmatter(raw) {
   return { body: raw.slice(match[0].length), fm: match[0] };
 }
 
+const USAGE = `add-links — rewrite bare Linear issue IDs in changelog bodies to Linear URLs
+
+Usage:
+  node add-links.mjs                 Linkify every changelog/<ts>-<slug>.md body (writes)
+  node add-links.mjs --check         Report which files would change; write nothing
+  node add-links.mjs --dry-run       Alias for --check
+  node add-links.mjs --self-test     Run the built-in offline smoke test
+  node add-links.mjs --help          Show this message (alias: -h)
+
+--check exits 1 when a rewrite is needed, 0 when nothing would change.`;
+
+// Offline smoke test for the pure rewriteBody: linkify a sample body and check
+// the masking rules (fenced/inline code and existing links are left alone).
+// The exhaustive cases live in the repo's vitest suite
+// (infrastructure/tests/add-links*.test.ts); this is a light wiring check with
+// no filesystem or network access. The exact linkification depends on the
+// configured issue keys, so where a key is configured we assert it is linked;
+// either way we assert the masking invariants that hold regardless of config.
+function selfTest() {
+  const cases = [];
+
+  // Masking invariants hold whatever the config: an already-linked ID and an
+  // inline-code ID must survive a rewrite untouched.
+  const alreadyLinked = "See [A-1](https://example.test/A-1) for context.";
+  cases.push({
+    name: "an already-linked issue ID is left untouched",
+    ok: rewriteBody(alreadyLinked) === alreadyLinked,
+  });
+
+  const inlineCode = "The token `A-1` is code, not a link.";
+  cases.push({
+    name: "an issue ID inside inline code is not linkified",
+    ok: rewriteBody(inlineCode) === inlineCode,
+  });
+
+  const fenced = "```\nA-1 in a fence\n```";
+  cases.push({
+    name: "an issue ID inside a code fence is not linkified",
+    ok: rewriteBody(fenced) === fenced,
+  });
+
+  // When the host config has issue keys, a bare ID for the first key linkifies.
+  if (ISSUE_RE && TEAM_KEYS.length > 0) {
+    const key = TEAM_KEYS[0];
+    const id = `${key}-123`;
+    const before = `Closes ${id}.`;
+    const after = rewriteBody(before);
+    cases.push({
+      name: `a bare ${id} is rewritten to a Linear link`,
+      ok: after === `Closes [${id}](${buildUrl(id)}).`,
+    });
+  } else {
+    cases.push({
+      name: "no issue keys configured — rewriteBody is a no-op",
+      ok: rewriteBody("Closes A-1.") === "Closes A-1.",
+    });
+  }
+
+  let failed = 0;
+  for (const { name, ok } of cases) {
+    if (ok) {
+      console.log(`  ok    ${name}`);
+    } else {
+      failed += 1;
+      console.log(`  FAIL  ${name}`);
+    }
+  }
+
+  console.log(`\n${cases.length - failed}/${cases.length} passed`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
 function main() {
+  const args = argv.slice(2);
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(USAGE);
+    return;
+  }
+
+  if (args.includes("--self-test")) {
+    selfTest();
+    return;
+  }
+
   // --check (alias --dry-run): report which files would be rewritten and write
   // nothing. Exit 0 when nothing would change, 1 when a rewrite is needed —
   // prettier-style, so CI can gate on it.
-  const check = argv
-    .slice(2)
-    .some((argument) => argument === "--check" || argument === "--dry-run");
+  const check = args.some(
+    (argument) => argument === "--check" || argument === "--dry-run",
+  );
 
   let stat;
   try {

@@ -97,13 +97,89 @@ function changedPaths(base) {
   return out ? out.split("\n") : [];
 }
 
+const USAGE = `set-affected-packages — write affected_packages into the current branch's changelog entry
+
+Monorepo-only (config.json affectedPackages: true; a no-op otherwise). Diffs the
+branch against the base, maps the changed paths through the shared package rule,
+and writes the derived list into the entry's frontmatter (canonical field order).
+
+Env overrides: BASE_REF (default origin/<baseBranch>), BRANCH_NAME (default git HEAD).
+
+Usage:
+  node set-affected-packages.mjs            Derive + write affected_packages (writes; needs git)
+  node set-affected-packages.mjs --check    Report what would change; write nothing (alias: --dry-run)
+  node set-affected-packages.mjs --self-test  Run the built-in offline smoke test
+  node set-affected-packages.mjs --help     Show this message (alias: -h)`;
+
+// Offline smoke test: exercise the pure buildAffectedPackagesFrontmatter — no
+// git, no filesystem. The exhaustive cases live in the repo's vitest suite
+// (tests/skills/changelog/set-affected-packages.test.ts).
+function selfTest() {
+  const cases = [];
+
+  const data = {
+    branch: "a-1-sample",
+    stats: { files_changed: null },
+    title: "Sample",
+  };
+  const rebuilt = buildAffectedPackagesFrontmatter(data, ["skills/changelog"]);
+  cases.push({
+    name: "affected_packages is set from the derived list",
+    ok:
+      JSON.stringify(rebuilt.affected_packages) ===
+      JSON.stringify(["skills/changelog"]),
+  });
+  cases.push({
+    name: "affected_packages is inserted immediately before stats",
+    ok:
+      Object.keys(rebuilt).indexOf("affected_packages") ===
+      Object.keys(rebuilt).indexOf("stats") - 1,
+  });
+
+  let guardThrew = false;
+  try {
+    buildAffectedPackagesFrontmatter({}, ["x"]);
+  } catch {
+    guardThrew = true;
+  }
+
+  cases.push({
+    name: "refuses to write when frontmatter lacks the branch key",
+    ok: guardThrew,
+  });
+
+  let failed = 0;
+  for (const { name, ok } of cases) {
+    if (ok) {
+      console.log(`  ok    ${name}`);
+    } else {
+      failed += 1;
+      console.log(`  FAIL  ${name}`);
+    }
+  }
+
+  console.log(`\n${cases.length - failed}/${cases.length} passed`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
 function main() {
+  const args = process.argv.slice(2);
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(USAGE);
+    return;
+  }
+
+  if (args.includes("--self-test")) {
+    selfTest();
+    return;
+  }
+
   // --check (alias --dry-run): report what would change and write nothing.
   // Exit 0 when already up to date, 1 when a rewrite is needed — prettier-style,
   // so CI can gate on it.
-  const check = process.argv
-    .slice(2)
-    .some((argument) => argument === "--check" || argument === "--dry-run");
+  const check = args.some(
+    (argument) => argument === "--check" || argument === "--dry-run",
+  );
 
   const config = loadConfig();
 

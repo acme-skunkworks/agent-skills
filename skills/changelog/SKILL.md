@@ -16,7 +16,7 @@ compatibility: >-
   `preflight-changelog-ci.mjs` step assumes the consumer repo uses pnpm with a
   committed lockfile; skip it if yours does not.
 metadata:
-  version: 0.5.1
+  version: 0.6.0
   author: Rob Easthope
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(node:*), Bash(pnpm:*)
 ---
@@ -204,18 +204,35 @@ continuing — do not hand a malformed entry to the ship flow.
 
 ## Implementation
 
-The enrichment and validation scripts live under [`scripts/`](scripts/) in this
-bundle and run on plain Node (no npm dependencies, no build step):
+All the scripts the changelog lifecycle needs live under [`scripts/`](scripts/)
+in this bundle and run on plain Node (no npm dependencies, no build step). They
+cover the **whole lifecycle the bundle owns** — authoring (run by this skill) and
+finalisation (wired into the consumer's `package.json` / CI / release
+orchestrator). Each takes `--help` (usage, exit 0) and `--self-test` (an offline
+smoke test of its pure logic); the file-writing scripts also take `--check` /
+`--dry-run` (report, write nothing).
 
-- `scripts/set-affected-packages.mjs` — writes `affected_packages` from the branch diff.
+**Authoring — run by this skill (the `/changelog` flow):**
+
+- `scripts/set-affected-packages.mjs` — writes `affected_packages` from the branch diff (monorepo consumers only; a no-op when `affectedPackages` is off).
 - `scripts/add-links.mjs` — rewrites bare issue IDs in the body to Linear URLs.
 - `scripts/preflight-changelog-ci.mjs` — optional Node/lockfile CI-parity check (pnpm).
 - `scripts/validate-changelog.mjs` — validates the entry against the contract.
 
+**Finalisation and the CI gate — run by the consumer, not by this skill.** These
+ship in the bundle too, and an adopter wiring up the orchestrator/CI gate needs
+them. They are referenced from the consumer's `package.json` scripts and
+workflows rather than invoked during authoring:
+
+- `scripts/finalise-changelog.mjs` — release-time enrichment + version-stamping, **run by the release orchestrator** right after `release-please release-pr` (the consumer exposes it as the `changelog:finalise` script). For each un-finalised entry it resolves the merged PR via `gh`/`git`, fills the post-merge fields (`merged_at` / `commit` / `pr` / `merge_strategy` / `stats`), stamps `version` with the just-bumped `package.json` version, and links bare Linear IDs. It composes `lib/enrich.mjs` (the PR-metadata fill) and `lib/stamp.mjs` (the version stamp).
+- `scripts/check-changelog-completeness.mjs` — the **CI completeness gate**, run by the consumer's validation workflow: a release-triggering (`feat`/`fix`/breaking) PR title must carry a dated `changelog/` entry, or the build fails.
+
 They share helpers under `scripts/lib/` (`changelog.mjs`, `derive-packages.mjs`,
-`frontmatter.mjs`, `config.mjs`). The post-merge finalisation of `stats` /
-`merged_at` / `commit` / `merge_strategy` is owned by the release-orchestrator and
-is **not** invoked here.
+`frontmatter.mjs`, `config.mjs`, `enrich.mjs`, `stamp.mjs`). So while this skill
+itself stops at authoring + validation and leaves the post-merge fields blank,
+the **finalisation and completeness scripts that fill them are part of this
+bundle** — the consumer's `package.json` / CI / release orchestrator run them, not
+the `/changelog` flow.
 
 > **Note for adopters:** unit tests for these scripts are maintained in the
 > `agent-skills` repo (not bundled into the skill). See the skill's README.
