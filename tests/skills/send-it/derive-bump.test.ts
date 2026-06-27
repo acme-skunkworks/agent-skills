@@ -2,7 +2,7 @@ import {
   deriveBody,
   deriveBump,
   deriveSlug,
-} from "../../skills/send-it/scripts/derive-bump.mjs";
+} from "../../../skills/send-it/scripts/derive-bump.mjs";
 import { describe, expect, it } from "vitest";
 
 describe("deriveSlug", () => {

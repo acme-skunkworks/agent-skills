@@ -1,4 +1,4 @@
-import { parseMarkdownlintText } from "../../skills/preflight/scripts/classify-lint.mjs";
+import { parseMarkdownlintText } from "../../../skills/preflight/scripts/classify-lint.mjs";
 import { describe, expect, it } from "vitest";
 
 // Real markdownlint-cli2 v0.22.1 default output (the format preflight parses).

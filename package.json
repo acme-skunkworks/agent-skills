@@ -39,6 +39,7 @@
     "release:manual": "npm publish --access public --provenance=false",
     "release:manual:dry": "npm publish --access public --provenance=false --dry-run",
     "test": "vitest run",
+    "test:self": "node infrastructure/scripts/run-self-tests.mjs",
     "test:sh": "bash -c 'if command -v bats >/dev/null 2>&1; then bats infrastructure/tests/*.bats; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  bats not installed — skipping. Install: brew install bats-core\"; else echo \"⚠️  bats not installed — skipping. Install: apt-get install bats\"; fi'",
     "test:watch": "vitest",
     "tsc": "tsc -p tsconfig.json",

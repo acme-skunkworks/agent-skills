@@ -1,6 +1,6 @@
 // Imports the BUNDLE loader directly (the distributed `.mjs`). `parseConfig` is
 // exported so the fail-loud contract is testable without filesystem setup.
-import { parseConfig } from "../../skills/changelog/scripts/lib/config.mjs";
+import { parseConfig } from "../../../skills/changelog/scripts/lib/config.mjs";
 import { describe, expect, it } from "vitest";
 
 const VALID = {

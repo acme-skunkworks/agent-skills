@@ -1,6 +1,5 @@
-// Imports the BUNDLE script directly (the distributed `.mjs`), not an
-// infrastructure twin — derive-packages has no infra counterpart.
-import { derivePackagesFromPaths } from "../../skills/changelog/scripts/lib/derive-packages.mjs";
+// Imports the BUNDLE script directly (the distributed `.mjs`).
+import { derivePackagesFromPaths } from "../../../skills/changelog/scripts/lib/derive-packages.mjs";
 import { describe, expect, it } from "vitest";
 
 describe("derivePackagesFromPaths", () => {

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Imports the BUNDLE script directly (the distributed `.mjs`). The parse-error
 // context path (a malformed entry naming the offending file) is covered against
-// the bundle in infrastructure/tests/changelog-frontmatter.test.ts; this suite
+// the bundle in ./changelog-frontmatter.test.ts; this suite
 // covers the happy-path lookup behaviour of findEntryByBranch.
 import { findEntryByBranch } from "../../../skills/changelog/scripts/lib/changelog.mjs";
 

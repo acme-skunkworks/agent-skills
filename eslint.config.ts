@@ -44,22 +44,6 @@ export default defineConfig([
       complexity: "off",
     },
   },
-  // Some tests assert on object KEY ORDER (changelog-frontmatter:
-  // buildAffectedPackagesFrontmatter inserts affected_packages immediately
-  // before stats) or deliberately pass differently-ordered objects to prove an
-  // order-insensitive comparison (initialise-merge: deepEqual). Their
-  // object-literal fixtures are intentionally non-alphabetical, so
-  // perfectionist/sort-objects would silently rewrite the very thing under
-  // test — switch it off for those files.
-  {
-    files: [
-      "infrastructure/tests/changelog-frontmatter.test.ts",
-      "infrastructure/tests/initialise-merge.test.ts",
-    ],
-    rules: {
-      "perfectionist/sort-objects": "off",
-    },
-  },
   // The base preset enables type-aware linting (parserOptions.project), which
   // resolves each file to a TS program. The canonical tsconfig.json is
   // scripts-only, so pin an explicit project spanning scripts + tests

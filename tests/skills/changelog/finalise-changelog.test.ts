@@ -1,11 +1,11 @@
 import {
   finaliseEntry,
   makeResolver,
-} from "../../skills/changelog/scripts/finalise-changelog.mjs";
+} from "../../../skills/changelog/scripts/finalise-changelog.mjs";
 // Exercises the BUNDLE script directly (the distributed `.mjs`). finaliseEntry
 // links bare Linear IDs via the bundle's own config.json (workspace
 // `acme-skunkworks`, key A).
-import { parseFrontmatter } from "../../skills/changelog/scripts/lib/frontmatter.mjs";
+import { parseFrontmatter } from "../../../skills/changelog/scripts/lib/frontmatter.mjs";
 import { describe, expect, it } from "vitest";
 
 // The .mjs carries these shapes as JSDoc typedefs (no exported TS types); mirror
