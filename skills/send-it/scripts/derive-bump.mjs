@@ -17,7 +17,7 @@
 // BASE_REF env var. The pure functions are exported for vitest.
 
 import { readGitBranch, readGitCommits } from "./lib/git.mjs";
-import { pathToFileURL } from "node:url";
+import { realpathSync } from "node:fs";
 
 const SLUG_MAX = 60;
 
@@ -68,7 +68,25 @@ export function deriveBody(commits) {
   return subject.replace(/^[a-z]+(\([^)]+\))?!?:\s*/, "");
 }
 
+const USAGE = `derive-bump — print the slug/bump/body send-it derives from the branch commits
+
+Usage:
+  node derive-bump.mjs            Print { slug, bump, body } as JSON to stdout (read-only)
+  node derive-bump.mjs --help     Show this message (alias: -h)
+
+Env:
+  BASE_REF   Override the base ref (default: origin/main, then main).`;
+
 function main() {
+  if (
+    process.argv
+      .slice(2)
+      .some((argument) => argument === "--help" || argument === "-h")
+  ) {
+    console.log(USAGE);
+    return;
+  }
+
   const branch = readGitBranch();
   const commits = readGitCommits();
   console.log(
@@ -84,23 +102,21 @@ function main() {
   );
 }
 
-const USAGE = `derive-bump — print the slug/bump/body send-it derives from the branch commits
-
-Usage:
-  node derive-bump.mjs            Print { slug, bump, body } as JSON to stdout (read-only)
-  node derive-bump.mjs --help     Show this message (alias: -h)
-
-Env:
-  BASE_REF   Override the base ref (default: origin/main, then main).`;
-
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (
-    process.argv
-      .slice(2)
-      .some((argument) => argument === "--help" || argument === "-h")
-  ) {
-    console.log(USAGE);
-  } else {
-    main();
+// Run main() only when invoked directly as a CLI, not when imported (e.g. by
+// check-skill-bumps, which imports deriveBump). Compare realpath'd paths so
+// symlinks (macOS /var→/private/var, pnpm's store) don't cause a false negative.
+function isCliEntry() {
+  if (!process.argv[1]) {
+    return false;
   }
+
+  try {
+    return realpathSync(import.meta.filename) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
+  main();
 }

@@ -19,7 +19,7 @@ import { discoverSkills } from "./lib/discover.mjs";
 import { serialiseConfig } from "./lib/jsonio.mjs";
 import { mergeConfig } from "./lib/merge.mjs";
 import { buildReport, formatHuman } from "./lib/report.mjs";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
 
 /**
@@ -198,11 +198,29 @@ function main() {
   }
 }
 
-try {
-  main();
-} catch (error) {
-  // The CLI contract documents exit 2 for usage/IO errors — funnel any unexpected
-  // throw (discovery, detection, write, output) into it instead of a raw crash.
-  console.error(`initialise-skills: ${error.message}`);
-  process.exit(2);
+// Run main() only when invoked directly as a CLI, not when imported. Compare
+// realpath'd paths so symlinks (macOS /var→/private/var, pnpm's store) don't
+// cause a false negative.
+function isCliEntry() {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  try {
+    return realpathSync(import.meta.filename) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
+  try {
+    main();
+  } catch (error) {
+    // The CLI contract documents exit 2 for usage/IO errors — funnel any
+    // unexpected throw (discovery, detection, write, output) into it instead of
+    // a raw crash.
+    console.error(`initialise-skills: ${error.message}`);
+    process.exit(2);
+  }
 }

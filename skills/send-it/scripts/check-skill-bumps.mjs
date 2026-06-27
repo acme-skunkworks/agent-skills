@@ -28,9 +28,8 @@
 import { deriveBump } from "./derive-bump.mjs";
 import { readGitCommits, resolveBaseRef } from "./lib/git.mjs";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
 
 const CONFIG_PATH = new URL("../config.json", import.meta.url);
 
@@ -161,7 +160,25 @@ function readCurrentVersion(path) {
     : null;
 }
 
+const USAGE = `check-skill-bumps — list skill bundles changed on this branch without a version bump
+
+Usage:
+  node check-skill-bumps.mjs       Print { configured, unbumped, bumped } as JSON to stdout (read-only)
+  node check-skill-bumps.mjs --help  Show this message (alias: -h)
+
+Config-gated: a no-op ({ configured: false }) unless send-it's config.json
+carries a bundleVersioning block.`;
+
 function main() {
+  if (
+    process.argv
+      .slice(2)
+      .some((argument) => argument === "--help" || argument === "-h")
+  ) {
+    console.log(USAGE);
+    return;
+  }
+
   const config = readConfig();
   const bv = config.bundleVersioning;
   if (!bv || typeof bv !== "object") {
@@ -210,23 +227,21 @@ function main() {
   console.log(JSON.stringify({ bumped, configured: true, unbumped }, null, 2));
 }
 
-const USAGE = `check-skill-bumps — list skill bundles changed on this branch without a version bump
-
-Usage:
-  node check-skill-bumps.mjs       Print { configured, unbumped, bumped } as JSON to stdout (read-only)
-  node check-skill-bumps.mjs --help  Show this message (alias: -h)
-
-Config-gated: a no-op ({ configured: false }) unless send-it's config.json
-carries a bundleVersioning block.`;
-
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (
-    process.argv
-      .slice(2)
-      .some((argument) => argument === "--help" || argument === "-h")
-  ) {
-    console.log(USAGE);
-  } else {
-    main();
+// Run main() only when invoked directly as a CLI, not when imported. Compare
+// realpath'd paths so symlinks (macOS /var→/private/var, pnpm's store) don't
+// cause a false negative.
+function isCliEntry() {
+  if (!process.argv[1]) {
+    return false;
   }
+
+  try {
+    return realpathSync(import.meta.filename) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
+  main();
 }
