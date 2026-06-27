@@ -32,12 +32,13 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve, sep } from "node:path";
+import { dirname, join, sep } from "node:path";
 
 // Recurse a directory. Returns true when the directory is recursively empty
 // (its subtree contains no files). Side effects: pushes top-most empty
@@ -412,6 +413,21 @@ function main() {
   console.log(JSON.stringify(result, null, 2));
 }
 
-if (process.argv[1] && import.meta.filename === resolve(process.argv[1])) {
+// Run main() only when invoked directly as a CLI, not when imported. Compare
+// realpath'd paths so symlinks (macOS /var→/private/var, pnpm's store) don't
+// cause a false negative.
+function isCliEntry() {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  try {
+    return realpathSync(import.meta.filename) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
   main();
 }

@@ -4,6 +4,7 @@ import { getBranchScope } from "./lib/scope.mjs";
  * Scoped auto-fix for branch-changed lintable paths (originally ASW-282).
  */
 import { spawnSync } from "node:child_process";
+import { realpathSync } from "node:fs";
 
 const ROOT = process.cwd();
 
@@ -22,7 +23,22 @@ function run(cmd, argv) {
   }
 }
 
+const USAGE = `preflight-lint-fix — scoped eslint --fix / markdownlint --fix on branch-changed paths
+
+Usage:
+  node lint-fix.mjs          Auto-fix lint on the files the branch changed
+  node lint-fix.mjs --help   Show this message (alias: -h)`;
+
 function main() {
+  if (
+    process.argv
+      .slice(2)
+      .some((argument) => argument === "--help" || argument === "-h")
+  ) {
+    console.log(USAGE);
+    return;
+  }
+
   const scope = getBranchScope();
 
   if (!scope.codeChanged && !scope.markdownChanged) {
@@ -75,4 +91,21 @@ function main() {
   console.log("preflight-lint-fix: done");
 }
 
-main();
+// Run main() only when invoked directly as a CLI, not when imported. Compare
+// realpath'd paths so symlinks (macOS /var→/private/var, pnpm's store) don't
+// cause a false negative.
+function isCliEntry() {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  try {
+    return realpathSync(import.meta.filename) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
+  main();
+}

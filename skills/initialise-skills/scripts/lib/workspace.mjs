@@ -116,9 +116,10 @@ export function globsFromWorkspacesField(workspaces) {
 }
 
 /**
- * Detect monorepo package roots for a host repo: pnpm-workspace.yaml wins, else
- * the root package.json `workspaces` field, else the generic default filtered to
- * the candidates that actually exist on disk.
+ * Detect monorepo package roots for a host repo: pnpm-workspace.yaml wins
+ * (authoritatively, even when it declares no roots), else the root package.json
+ * `workspaces` field, else the generic default filtered to the candidates that
+ * actually exist on disk.
  *
  * The fallback is a *guess*, not a declaration, so it must not invent roots: a
  * repo with no workspace manifest and none of the default dirs returns `[]`, and
@@ -129,14 +130,18 @@ export function globsFromWorkspacesField(workspaces) {
  * @returns {string[]}
  */
 export function detectPackageRoots(root) {
+  // A present pnpm-workspace.yaml is authoritative: derive the package roots from
+  // its `packages:` globs and return them verbatim — even when empty. A file with
+  // no parseable `packages:` block (e.g. a `catalogs:`-only file on pnpm ≥9.5, or
+  // `packages: []`) declares a pnpm workspace with no package-dir roots, so the
+  // answer is `[]` ("declared, none"). It must NOT fall through to the
+  // package.json / default-dir guess, which would fabricate roots from whichever
+  // apps/packages/services directories happen to exist — exactly the invented-root
+  // drift SK-460 removed. The caller maps `[]` to couldn't-detect (keep existing
+  // config / flag for manual input).
   const pnpmFile = join(root, "pnpm-workspace.yaml");
   if (existsSync(pnpmFile)) {
-    const roots = rootsFromGlobs(
-      parseWorkspaceGlobs(readFileSync(pnpmFile, "utf8")),
-    );
-    if (roots.length > 0) {
-      return roots;
-    }
+    return rootsFromGlobs(parseWorkspaceGlobs(readFileSync(pnpmFile, "utf8")));
   }
 
   const pkgFile = join(root, "package.json");
