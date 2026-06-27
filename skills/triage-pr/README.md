@@ -43,7 +43,8 @@ Two phases, chosen from the PR's draft state:
    weakening CI config to greenwash. Rebase/merge the base branch when failures
    are upstream drift. Loop until CI is green (then stop) or report blockers.
 2. **Phase B — after the PR is ready-for-review.** AI review is gated on
-   `draft == false`, so it only runs after a human flips the PR. Fetch the
+   `draft == false`, so it only runs once the PR is ready-for-review (flipped by
+   `promoteOnGreen` or a human). Fetch the
    **unresolved** review threads (bundled `scripts/review-threads.mjs` returns
    minimal JSON), validate each finding against the codebase before changing
    anything, fix the valid ones, decline the invalid ones with technical

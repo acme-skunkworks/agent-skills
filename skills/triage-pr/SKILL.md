@@ -33,8 +33,9 @@ phases, choosing the phase from the PR's draft state:
   Actions logs, and fix failures **in PR scope only**. Loop until CI is green or
   report blockers.
 - **Phase B — after the PR is ready-for-review:** AI review is gated on
-  `draft == false`, so once a human flips the PR, reviewers (Claude Code Review,
-  Bugbot) post feedback. Fetch the **unresolved** findings, validate each
+  `draft == false`, so once the PR is flipped to ready — by `promoteOnGreen` or a
+  human — reviewers (Claude Code Review, Bugbot) post feedback. Fetch the
+  **unresolved** findings, validate each
   against the codebase before changing anything, fix the valid ones, decline the
   invalid ones with technical reasoning, then loop back through Phase A.
 

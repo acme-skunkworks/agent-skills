@@ -31,6 +31,8 @@ unresolved AI review threads once it is ready), with the constraints below.
 
 ## Flags
 
+- `--promote` / `--no-promote` — override the `promoteOnGreen` config for this run:
+  force the draft→ready flip on a cleanly-green Phase A, or force stop-at-green.
 - `--ci-only` — run Phase A and stop, even if the PR is ready.
 - `--dry-run` — report failing checks and unresolved findings and propose fixes,
   but change nothing (no commits, pushes, or thread replies).
