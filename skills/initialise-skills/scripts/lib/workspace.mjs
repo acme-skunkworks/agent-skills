@@ -6,7 +6,7 @@
 // than imported because vendored bundles are independent. The pure parsers take
 // strings/objects as arguments for unit-testing; only `detect*` touch disk.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -152,7 +152,13 @@ export function detectPackageRoots(root) {
     }
   }
 
-  return DEFAULT_PACKAGE_ROOTS.filter((directory) =>
-    existsSync(join(root, directory)),
+  // Strictly directory-backed: a regular file or symlink named apps/packages/
+  // services must not leak in as a package root. Mirrors the changelog detector's
+  // statSync guard in detectors.mjs.
+  return DEFAULT_PACKAGE_ROOTS.filter(
+    (directory) =>
+      statSync(join(root, directory), {
+        throwIfNoEntry: false,
+      })?.isDirectory() ?? false,
   );
 }

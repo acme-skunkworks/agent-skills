@@ -214,7 +214,7 @@ const USAGE = `check-skill-bumps — list skill bundles changed on this branch w
 
 Usage:
   node check-skill-bumps.mjs       Print { configured, unbumped, bumped } as JSON to stdout (read-only)
-  node check-skill-bumps.mjs --help  Show this message
+  node check-skill-bumps.mjs --help  Show this message (alias: -h)
 
 Config-gated: a no-op ({ configured: false }) unless send-it's config.json
 carries a bundleVersioning block.`;

@@ -88,7 +88,7 @@ const USAGE = `derive-bump — print the slug/bump/body send-it derives from the
 
 Usage:
   node derive-bump.mjs            Print { slug, bump, body } as JSON to stdout (read-only)
-  node derive-bump.mjs --help     Show this message
+  node derive-bump.mjs --help     Show this message (alias: -h)
 
 Env:
   BASE_REF   Override the base ref (default: origin/main, then main).`;

@@ -63,6 +63,13 @@ describe("detectPackageRoots", () => {
     expect(detectPackageRoots(dir)).toEqual([]);
   });
 
+  it("ignores a non-directory named like a default candidate", () => {
+    // A regular file (or symlink) called `packages` must not leak in as a root —
+    // the fallback is strictly directory-backed.
+    writeFileSync(join(dir, "packages"), "not a directory\n");
+    expect(detectPackageRoots(dir)).toEqual([]);
+  });
+
   it("returns [] for a missing/empty repo root rather than guessing", () => {
     expect(detectPackageRoots(join(dir, "does-not-exist"))).toEqual([]);
   });
