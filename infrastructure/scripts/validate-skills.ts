@@ -140,12 +140,32 @@ function keyPaths(value: unknown, prefix = ""): string[] {
 }
 
 /**
+ * Top-level config keys that may legitimately live in `config.json` without
+ * appearing in the template `config.example.json`. These are opt-in, config-only
+ * features a neutral single-package template deliberately omits — `send-it`'s
+ * `bundleVersioning` is the canonical case (A-555): it is added by hand only in
+ * multi-bundle repos, so shipping it in the example would force a bogus key into
+ * every single-package consumer's reset config (and flag it `needs-manual-input`
+ * on every `initialise-skills` run). The exemption applies to the **whole subtree**
+ * but **only when the example omits the top-level key entirely** — a partially
+ * present block (example has some sub-keys but not others) is still a genuine
+ * mismatch and stays flagged.
+ */
+const OPTIONAL_CONFIG_ONLY_TOPLEVEL = new Set(["bundleVersioning"]);
+
+function topLevelKey(key: string): string {
+  const dot = key.indexOf(".");
+  return dot === -1 ? key : key.slice(0, dot);
+}
+
+/**
  * When a bundle ships BOTH `config.json` and `config.example.json`, their key
  * structures must match — the example is the template a consumer copies over, so a
  * key in one but not the other means an adopter silently gets a stale or
  * incomplete config (A-538). Values may differ (the example carries placeholders);
  * only the key sets are compared, recursively. Skills that ship only one file
- * (e.g. `preflight`, whose config lives at the consumer root) are exempt. `*Raw`
+ * (e.g. `preflight`, whose config lives at the consumer root) are exempt, as are
+ * the config-only optional subtrees in `OPTIONAL_CONFIG_ONLY_TOPLEVEL`. `*Raw`
  * are null when the file is absent.
  */
 export function configKeyParityErrors(
@@ -182,7 +202,20 @@ export function configKeyParityErrors(
 
   const configKeys = new Set(keyPaths(config));
   const exampleKeys = new Set(keyPaths(example));
-  const onlyInConfig = [...configKeys].filter((key) => !exampleKeys.has(key));
+  const onlyInConfig = [...configKeys].filter((key) => {
+    if (exampleKeys.has(key)) {
+      return false;
+    }
+
+    // A config-only optional subtree (e.g. bundleVersioning) is exempt only when
+    // the example omits the top-level key wholesale; a partial block still flags.
+    const top = topLevelKey(key);
+    if (OPTIONAL_CONFIG_ONLY_TOPLEVEL.has(top) && !exampleKeys.has(top)) {
+      return false;
+    }
+
+    return true;
+  });
   const onlyInExample = [...exampleKeys].filter((key) => !configKeys.has(key));
 
   if (onlyInConfig.length > 0) {
