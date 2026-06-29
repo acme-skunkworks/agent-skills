@@ -17,6 +17,7 @@ stats:
   files_changed: 9
   loc_added: 818
   loc_removed: 0
+  commits: 10
 ---
 
 ## Added

@@ -41,6 +41,7 @@ describe("validateEntry", () => {
         "  files_changed: 3",
         "  loc_added: 10",
         "  loc_removed: 2",
+        "  commits: 4",
       ].join("\n"),
     );
     expect(validateEntry(VALID_NAME, raw)).toEqual([]);
@@ -192,6 +193,31 @@ describe("validateEntry", () => {
     );
     expect(validateEntry(VALID_NAME, raw)).toEqual([
       expect.stringMatching(/loc_added must be under stats/),
+    ]);
+  });
+
+  it("rejects a top-level commits key (must live under stats)", () => {
+    const raw = entry(
+      'title: "x"\ncreated_at: "2026-05-23T14:55:37Z"\ncategory: fix\nbreaking: false\ncommits: 4',
+    );
+    expect(validateEntry(VALID_NAME, raw)).toEqual([
+      expect.stringMatching(/commits must be under stats/),
+    ]);
+  });
+
+  it("rejects a non-integer stats.commits", () => {
+    const raw = entry(
+      [
+        'title: "x"',
+        'created_at: "2026-05-23T14:55:37Z"',
+        "category: fix",
+        "breaking: false",
+        "stats:",
+        '  commits: "lots"',
+      ].join("\n"),
+    );
+    expect(validateEntry(VALID_NAME, raw)).toEqual([
+      expect.stringMatching(/stats\.commits must be a non-negative integer/),
     ]);
   });
 
