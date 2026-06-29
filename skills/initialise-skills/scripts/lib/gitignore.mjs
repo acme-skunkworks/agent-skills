@@ -19,10 +19,11 @@ export const IGNORE_COMMENT =
   "# preflight skill scratch output (written at the repo root on each run)";
 
 /**
- * Does any uncommented line already exclude the entry? Trims surrounding
- * whitespace; the leading-slash anchored form (`/.preflight-summary.json`) ignores
- * the same root-level path, so it counts as present too — we must not append a
- * duplicate.
+ * Does any line already exclude the entry? Matches by exact string equality after
+ * trimming — comment lines start with `#` so they can never match, which is the
+ * behaviour we want (a commented-out entry does not gitignore the file). The
+ * leading-slash anchored form (`/.preflight-summary.json`) ignores the same
+ * root-level path, so it counts as present too — we must not append a duplicate.
  * @param {string} text
  * @returns {boolean}
  */
@@ -52,16 +53,16 @@ function detectNewline(raw) {
  * @returns {{ path: string, status: "present"|"added"|"created"|"would-add"|"would-create" }}
  */
 export function reconcilePreflightIgnore(repoRoot, { write = false } = {}) {
-  const path = join(repoRoot, ".gitignore");
+  const gitignorePath = join(repoRoot, ".gitignore");
 
-  if (existsSync(path)) {
-    const raw = readFileSync(path, "utf8");
+  if (existsSync(gitignorePath)) {
+    const raw = readFileSync(gitignorePath, "utf8");
     if (hasEntry(raw)) {
-      return { path, status: "present" };
+      return { path: gitignorePath, status: "present" };
     }
 
     if (!write) {
-      return { path, status: "would-add" };
+      return { path: gitignorePath, status: "would-add" };
     }
 
     const nl = detectNewline(raw);
@@ -75,14 +76,16 @@ export function reconcilePreflightIgnore(repoRoot, { write = false } = {}) {
 
     const separator = next.length ? nl : "";
     next += `${separator}${IGNORE_COMMENT}${nl}${IGNORE_ENTRY}${nl}`;
-    writeFileSync(path, next);
-    return { path, status: "added" };
+    writeFileSync(gitignorePath, next);
+    return { path: gitignorePath, status: "added" };
   }
 
   if (!write) {
-    return { path, status: "would-create" };
+    return { path: gitignorePath, status: "would-create" };
   }
 
-  writeFileSync(path, `${IGNORE_COMMENT}\n${IGNORE_ENTRY}\n`);
-  return { path, status: "created" };
+  // A brand-new file always uses LF — there's no existing content to match, and
+  // LF is correct for new files on every non-Windows target.
+  writeFileSync(gitignorePath, `${IGNORE_COMMENT}\n${IGNORE_ENTRY}\n`);
+  return { path: gitignorePath, status: "created" };
 }

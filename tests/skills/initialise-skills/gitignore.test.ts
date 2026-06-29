@@ -62,6 +62,24 @@ describe("reconcilePreflightIgnore", () => {
     );
   });
 
+  it("handles an existing but empty .gitignore (no leading blank line)", () => {
+    writeFileSync(ignorePath(), "");
+
+    const result = reconcilePreflightIgnore(dir, { write: true });
+    expect(result.status).toBe("added");
+    expect(read()).toBe(`${IGNORE_COMMENT}\n${IGNORE_ENTRY}\n`);
+  });
+
+  it("preserves CRLF line endings on append", () => {
+    writeFileSync(ignorePath(), "node_modules/\r\ndist/\r\n");
+
+    reconcilePreflightIgnore(dir, { write: true });
+    // The appended block round-trips as CRLF — no bare-LF line slips in.
+    expect(read()).toBe(
+      `node_modules/\r\ndist/\r\n\r\n${IGNORE_COMMENT}\r\n${IGNORE_ENTRY}\r\n`,
+    );
+  });
+
   it("is idempotent — a second write leaves the file byte-identical", () => {
     reconcilePreflightIgnore(dir, { write: true });
     const after1 = read();
