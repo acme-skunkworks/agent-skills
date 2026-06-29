@@ -33,6 +33,26 @@ describe("createDetectors — triage-pr boolean defaults", () => {
   });
 });
 
+// A-567: triage-pr's opt-in follow-up capture keys are repo-independent
+// structural defaults — they emit a value (never null) so they aren't flagged
+// needs-manual-input, with empty label/project meaning "unset".
+describe("createDetectors — triage-pr follow-up capture defaults", () => {
+  it("infers empty followUpLabel / followUpProject and a Backlog state", () => {
+    const { detect, has } = detectorsFor();
+    expect(has("followUpLabel")).toBe(true);
+    expect(detect("followUpLabel")).toEqual({ value: "" });
+    expect(detect("followUpProject")).toEqual({ value: "" });
+    expect(detect("followUpState")).toEqual({ value: "Backlog" });
+  });
+
+  it("never returns null for any of the three (so none flags needs-manual-input)", () => {
+    const { detect } = detectorsFor();
+    expect(detect("followUpLabel")).not.toBeNull();
+    expect(detect("followUpProject")).not.toBeNull();
+    expect(detect("followUpState")).not.toBeNull();
+  });
+});
+
 // Regression cover for A-460: packageRoots must signal "couldn't detect" (null)
 // when there's no workspace manifest and none of the default candidates exist,
 // rather than reporting a fabricated `["apps","packages","services"]`.

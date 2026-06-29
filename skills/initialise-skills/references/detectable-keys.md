@@ -7,8 +7,8 @@ detector serves every skill that uses a key. A key found in a skill's
 | Key | Used by | Detection source | Fallback / when undetectable |
 | --- | --- | --- | --- |
 | `baseBranch` | changelog, send-it | `git symbolic-ref refs/remotes/origin/HEAD`, stripped of `origin/` | `main` |
-| `issueKeys` | changelog, cleanup-repo, linear-sync | Leading `<KEY>-<num>` (uppercased; single-letter keys like `A` accepted) from the **most recently committed** branch — `git for-each-ref --sort=-committerdate` — so a renamed team yields its current key, not the historical union; or supplied facts | `needs-manual-input` when no branches match |
-| `linearTeamName` | cleanup-repo, linear-sync | Supplied via stdin `facts` (Linear MCP `list_teams`) | `needs-manual-input` |
+| `issueKeys` | changelog, cleanup-repo, linear-sync, triage-pr | Leading `<KEY>-<num>` (uppercased; single-letter keys like `A` accepted) from the **most recently committed** branch — `git for-each-ref --sort=-committerdate` — so a renamed team yields its current key, not the historical union; or supplied facts | `needs-manual-input` when no branches match |
+| `linearTeamName` | cleanup-repo, linear-sync, triage-pr | Supplied via stdin `facts` (Linear MCP `list_teams`) | `needs-manual-input` |
 | `linearWorkspaceSlug` | changelog | Supplied via stdin `facts` (Linear MCP) | `needs-manual-input` |
 | `changelog` | send-it | `true` when the `changelog` skill is installed alongside or a `changelog/` directory exists; `false` when the repo has neither (no changelog flow) | `true` |
 | `changelogDir` | changelog | Structural default | `changelog` |
@@ -22,6 +22,9 @@ detector serves every skill that uses a key. A key found in a skill's
 | `bundleVersioning` | send-it | Present only when the repo ships multiple skill bundles (a `skills/`-style dir with ≥1 `SKILL.md` subdir) | omitted otherwise |
 | `reviewBots` | triage-pr | Fixed | `["claude", "cursor", "coderabbitai"]` |
 | `maxCiRounds` | triage-pr | Fixed | `5` |
+| `followUpLabel` | triage-pr | Fixed (opt-in follow-up capture; empty = no label) | `""` |
+| `followUpProject` | triage-pr | Fixed (opt-in follow-up capture; empty = no project) | `""` |
+| `followUpState` | triage-pr | Fixed (opt-in follow-up capture; initial state for created issues) | `"Backlog"` |
 | `workspaces` | preflight | n/a — preflight self-detects | never written |
 
 ## Notes and known limitations (v0.1.0)
