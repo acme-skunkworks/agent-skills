@@ -89,6 +89,13 @@ describe("planThreadResponses — guardrails and idempotency", () => {
     expect(action).toEqual({ kind: "skip", threadId: "H1", why: "human" });
   });
 
+  it("never auto-actions a human thread with a defer decision", () => {
+    const [action] = planThreadResponses([
+      { decision: "defer", isHuman: true, reference: "A-602", threadId: "H2" },
+    ]);
+    expect(action).toEqual({ kind: "skip", threadId: "H2", why: "human" });
+  });
+
   it("skips a thread already carrying our marker (no double-post)", () => {
     const [action] = planThreadResponses([
       {
