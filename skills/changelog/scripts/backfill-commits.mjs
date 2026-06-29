@@ -55,7 +55,7 @@ function realRunner(cmd, args) {
  * resolvable merged PR (e.g. an entry whose PR never merged or predates GitHub).
  * @param {Function} run command runner (cmd, args) -> stdout
  * @param {Record<string, unknown>} fm parsed frontmatter
- * @returns {null | number}
+ * @returns {null | number} the PR number, or null when no merged PR resolves. Throws (rather than returning null) if the gh output isn't valid JSON — main()'s per-entry try/catch owns that, so a malformed response skips the entry loudly instead of being mistaken for "no PR".
  */
 export function resolvePrNumber(run, fm) {
   if (typeof fm.pr === "number") {

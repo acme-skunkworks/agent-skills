@@ -20,7 +20,7 @@
  * Count a merged PR's commits, excluding merge commits (more than one parent).
  * @param {(cmd: string, args: string[]) => string} run command runner
  * @param {number | string} prNumber merged PR number
- * @returns {null | string} the non-merge commit count as a string, or null when unresolvable
+ * @returns {null | string} the non-merge commit count as a string, or null when the response isn't an array. Throws (rather than returning null) if the gh output isn't valid JSON — a network/auth failure must surface to the caller, not be silently recorded as a count; both callers own that (finalise-changelog's resolver and backfill's main() each wrap the call).
  */
 export function nonMergeCommitCount(run, prNumber) {
   const json = run("gh", [
