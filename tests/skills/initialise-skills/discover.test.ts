@@ -9,7 +9,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 // shipping a config.example.json — with the self-configuring `preflight` skill
 // and unparseable config.json files handled specially. Uses a tmp skills dir so
 // the assertions don't depend on which skills happen to be installed here.
-import { discoverSkills } from "../../../skills/initialise-skills/scripts/lib/discover.mjs";
+import {
+  discoverSkills,
+  isPreflightInstalled,
+} from "../../../skills/initialise-skills/scripts/lib/discover.mjs";
 
 describe("discoverSkills", () => {
   let dir: string;
@@ -78,5 +81,32 @@ describe("discoverSkills", () => {
 
   it("returns an empty list when the skills directory does not exist", () => {
     expect(discoverSkills(join(dir, "nope"))).toEqual([]);
+  });
+});
+
+describe("isPreflightInstalled", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "preflight-installed-"));
+  });
+
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("is true when the preflight bundle ships a SKILL.md", () => {
+    mkdirSync(join(dir, "preflight"), { recursive: true });
+    writeFileSync(join(dir, "preflight", "SKILL.md"), "---\nname: preflight\n---\n");
+    expect(isPreflightInstalled(dir)).toBe(true);
+  });
+
+  it("is false when the preflight directory is absent", () => {
+    expect(isPreflightInstalled(dir)).toBe(false);
+  });
+
+  it("is false when the directory exists but has no SKILL.md (empty leftover)", () => {
+    mkdirSync(join(dir, "preflight"), { recursive: true });
+    expect(isPreflightInstalled(dir)).toBe(false);
   });
 });
