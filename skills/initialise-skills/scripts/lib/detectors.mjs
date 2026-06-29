@@ -2,7 +2,7 @@
 //
 // One detector per config key serves every skill that uses it — `baseBranch`
 // covers changelog + send-it + preflight; `issueKeys` covers changelog +
-// cleanup-repo + linear-sync. A key in a skill's config.example.json with NO
+// cleanup-repo + linear-sync + triage-pr. A key in a skill's config.example.json with NO
 // entry here is reported as `needs-manual-input`; the merge then leaves it for
 // the user (or a Linear MCP fact) to supply.
 //
@@ -140,6 +140,12 @@ export function createDetectors({
     // them confidently rather than flagging for manual input.
     changelogDir: () => ({ value: "changelog" }),
     fallbackPackage: () => ({ value: "infrastructure" }),
+    // triage-pr follow-up capture is opt-in: emit the bundle's own structural
+    // defaults confidently (never null) so they aren't flagged needs-manual-input.
+    // Empty label/project mean "unset"; a consumer edit reads as drift and is kept.
+    followUpLabel: () => ({ value: "" }),
+    followUpProject: () => ({ value: "" }),
+    followUpState: () => ({ value: "Backlog" }),
     issueKeys: () => {
       const fromFacts = linearFacts.issueKeys;
       if (Array.isArray(fromFacts) && fromFacts.length > 0) {

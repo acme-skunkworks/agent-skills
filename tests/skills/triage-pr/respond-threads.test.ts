@@ -43,6 +43,16 @@ describe("planThreadResponses — symmetric accept/decline", () => {
     expect(action.kind).toBe("resolve-only");
     expect(action).not.toHaveProperty("body");
   });
+
+  it("defers → reply-resolve referencing the follow-up ticket + marker", () => {
+    const [action] = planThreadResponses([
+      { decision: "defer", reference: "A-601", threadId: "T4" },
+    ]);
+    expect(action.kind).toBe("reply-resolve");
+    expect(action.body).toContain("A-601");
+    expect(action.body).toContain("for follow-up");
+    expect(action.body).toContain(THREAD_MARKER);
+  });
 });
 
 describe("planThreadResponses — replyOnAccept knob", () => {
@@ -61,6 +71,14 @@ describe("planThreadResponses — replyOnAccept knob", () => {
     );
     expect(action.kind).toBe("reply-resolve");
   });
+
+  it("defers still reply even when replyOnAccept is false", () => {
+    const [action] = planThreadResponses(
+      [{ decision: "defer", reference: "A-601", threadId: "T3" }],
+      { replyOnAccept: false },
+    );
+    expect(action.kind).toBe("reply-resolve");
+  });
 });
 
 describe("planThreadResponses — guardrails and idempotency", () => {
@@ -69,6 +87,13 @@ describe("planThreadResponses — guardrails and idempotency", () => {
       { decision: "accept", isHuman: true, sha: "abc1234", threadId: "H1" },
     ]);
     expect(action).toEqual({ kind: "skip", threadId: "H1", why: "human" });
+  });
+
+  it("never auto-actions a human thread with a defer decision", () => {
+    const [action] = planThreadResponses([
+      { decision: "defer", isHuman: true, reference: "A-602", threadId: "H2" },
+    ]);
+    expect(action).toEqual({ kind: "skip", threadId: "H2", why: "human" });
   });
 
   it("skips a thread already carrying our marker (no double-post)", () => {
@@ -115,6 +140,12 @@ describe("buildReplyBody — validation + no sycophancy", () => {
     expect(() =>
       buildReplyBody({ decision: "decline", reason: "   " }),
     ).toThrow(/reasoning/);
+  });
+
+  it("requires a reference for a defer", () => {
+    expect(() =>
+      buildReplyBody({ decision: "defer", reference: "  " }),
+    ).toThrow(/reference/);
   });
 
   it("states facts without praise", () => {
