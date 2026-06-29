@@ -19,9 +19,9 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.4.3
+  version: 0.5.0
   author: Rob Easthope
-allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
+allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
 
 # triage-pr
@@ -55,9 +55,11 @@ review-reception and verification rules folded into Phase B.
 
 ## Configuration
 
-Four knobs live in [`config.json`](config.json) beside this file. Read it at the
+The knobs live in [`config.json`](config.json) beside this file. Read it at the
 start of a run and use its values throughout. Edit your copied `config.json` to
-match the consuming repo's review bots.
+match the consuming repo's review bots and (optionally) its Linear workspace.
+
+The first four govern the **CI + review** loop:
 
 | Key | Meaning | Default |
 | --- | --- | --- |
@@ -65,6 +67,20 @@ match the consuming repo's review bots.
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers. Bounds the fix-and-watch loop so it can't spin forever. | `5` |
 | `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before the thread is resolved (the audit trail). `false` resolves accepted threads silently for maintainers who dislike bot-reply noise — declines always reply with reasoning regardless. | `true` |
 | `promoteOnGreen` | The single control for the draft→ready flip. When `true`, after Phase A finishes with **every** required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**, and an enabled config *is* the human authorisation for the flip: proceed on proven green without seeking a separate sign-off. Set `false` (or pass `--no-promote`) to opt out and stop at green. Promotion is suppressed unless the green is *proven* (Step 6's watched rollup, never "no failures yet"), there are **no unresolved human review threads**, and `mergeStateStatus` shows no unresolved base drift (`BEHIND` / `DIRTY`). An explicit user prompt — or `--promote` / `--no-promote` — overrides this per run; `--ci-only` and `--dry-run` never promote. | `true` |
+
+The remaining five configure the **follow-up capture** step (Step 10) — turning a
+valid-but-out-of-scope finding into a tracked Linear issue. They are **opt-in**:
+when `linearTeamName` is empty, capture is disabled and the step is skipped
+silently (no Linear MCP calls). Capture also needs the Linear MCP server; skip it
+silently when it is unavailable.
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `linearTeamName` | Linear team **name** (not the key — the key is renamed over time, the name is stable) the follow-up issues are created under. Empty disables capture entirely. | `""` |
+| `issueKeys` | Team-key prefixes that may appear in branch names, used to recognise issue ids the same way `linear-sync` does. Mirrors the established `issueKeys` convention. | `[]` |
+| `followUpLabel` | Optional label applied to each created follow-up issue (e.g. `follow-up`). Empty = no label. | `""` |
+| `followUpProject` | Optional Linear project (name, id, or slug) the follow-up issues are filed under. Empty = no project. | `""` |
+| `followUpState` | Optional initial workflow state (type, name, or id — e.g. `Backlog`) for created issues. Empty = the team's default state. | `"Backlog"` |
 
 Only the configured `reviewBots` are actioned in Phase B. Human review comments
 are surfaced in the final report but never auto-actioned, replied to, or
@@ -249,7 +265,7 @@ It prints minimal JSON with three groups:
 
 Resolved threads are filtered out so the context stays small. Empty
 `unresolvedThreads` **and** no AI summary → report "no actionable AI review
-feedback" and skip to Step 11.
+feedback" and skip to Step 12.
 
 ### Step 8 — Phase B: validate each finding before touching code
 
@@ -271,6 +287,13 @@ Apply the six-step reception (full rules in
      (`Addressed in <sha>.`). When `replyOnAccept` is `false`, resolve without the
      reply.
    - **Outdated** (cited code is gone) → resolve without a reply.
+   - **Defer** (the finding is **valid but out of scope** for this PR — a
+     worthwhile follow-up, not a change to make here) → **do not** resolve it now.
+     Set it aside as a follow-up **candidate**, recording
+     `{title, rationale, threadId, path, line}`, and leave the thread unresolved.
+     Candidates are captured as tracked Linear issues — **only on explicit human
+     approval** — at Step 10, which then posts the defer reply and resolves the
+     thread. Never create an issue here.
 
    No sycophancy ("You're absolutely right!", "Great point!") — state facts.
 6. **IMPLEMENT** accepted findings one at a time (Step 9), then reply+resolve.
@@ -288,6 +311,8 @@ and **refuses to action a human thread** even if its id is passed by mistake. Ad
 node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision accept --sha <sha> --bots "claude,cursor,coderabbitai"
 # declined finding:
 node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision decline --reason "<technical reasoning>" --bots "claude,cursor,coderabbitai"
+# deferred finding, after Step 10 mints its follow-up ticket:
+node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision defer --reference <issue-id> --bots "claude,cursor,coderabbitai"
 ```
 
 `respond-threads.mjs --help` prints the full subcommand/flag usage, and
@@ -313,20 +338,73 @@ including declined or not-yet-handled ones (see
   rides on them).
 - **Convergence.** Loop Phase B ↔ Phase A until CI is green **and** every bot
   thread is *handled* — resolved-by-us (accept, post-CI-green), declined+resolved,
-  or a human thread (never auto-actioned) — with **no accepted fix still awaiting
-  CI-green**. Because each push re-triggers review, the idempotency marker is what
-  makes this terminate: already-handled threads are skipped on the next pass, so
-  only genuinely new findings are actioned. The whole loop stays bounded by
-  `maxCiRounds`.
+  a human thread (never auto-actioned), or **flagged as a follow-up candidate**
+  (a recognised transient state — left unresolved on purpose, settled at Step 10) —
+  with **no accepted fix still awaiting CI-green**. Because each push re-triggers
+  review, the idempotency marker is what makes this terminate: already-handled
+  threads are skipped on the next pass, so only genuinely new findings are
+  actioned. The whole loop stays bounded by `maxCiRounds`.
 
-### Step 10 — Phase B: acknowledge issue-level review comments
+### Step 10 — Phase B: capture out-of-scope findings as follow-up issues
+
+Once the thread loop has converged, gather every follow-up **candidate** flagged
+during Step 8 — both per-thread defers **and** issue-level findings judged
+valid-but-out-of-scope. If there are none, skip to Step 11.
+
+**Capture is opt-in and gated on explicit human approval — nothing is created
+otherwise.** It is disabled when `config.linearTeamName` is empty or the Linear MCP
+server is unavailable; in that case (and whenever the human declines below), fall
+back without creating anything: **decline** each per-thread candidate with concise
+technical reasoning (`out of scope; not tracked`) and resolve it, and map each
+issue-level candidate as `out-of-scope` with **no** ticket in the Step 11 summary.
+
+When capture is enabled, present **all** candidates as a single batch and ask once
+for explicit approval (**default no** — mirrors `cleanup-repo`'s two-pass gate):
+
+```text
+Proposed follow-up issues (none created yet):
+  1. Refactor fetch layer — thread on src/api.ts:42
+  2. Add retry backoff — CodeRabbit summary
+Create these 2 issues in Linear? [y/N]
+```
+
+On a single explicit **yes**, create one Linear issue per candidate with
+`mcp__linear-server__save_issue` — resolve the team by **name** and the state by
+**type**, never a stale key (the renamed-team gotcha; see
+[`skills/linear-sync/SKILL.md`](../linear-sync/SKILL.md)):
+
+- `team` = `config.linearTeamName`; `title` derived from the finding.
+- `description` = the bot's rationale, a back-link to the PR **and** the specific
+  thread/comment URL, and the originating `path:line` (literal newlines, British
+  English).
+- `links` = `[{ url: <PR url>, title: "Source PR" }]`.
+- `labels` = `[config.followUpLabel]` when set; `project` = `config.followUpProject`
+  when set; `state` = `config.followUpState` when set (else the team default).
+  Use `list_issue_statuses` / `list_projects` to resolve a configured state/project
+  and fail loudly on a typo rather than filing in the wrong place.
+
+Then write each created issue's id/URL back:
+
+- **Per-thread** candidate → post the defer reply and resolve via the `defer`
+  decision:
+
+  ```bash
+  node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision defer --reference <issue-id> --bots "claude,cursor,coderabbitai"
+  ```
+
+- **Issue-level** candidate → carry it into Step 11 as
+  `{ "title": "…", "status": "out-of-scope", "reference": "<issue-id>" }`.
+
+Under `--dry-run`, list the candidates that *would* be proposed and create nothing.
+
+### Step 11 — Phase B: acknowledge issue-level review comments
 
 Findings that arrive as **issue-level comments** — Claude's whole-review comment,
 CodeRabbit's sticky summary (`aiSummaryComments` from Step 7) — have no resolvable
 per-finding thread, so the thread machinery above never touches them. Once the
-thread loop has converged, acknowledge them on the PR with **one consolidated
-comment** mapping each finding → `accepted (<sha>)` / `declined (<reason>)` /
-`out-of-scope (<ticket>)`:
+thread loop has converged (and Step 10's capture has minted any follow-up tickets),
+acknowledge them on the PR with **one consolidated comment** mapping each finding →
+`accepted (<sha>)` / `declined (<reason>)` / `out-of-scope (<ticket>)`:
 
 ```bash
 node scripts/respond-threads.mjs summary --pr <pr> --findings '[{"title":"…","status":"accepted","reference":"<sha>"}]'
@@ -337,13 +415,15 @@ comment rather than posting a duplicate. Acknowledge each issue-level finding on
 once here (not per sub-point of a checklist review — that is noise). Skip this step
 entirely when there were no issue-level findings to map.
 
-### Step 11 — Report
+### Step 12 — Report
 
 Summarise:
 
 - Checks fixed, each with the failing command it addressed.
 - Findings accepted and fixed (with the resolving commit).
 - Findings declined, each with the technical reasoning given.
+- Follow-up issues created (each with its Linear id/URL), or candidates that were
+  proposed and **declined** (so nothing was created).
 - Issue-level findings acknowledged in the consolidated comment.
 - Base merges/rebases performed.
 - Remaining blockers (if `maxCiRounds` was exhausted).

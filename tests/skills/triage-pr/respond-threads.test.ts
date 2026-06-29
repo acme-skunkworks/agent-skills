@@ -43,6 +43,16 @@ describe("planThreadResponses — symmetric accept/decline", () => {
     expect(action.kind).toBe("resolve-only");
     expect(action).not.toHaveProperty("body");
   });
+
+  it("defers → reply-resolve referencing the follow-up ticket + marker", () => {
+    const [action] = planThreadResponses([
+      { decision: "defer", reference: "A-601", threadId: "T4" },
+    ]);
+    expect(action.kind).toBe("reply-resolve");
+    expect(action.body).toContain("A-601");
+    expect(action.body).toContain("for follow-up");
+    expect(action.body).toContain(THREAD_MARKER);
+  });
 });
 
 describe("planThreadResponses — replyOnAccept knob", () => {
@@ -57,6 +67,14 @@ describe("planThreadResponses — replyOnAccept knob", () => {
   it("declines still reply even when replyOnAccept is false", () => {
     const [action] = planThreadResponses(
       [{ decision: "decline", reason: "Out of scope.", threadId: "T2" }],
+      { replyOnAccept: false },
+    );
+    expect(action.kind).toBe("reply-resolve");
+  });
+
+  it("defers still reply even when replyOnAccept is false", () => {
+    const [action] = planThreadResponses(
+      [{ decision: "defer", reference: "A-601", threadId: "T3" }],
       { replyOnAccept: false },
     );
     expect(action.kind).toBe("reply-resolve");
@@ -115,6 +133,12 @@ describe("buildReplyBody — validation + no sycophancy", () => {
     expect(() =>
       buildReplyBody({ decision: "decline", reason: "   " }),
     ).toThrow(/reasoning/);
+  });
+
+  it("requires a reference for a defer", () => {
+    expect(() =>
+      buildReplyBody({ decision: "defer", reference: "  " }),
+    ).toThrow(/reference/);
   });
 
   it("states facts without praise", () => {
