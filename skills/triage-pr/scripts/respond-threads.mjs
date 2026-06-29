@@ -221,7 +221,7 @@ const STATUS_LABELS = {
  */
 export function buildConsolidatedComment(findings) {
   if (!findings || findings.length === 0) {
-    // The caller is told (SKILL.md Step 10) to skip the summary step when there
+    // The caller is told (SKILL.md Step 11) to skip the summary step when there
     // are no issue-level findings; fail loudly rather than post a bare table.
     throw new Error("buildConsolidatedComment requires at least one finding");
   }
