@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 type ResolvedPr = {
   additions: null | string;
   changedFiles: null | string;
+  commits: null | string;
   deletions: null | string;
   mergedAt: string;
   mergeSha: string;
@@ -25,6 +26,7 @@ type Runner = (cmd: string, args: readonly string[]) => string;
 const PR: ResolvedPr = {
   additions: "10",
   changedFiles: "3",
+  commits: "4",
   deletions: "2",
   mergedAt: "2026-05-24T09:00:00Z",
   mergeSha: "abc1234def",
@@ -65,6 +67,7 @@ describe("finaliseEntry", () => {
     expect(data.pr).toBe(42);
     expect(data.merge_strategy).toBe("squash");
     expect(data.stats).toEqual({
+      commits: 4,
       files_changed: 3,
       loc_added: 10,
       loc_removed: 2,
@@ -153,12 +156,49 @@ describe("makeResolver", () => {
     expect(resolved).toEqual({
       additions: "10",
       changedFiles: "3",
+      // No `gh api` handler wired here, so the commit-count call fails softly.
+      commits: null,
       deletions: "2",
       mergedAt: "2026-05-24T09:00:00Z",
       mergeSha: "merge111",
       mergeStrategy: "squash",
       prNumber: "42",
     });
+  });
+
+  it("resolves the non-merge commit count from the PR commits API", () => {
+    const { run } = makeRunner({
+      "gh api": () =>
+        JSON.stringify([
+          { parents: [{ sha: "p1" }] },
+          { parents: [{ sha: "p2" }] },
+          // A merge commit (two parents) is excluded from the count.
+          { parents: [{ sha: "p3" }, { sha: "p4" }] },
+          { parents: [{ sha: "p5" }] },
+        ]),
+      "gh pr list": () =>
+        JSON.stringify([
+          { mergeCommit: { oid: "merge111" }, number: 42 },
+        ]),
+      "git cat-file": () => "tree x\nparent p1\n",
+    });
+    expect(makeResolver(run)("a-1-branch")?.commits).toBe("3");
+  });
+
+  it("leaves commits null (without discarding other stats) when the count call fails", () => {
+    const { run } = makeRunner({
+      "gh api": () => {
+        throw new Error("gh: API rate limit exceeded");
+      },
+      "gh pr list": () =>
+        JSON.stringify([
+          { additions: 10, mergeCommit: { oid: "merge111" }, number: 42 },
+        ]),
+      "git cat-file": () => "tree x\nparent p1\n",
+    });
+    const resolved = makeResolver(run)("a-1-branch");
+    expect(resolved?.commits).toBeNull();
+    expect(resolved?.additions).toBe("10"); // other stats survive
   });
 
   it("infers merge from a 2-parent merge commit", () => {

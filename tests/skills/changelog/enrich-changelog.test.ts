@@ -8,6 +8,7 @@ type EnrichInput = {
   additions?: null | string;
   branch: string;
   changedFiles?: null | string;
+  commits?: null | string;
   deletions?: null | string;
   mergedAt: string;
   mergeSha: string;
@@ -19,6 +20,7 @@ const BASE: EnrichInput = {
   additions: "10",
   branch: "asw-123-fix-a-thing",
   changedFiles: "3",
+  commits: "4",
   deletions: "2",
   mergedAt: "2026-05-24T09:00:00Z",
   mergeSha: "abc1234def5678",
@@ -56,6 +58,7 @@ describe("enrichFrontmatter", () => {
     expect(data.merge_strategy).toBe("squash");
     expect(data.pr).toBe(42);
     expect(data.stats).toEqual({
+      commits: 4,
       files_changed: 3,
       loc_added: 10,
       loc_removed: 2,
@@ -88,10 +91,21 @@ describe("enrichFrontmatter", () => {
     });
     const { data } = parseFrontmatter(second);
     expect(data.stats).toEqual({
+      commits: 4,
       files_changed: 9,
       loc_added: 100,
       loc_removed: 5,
     });
+  });
+
+  it("writes stats.commits from the commits input", () => {
+    const out = enrichFrontmatter(placeholderEntry(), { ...BASE, commits: "7" });
+    expect((parseFrontmatter(out).data.stats as { commits: number }).commits).toBe(7);
+  });
+
+  it("treats an empty-string commits input as absent (no NaN written)", () => {
+    const out = enrichFrontmatter(placeholderEntry(), { ...BASE, commits: "" });
+    expect(parseFrontmatter(out).data.stats).not.toHaveProperty("commits");
   });
 
   it("leaves created_at untouched", () => {
