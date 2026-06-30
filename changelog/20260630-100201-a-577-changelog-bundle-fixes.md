@@ -38,7 +38,7 @@ stats:
   `blank(fm.stats)` (the object), not `blank(fm.stats.commits)`. An entry with `merged_at`/`commit`/`pr`
   set and a populated `stats` block but no `commits` child therefore skipped enrichment and was
   version-stamped without it — and the line-63 short-circuit then made the missing count
-  un-backfillable through finalise forever. The gate now also enrichs when `stats.commits` is blank.
+  un-backfillable through finalise forever. The gate now also enriches when `stats.commits` is blank.
 
 - **`backfill-commits` mirrors the stats-block indent instead of assuming two spaces
   ([A-581](https://linear.app/acme-skunkworks/issue/A-581)).** `setStatsCommits()` walked the
