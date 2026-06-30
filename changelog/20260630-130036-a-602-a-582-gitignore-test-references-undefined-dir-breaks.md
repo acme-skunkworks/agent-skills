@@ -1,0 +1,33 @@
+---
+title: Fix undefined `dir` reference in the A-582 gitignore tests
+release_note:
+version:
+created_at: '2026-06-30T13:00:36Z'
+merged_at:
+branch: a-602-a-582-gitignore-test-references-undefined-dir-breaks-pnpm
+pr:
+commit:
+merge_strategy:
+author: rob@acmeskunkworks.io
+co_authors: []
+category: chore
+breaking: false
+issues:
+  - A-602
+stats:
+  files_changed:
+  loc_added:
+  loc_removed:
+---
+
+## Fixed
+
+- **The [A-582](https://linear.app/acme-skunkworks/issue/A-582) gitignore tests reference an undefined `dir`
+  ([A-602](https://linear.app/acme-skunkworks/issue/A-602)).** The two `!`-unignore cases
+  added to `tests/skills/initialise-skills/gitignore.test.ts` called
+  `reconcilePreflightIgnore(dir, …)`, but the `describe` block defines the temp root as
+  `directory` — so both threw `ReferenceError: dir is not defined` and `pnpm test` failed.
+  The three references now use `directory`, matching the sibling cases. Pure test fix — no
+  production code, no bundle version bump. It merged on a stale-green Build & Lint check
+  (that gate runs on PRs, not on pushes to `main`), so nothing re-ran the suite against the
+  trunk.

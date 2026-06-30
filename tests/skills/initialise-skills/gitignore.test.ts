@@ -112,17 +112,17 @@ describe("reconcilePreflightIgnore", () => {
     // last-match-wins, silently re-ignore the file the consumer chose to track.
     const original = `node_modules/\n!${IGNORE_ENTRY}\n`;
     writeFileSync(ignorePath(), original);
-    expect(reconcilePreflightIgnore(dir, { write: false }).status).toBe(
+    expect(reconcilePreflightIgnore(directory, { write: false }).status).toBe(
       "present",
     );
-    const result = reconcilePreflightIgnore(dir, { write: true });
+    const result = reconcilePreflightIgnore(directory, { write: true });
     expect(result.status).toBe("present");
     expect(read()).toBe(original);
   });
 
   it("treats the anchored !-unignore form as already settled too", () => {
     writeFileSync(ignorePath(), `!/${IGNORE_ENTRY}\n`);
-    expect(reconcilePreflightIgnore(dir, { write: true }).status).toBe(
+    expect(reconcilePreflightIgnore(directory, { write: true }).status).toBe(
       "present",
     );
   });
