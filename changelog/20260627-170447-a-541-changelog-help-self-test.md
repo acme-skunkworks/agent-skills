@@ -40,7 +40,7 @@ stats:
   scripts and said finalisation was "owned by the orchestrator … not invoked here"
   — but `finalise-changelog.mjs`, `check-changelog-completeness.mjs`,
   `lib/enrich.mjs`, and `lib/stamp.mjs` ship **inside this bundle** and are wired
-  into the consumer's `package.json` + CI (post-A-369). The section now splits the
+  into the consumer's `package.json` + CI (post-[A-369](https://linear.app/acme-skunkworks/issue/A-369)). The section now splits the
   scripts into **authoring** (run by the skill) and **finalisation / CI gate** (run
   by the consumer's `package.json` scripts / CI / the release orchestrator), making
   clear which actor runs each, so an adopter wiring the orchestrator/CI gate
