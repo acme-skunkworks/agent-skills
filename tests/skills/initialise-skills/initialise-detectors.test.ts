@@ -1,6 +1,8 @@
 import { createDetectors } from "../../../skills/initialise-skills/scripts/lib/detectors.mjs";
 import {
   currentIssueKeys,
+  detectIssueKeys,
+  listBranchNames,
   parseIssueKeysFromBranches,
 } from "../../../skills/initialise-skills/scripts/lib/git.mjs";
 import {
@@ -8,6 +10,7 @@ import {
   parseWorkspaceGlobs,
   rootsFromGlobs,
 } from "../../../skills/initialise-skills/scripts/lib/workspace.mjs";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -73,6 +76,40 @@ describe("currentIssueKeys", () => {
   });
 });
 
+// A-580: the remote-prefix strip must only drop the ref namespace, not the first
+// segment of a slash-named local branch — `A-123/demo` keeps its `A` key.
+describe("listBranchNames / detectIssueKeys — slash-named local branches", () => {
+  let repoRoot: string;
+
+  function git(...args: string[]): void {
+    const result = spawnSync("git", args, { cwd: repoRoot, encoding: "utf8" });
+    if (result.status !== 0) {
+      throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+    }
+  }
+
+  beforeEach(() => {
+    repoRoot = mkdtempSync(join(tmpdir(), "init-git-"));
+    git("init", "-b", "main");
+    git("config", "user.email", "test@example.test");
+    git("config", "user.name", "Test");
+    git("commit", "--allow-empty", "-m", "init");
+    git("branch", "A-123/demo");
+  });
+
+  afterEach(() => {
+    rmSync(repoRoot, { force: true, recursive: true });
+  });
+
+  it("preserves the embedded slash in a local branch name", () => {
+    expect(listBranchNames(repoRoot)).toContain("A-123/demo");
+  });
+
+  it("detects the key from a slash-named local branch", () => {
+    expect(detectIssueKeys(repoRoot)).toEqual(["A"]);
+  });
+});
+
 describe("parseWorkspaceGlobs / rootsFromGlobs", () => {
   it("reads the packages: block from pnpm-workspace.yaml and reduces to roots", () => {
     const yaml = [
@@ -132,37 +169,29 @@ describe("changelog detector", () => {
     rmSync(repoRoot, { force: true, recursive: true });
   });
 
-  it("is true when the changelog skill is installed alongside", () => {
-    const { detect } = createDetectors({
-      installedSkills: new Set(["changelog", "send-it"]),
-      repoRoot,
-    });
-    expect(detect("changelog")).toEqual({ value: true });
+  it("is false when there is no changelog/ dir, even if the changelog skill is vendored (A-570)", () => {
+    // Skill-presence alone must not flip changelog true: a repo that
+    // over-installed the bundle but keeps no changelog/ dir (e.g.
+    // release-orchestrator) would otherwise try to author entries with nowhere
+    // to live.
+    const { detect } = createDetectors({ repoRoot });
+    expect(detect("changelog")).toEqual({ value: false });
   });
 
-  it("is true when a changelog/ directory exists even with no changelog skill", () => {
+  it("is true when a changelog/ directory exists", () => {
     mkdirSync(join(repoRoot, "changelog"));
-    const { detect } = createDetectors({
-      installedSkills: new Set(["send-it"]),
-      repoRoot,
-    });
+    const { detect } = createDetectors({ repoRoot });
     expect(detect("changelog")).toEqual({ value: true });
   });
 
-  it("is false when the repo has neither a changelog skill nor a changelog/ dir", () => {
-    const { detect } = createDetectors({
-      installedSkills: new Set(["preflight", "send-it"]),
-      repoRoot,
-    });
+  it("is false when the repo has no changelog/ dir", () => {
+    const { detect } = createDetectors({ repoRoot });
     expect(detect("changelog")).toEqual({ value: false });
   });
 
   it("is false when 'changelog' is a plain file rather than a directory", () => {
     writeFileSync(join(repoRoot, "changelog"), "not a dir\n");
-    const { detect } = createDetectors({
-      installedSkills: new Set(["send-it"]),
-      repoRoot,
-    });
+    const { detect } = createDetectors({ repoRoot });
     expect(detect("changelog")).toEqual({ value: false });
   });
 });

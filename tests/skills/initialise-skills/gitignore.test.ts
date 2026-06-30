@@ -104,4 +104,24 @@ describe("reconcilePreflightIgnore", () => {
       "present",
     );
   });
+
+  it("leaves an explicit !-unignore untouched rather than flipping it (A-582)", () => {
+    // Appending a positive rule after a deliberate negation would, under
+    // last-match-wins, silently re-ignore the file the consumer chose to track.
+    const original = `node_modules/\n!${IGNORE_ENTRY}\n`;
+    writeFileSync(ignorePath(), original);
+    expect(reconcilePreflightIgnore(dir, { write: false }).status).toBe(
+      "present",
+    );
+    const result = reconcilePreflightIgnore(dir, { write: true });
+    expect(result.status).toBe("present");
+    expect(read()).toBe(original);
+  });
+
+  it("treats the anchored !-unignore form as already settled too", () => {
+    writeFileSync(ignorePath(), `!/${IGNORE_ENTRY}\n`);
+    expect(reconcilePreflightIgnore(dir, { write: true }).status).toBe(
+      "present",
+    );
+  });
 });
