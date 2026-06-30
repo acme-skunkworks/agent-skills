@@ -68,6 +68,39 @@ describe("backfillEntry", () => {
     ).toBe(5);
   });
 
+  it("mirrors the stats-block child indent rather than hard-coding two spaces (A-581)", () => {
+    // A stats block indented four spaces must get a four-space commits line, or
+    // the inserted line is no longer a child of stats:.
+    const raw = [
+      "---",
+      'title: "Fix a thing"',
+      "branch: a-1-fix",
+      "pr: 42",
+      "stats:",
+      "    files_changed: 3",
+      "    loc_added: 10",
+      "    loc_removed: 2",
+      "---",
+      "",
+      "## Fixed",
+      "",
+      "- A thing.",
+      "",
+    ].join("\n");
+    const out = backfillEntry(
+      raw,
+      makeRunner({ "gh api": () => COMMITS(6) }),
+    ) as string;
+    expect(out).not.toBeNull();
+    const added = out
+      .split("\n")
+      .filter((line) => !raw.split("\n").includes(line));
+    expect(added).toEqual(["    commits: 6"]);
+    expect(
+      (parseFrontmatter(out).data.stats as { commits: number }).commits,
+    ).toBe(6);
+  });
+
   it("is idempotent — re-running yields no change", () => {
     const run = makeRunner({ "gh api": () => COMMITS(5) });
     const once = backfillEntry(entryWithPr(), run) as string;

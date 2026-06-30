@@ -57,6 +57,16 @@ describe("rewriteBody — masking", () => {
     expect(rewriteBody(body)).toBe(body);
   });
 
+  it("round-trips inline code nested inside a link without leaking NUL bytes", () => {
+    // The inner inline-code span masks first, then the whole `[<token>](url)`
+    // masks again — the unmask must be reentrant or a literal NUL token survives
+    // and turns the entry into a binary blob (A-577).
+    const body = "See [`A-12`](https://example.test/A-12) for the helper.";
+    const out = rewriteBody(body);
+    expect(out).toBe(body);
+    expect(out).not.toContain("\u0000");
+  });
+
   it("links a bare ID whilst leaving a fenced/inline-code occurrence masked", () => {
     const body = "Closes A-12; see `A-12` and:\n```\nA-12\n```\n";
     expect(rewriteBody(body)).toBe(

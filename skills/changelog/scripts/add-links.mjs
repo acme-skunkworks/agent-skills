@@ -59,10 +59,25 @@ export function rewriteBody(body) {
     .replaceAll(REFERENCE_LINKED_RE, mask)
     .replace(ISSUE_RE, (id) => `[${id}](${buildUrl(id)})`);
 
-  return masked.replaceAll(
-    /\0CR_MASK_(\d+)\0/g,
-    (_, index) => masks[Number(index)],
-  );
+  // Unmask is reentrant. Masks can nest: inline code inside a Markdown link —
+  // `` [`code`](url) `` — has the inner inline-code span masked first, then the
+  // whole `[<token>](url)` masked again, so the outer mask's stored value still
+  // contains the inner token. A single replace pass restores the outer token but
+  // leaves that inner `\0…\0` token embedded, so literal NUL bytes survive into
+  // the file (the entry becomes a binary blob). Restore to a fixed point instead.
+  // Each token is stored before any token that embeds it, so every pass strictly
+  // reduces the highest remaining index and the loop terminates.
+  let unmasked = masked;
+  let previous;
+  do {
+    previous = unmasked;
+    unmasked = unmasked.replaceAll(
+      /\0CR_MASK_(\d+)\0/g,
+      (_, index) => masks[Number(index)],
+    );
+  } while (unmasked !== previous);
+
+  return unmasked;
 }
 
 export function splitFrontmatter(raw) {
@@ -116,6 +131,15 @@ function selfTest() {
   cases.push({
     name: "an issue ID inside a code fence is not linkified",
     ok: rewriteBody(fenced) === fenced,
+  });
+
+  // Inline code nested inside a Markdown link masks twice (inner span, then the
+  // whole link). The reentrant unmask must restore both so no NUL token survives.
+  const codeInLink = "See [`A-1`](https://example.test/A-1) for the helper.";
+  const codeInLinkOut = rewriteBody(codeInLink);
+  cases.push({
+    name: "inline code nested inside a link round-trips with no NUL bytes",
+    ok: codeInLinkOut === codeInLink && !codeInLinkOut.includes("\u0000"),
   });
 
   // When the host config has issue keys, a bare ID for the first key linkifies.
