@@ -8,6 +8,13 @@
 # preflight skill scratch output (written at the repo root on each run)
 .preflight-summary.json
 
+# Per-skill config.json is generated, not tracked (A-615): `skills add --copy`
+# vendors every tracked file under skills/<name>/, so a tracked config.json would
+# leak this repo's own values into consumers. The neutral config.example.json is
+# the only config that ships; this repo's real values live in the tracked
+# infrastructure/dogfood-config/ tree and are materialised by `pnpm bootstrap:config`.
+skills/*/config.json
+
 node_modules/
 dist/
 build/

@@ -59,6 +59,14 @@ jobs:
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: 🥾 Bootstrap dogfood config
+        # skills/*/config.json is gitignored (A-615) so `skills add --copy` never
+        # vendors this repo's own config into consumers — only config.example.json
+        # ships. This repo's real values live in infrastructure/dogfood-config/ and
+        # are materialised into skills/<name>/config.json here, so the scripts and
+        # tests below (which read a real config and fail loudly without one) work.
+        run: pnpm bootstrap:config
+
       - name: 🔠 Typecheck (tsc)
         # Type-check-only (tsconfig.json sets noEmit) over the infrastructure
         # CLI tooling (SK-394). agent-skills ships skills.sh bundles, so there's

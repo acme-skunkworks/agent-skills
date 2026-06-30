@@ -29,6 +29,9 @@ import { join } from "node:path";
 
 export const SKILLS_DIR = "skills";
 export const SKILL_SCOPE = "@acme-skunkworks";
+// This repo's real (dogfood) configs live here, not in skills/<name>/config.json
+// (gitignored since A-615). The key-parity guard validates these tracked files.
+export const DOGFOOD_CONFIG_DIR = join("infrastructure", "dogfood-config");
 
 const SEMVER_RE =
   /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
@@ -159,13 +162,18 @@ function topLevelKey(key: string): string {
 }
 
 /**
- * When a bundle ships BOTH `config.json` and `config.example.json`, their key
- * structures must match — the example is the template a consumer copies over, so a
- * key in one but not the other means an adopter silently gets a stale or
- * incomplete config (A-538). Values may differ (the example carries placeholders);
- * only the key sets are compared, recursively. Skills that ship only one file
- * (e.g. `preflight`, whose config lives at the consumer root) are exempt, as are
- * the config-only optional subtrees in `OPTIONAL_CONFIG_ONLY_TOPLEVEL`. `*Raw`
+ * The shipped `config.example.json` (the template a consumer copies over) and this
+ * repo's own real config must share a key structure — a key in one but not the
+ * other means an adopter silently gets a stale or incomplete config (A-538). Values
+ * may differ (the example carries placeholders); only the key sets are compared,
+ * recursively.
+ *
+ * Since A-615 the per-skill `config.json` is gitignored (it would otherwise be
+ * vendored into consumers by `skills add --copy`), so this repo's real values live
+ * in the tracked `infrastructure/dogfood-config/<name>.json` tree — that is what
+ * `configRaw` carries here, not `skills/<name>/config.json`. Skills with no dogfood
+ * config (e.g. `preflight`, whose config lives at the consumer root) are exempt, as
+ * are the config-only optional subtrees in `OPTIONAL_CONFIG_ONLY_TOPLEVEL`. `*Raw`
  * are null when the file is absent.
  */
 export function configKeyParityErrors(
@@ -184,7 +192,7 @@ export function configKeyParityErrors(
     config = JSON.parse(configRaw);
   } catch (error) {
     errors.push(
-      `${directory}: config.json is not valid JSON: ${(error as Error).message}`,
+      `${directory}: infrastructure/dogfood-config/${directory}.json is not valid JSON: ${(error as Error).message}`,
     );
   }
 
@@ -220,13 +228,13 @@ export function configKeyParityErrors(
 
   if (onlyInConfig.length > 0) {
     errors.push(
-      `${directory}: config.json has keys missing from config.example.json: ${onlyInConfig.join(", ")}`,
+      `${directory}: infrastructure/dogfood-config/${directory}.json has keys missing from config.example.json: ${onlyInConfig.join(", ")}`,
     );
   }
 
   if (onlyInExample.length > 0) {
     errors.push(
-      `${directory}: config.example.json has keys missing from config.json: ${onlyInExample.join(", ")}`,
+      `${directory}: config.example.json has keys missing from infrastructure/dogfood-config/${directory}.json: ${onlyInExample.join(", ")}`,
     );
   }
 
@@ -278,7 +286,7 @@ function main(): void {
       ),
       ...configKeyParityErrors(
         directory,
-        readOrNull(join(base, "config.json")),
+        readOrNull(join(DOGFOOD_CONFIG_DIR, `${directory}.json`)),
         readOrNull(join(base, "config.example.json")),
       ),
     );
