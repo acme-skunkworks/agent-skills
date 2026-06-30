@@ -289,6 +289,13 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      - name: 🥾 Bootstrap dogfood config
+        # skills/*/config.json is gitignored (A-615); the self-tests below run
+        # scripts that load a real config at import (e.g. changelog/add-links.mjs),
+        # so materialise this repo's own configs from infrastructure/dogfood-config/
+        # first. Zero-dependency Node — no install needed.
+        run: node infrastructure/scripts/bootstrap-config.mjs
+
       - name: 🧪 Validate SKILL.md manifests
         # Hard gate: every skills/<name>/ with a SKILL.md must pass the canonical
         # Agent Skills validator. A malformed manifest fails the PR.
