@@ -9,9 +9,9 @@ description: >-
   work, or wrap up and push. A thin orchestrator that delegates the lint gate to
   the `preflight` skill, the changelog to the `changelog` skill, and the Linear
   writeback to the `linear-sync` skill; it owns the branch guard, atomic commits,
-  shippability decision, PR-title composition, push, and PR. Shippable paths and
-  the published surface are read from config.json so one skill serves monorepos
-  and single-package repos alike.
+  the release-type decision (by the change's semantic category), PR-title
+  composition, push, and PR. One skill serves monorepos and single-package repos
+  alike.
 license: MIT
 compatibility: >-
   Requires the `git` and `gh` CLIs (`gh` authenticated). Node.js ≥22 for the
@@ -21,7 +21,7 @@ compatibility: >-
   `linear-sync` skills — install them alongside this one. The In Review writeback
   needs the Linear MCP server (via `linear-sync`); it is skipped if unavailable.
 metadata:
-  version: 0.4.0
+  version: 0.5.0
   author: Rob Easthope
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -38,14 +38,13 @@ a pull request against the base branch, and transition any linked Linear issues 
 
 This skill is the single source of truth for the **ship flow**. It is a thin
 orchestrator: it owns only the glue no sibling skill does — the branch guard,
-worktree resolution, atomic commits, the shippability decision, PR-title
-composition, push, and the PR — and delegates the rest:
+worktree resolution, atomic commits, the release-type decision (by category),
+PR-title composition, push, and the PR — and delegates the rest:
 
 - **Lint gate** → the `preflight` skill (change-gated; no-ops when nothing
   lint-relevant changed).
-- **Changelog** → the `changelog` skill (author/update + validate; scoped by
-  `changelogScope` — every PR by default, or shippable-only — and skipped entirely
-  when `config.json` sets `changelog: false`).
+- **Changelog** → the `changelog` skill (author/update + validate; an entry for
+  **every** PR, skipped entirely only when `config.json` sets `changelog: false`).
 - **Linear In Review** → the `linear-sync` skill (resolve state by team name,
   idempotent transition).
 
@@ -77,15 +76,21 @@ copied `config.json` to match the consuming repo (a neutral
 | Key | Meaning | Default |
 | --- | --- | --- |
 | `baseBranch` | The trunk the branch diff is taken against (`origin/<baseBranch>`) and the PR base. | `"main"` |
-| `shippablePaths` | Path prefixes whose changes reach consumers. A change touching any makes the PR **shippable**. | `["skills/"]` |
-| `shippableManifestKeys` | `package.json` keys whose change is itself shippable (the published-`files` surface). | `["name", "version", "files", "publishConfig"]` |
-| `changelog` *(optional)* | Whether to author a dated `changelog/` entry at all (Steps 7–8). Set `false` for repos with **no changelog flow** — no `changelog/` directory and no `changelog` skill installed (e.g. a `private` repo with no release pipeline). When `false`, send-it skips changelog authoring entirely regardless of `changelogScope`, and the shippability decision continues to drive only the PR title. **Omit it (or set `true`) whenever the `changelog` skill is installed.** | `true` |
-| `changelogScope` *(optional)* | Which PRs get a dated `changelog/` entry when `changelog` is enabled. `"all"` (default) authors an entry for **every** PR — shippable *and* non-shippable — so the dated changelog is a full record of merged work (release notes then filter it to the version-stamped, shippable entries). `"shippable"` authors an entry **only for shippable changes**, so the changelog mirrors just the published-change surface. Subordinate to `changelog: false`, which disables Steps 7–8 outright. **New in bundle 0.4.0** — earlier versions behaved as `"shippable"` (shippable-only), so a repo re-syncing to ≥0.4.0 starts authoring entries for non-shippable PRs unless it sets `"shippable"`. | `"all"` |
+| `shippablePaths` *(advisory)* | Path prefixes that make up the published surface — a documentation hint for reviewers, **not** the release decision (A-598; see Step 6). Release-type is decided by the change's semantic category, so these no longer gate the title. Kept for the optional publish-surface cross-check note. | `["skills/"]` |
+| `shippableManifestKeys` *(advisory)* | `package.json` keys that form the published-`files` surface — same advisory role as `shippablePaths`, no longer a release gate. | `["name", "version", "files", "publishConfig"]` |
+| `changelog` *(optional)* | Whether to author a dated `changelog/` entry at all (Steps 7–8). Set `false` for repos with **no changelog flow** — no `changelog/` directory and no `changelog` skill installed (e.g. a `private` repo with no release pipeline). When `false`, send-it skips changelog authoring entirely, and the category decision continues to drive only the PR title. **Omit it (or set `true`) whenever the `changelog` skill is installed.** | `true` |
 | `bundleVersioning` *(optional)* | Enables the per-bundle version-bump check (Step 6) for repos that ship many independently-versioned skill bundles. An object `{ root, manifest, skillFile }` naming the bundle parent dir and the manifest / skill-manifest filenames each bundle carries. **Omit it entirely in single-package repos** — the check then no-ops. | unset (disabled) |
 
 The team name, issue-ID prefixes, and workspace slug are **not** configured here —
 they live in the `linear-sync` and `changelog` skills' own `config.json` files,
 read by the delegated steps.
+
+> **Changelog scope (was `changelogScope`).** send-it authors a dated entry for
+> **every** PR — the "record everything, filter later" model. Release notes come
+> from filtering the changelog to the version-stamped (release-triggering) entries
+> at release time, not from gating authoring at write time. The `changelogScope`
+> knob (added in 0.4.0) is **gone** (A-600); only the `changelog: true|false`
+> master switch remains.
 
 ## Prerequisites
 
@@ -247,40 +252,52 @@ Preflight is **change-gated**: it lints only the categories the branch touched, 
 it no-ops when nothing lint-relevant changed. Skip this step entirely only if
 `preflight` isn't installed.
 
-### Step 6: Decide shippability and compose the Conventional Commits PR title
+### Step 6: Decide release-type by category and compose the Conventional Commits PR title
 
 Versioning is driven by [release-please](https://github.com/googleapis/release-please)
 reading **Conventional Commits**. The repo squash-merges, so the **squash subject is
 the PR title** — and that single conventional title is what release-please parses to
 decide the bump. send-it composes a correct conventional title and writes the dated
-changelog entry (for every PR, or shippable-only — see `changelogScope` in Step 7). It
-does **not** bump versions, write any `CHANGELOG.md`, or tag.
+changelog entry (for every PR — see Step 7). It does **not** bump versions, write any
+`CHANGELOG.md`, or tag.
 
-1. **Derive the slug, bump level, and a draft body** from the branch commits via the
+Release-type is decided by the change's **semantic category — the Conventional-Commit
+type of the work send-it itself committed — not by which paths the diff touches**
+(A-598). A docs-only edit is `docs:` (no release) even when it lives under a published
+path like `skills/`; a `feat:` is a release wherever its files sit. (Earlier versions
+keyed this off `shippablePaths`, which mis-titled a docs edit inside a published path
+as `feat:`/`fix:` and cut a spurious release.)
+
+1. **Derive the slug, body, type, and category** from the branch commits via the
    bundled helper (zero-dep — no tsx):
 
    ```bash
    node skills/send-it/scripts/derive-bump.mjs
    ```
 
-   It prints JSON: `{ "slug": "…", "bump": "…", "body": "…" }`, where `bump` is
-   `major` / `minor` / `patch` (first match wins: a `BREAKING CHANGE:` trailer or a
-   `!` in any conventional subject → major; first commit `feat:`/`feat(<scope>):` →
-   minor; else patch) and `body` is the first commit's subject with its conventional
-   prefix stripped.
+   It prints JSON:
+   `{ "slug", "bump", "body", "type", "breaking", "category", "releaseTriggering" }`:
+   - `type` — the Conventional-Commit type of the **lead commit** (`feat`/`fix`/`perf`/
+     `docs`/`refactor`/`chore`/`ci`/…); this is the PR-title prefix.
+   - `breaking` — `true` if any commit carries a `!` or a `BREAKING CHANGE:` trailer.
+   - `category` — the dated changelog `category` enum value (`feat`→`feature`,
+     `fix`→`fix`, `perf`→`perf`, `docs`→`docs`, `refactor`→`refactor`, everything else
+     →`chore`).
+   - `releaseTriggering` — `true` iff `breaking` or `type ∈ {feat, fix, perf}`. This is
+     the release decision: `true` cuts a release, `false` does not.
+   - `bump` — `major`/`minor`/`patch`, the release **magnitude** when `releaseTriggering`
+     (a `BREAKING CHANGE:`/`!` → major; lead `feat:` → minor; else patch). Ignored when
+     `releaseTriggering` is `false`.
 
-2. **Decide whether this change is shippable.** Read `shippablePaths` and
-   `shippableManifestKeys` from [`config.json`](config.json). A change is
-   **shippable** (reaches consumers, so it must trigger a release) iff the branch
-   diff touches **either**:
-   - any path under a `shippablePaths` prefix, **or**
-   - `package.json`, **and** the diff modifies any of the `shippableManifestKeys`.
-
-   Verify with `git diff --name-only origin/<base>...HEAD`; for `package.json`, also
-   run `git diff origin/<base>...HEAD -- package.json` and check whether any listed
-   key appears in the hunks. Everything else — pure docs, CI/infra, agent tooling,
-   ADRs, the dated `changelog/` itself, release-please config, or a lone
-   `chore: update lockfile` — is **non-shippable**.
+2. **(Advisory) publish-surface cross-check.** `shippablePaths` /
+   `shippableManifestKeys` in [`config.json`](config.json) are a documentation hint of
+   the published surface — they **do not** decide release-type any more. Optionally
+   sanity-check the category against them: if `releaseTriggering` is `true` but the diff
+   (`git diff --name-only origin/<base>...HEAD`) touches **no** `shippablePaths` prefix
+   (nor a `shippableManifestKeys` key in `package.json`), note it in the PR body so a
+   reviewer can confirm the release was intended — and likewise if a change touching a
+   published path is `releaseTriggering: false`. This is a soft note only; never let it
+   override the category decision or block.
 
 3. **Check per-bundle version bumps** — only when `config.json` sets
    `bundleVersioning` (multi-artefact repos; skip this step entirely when it's
@@ -310,22 +327,27 @@ does **not** bump versions, write any `CHANGELOG.md`, or tag.
 
 4. **Compose the PR title** as a single Conventional Commits subject — this is the
    release-please bump signal and is enforced by CI's PR-title lint. If `--title` was
-   passed, use it verbatim (still run the shippability decision above for the
-   changelog gate, and **warn** — don't block — if its type contradicts that
-   decision). Otherwise:
-   - **Shippable** → a **release-triggering** type from the bump: `major` →
-     `feat!: <body>`; `minor` → `feat: <body>`; `patch` → `fix: <body>`. Add a scope
-     when one is obvious (`feat(<scope>): …`).
-   - **Non-shippable** → a **non-release-triggering** type that matches the change,
-     never `feat`/`fix`: `docs:`, `chore:`, `ci:`, `refactor:`, `test:`, `build:`,
-     `style:`, `perf:`. Pick by the dominant changed area / first commit's type.
+   passed, use it verbatim (still run `derive-bump` above for the changelog
+   `category`, and **warn** — don't block — if the supplied type contradicts the
+   derived `type`/`releaseTriggering`). Otherwise build it straight from the derived
+   fields:
+   - **Prefix** = `type` (add a scope when one is obvious, e.g. `feat(<scope>):`), plus
+     `!` when `breaking` — so `feat: <body>`, `fix: <body>`, `perf: <body>`,
+     `docs: <body>`, `refactor: <body>`, `chore: <body>`, `feat!: <body>`, etc.
+   - **Release-triggering** (`releaseTriggering: true`) → the prefix is already a
+     release type (`feat`/`fix`/`perf`, or any `!`); release-please cuts the bump from
+     it. Add the scope; that's it.
+   - **Non-release** (`releaseTriggering: false`) → the prefix is a non-release type
+     (`docs`/`refactor`/`chore`/`ci`/`build`/`test`/`style`); release-please cuts
+     nothing.
 
    > ⚠️ **The PR title is the version.** A mistyped prefix silently ships the wrong
    > semver — a `feat:` on a docs PR cuts a needless release; a `chore:` on a real
    > fix ships nothing. There is no changeset file to cross-check against: the title
-   > **is** the declaration. Match the type to the shippability decision exactly.
+   > **is** the declaration. It comes straight from the change's semantic category
+   > (the commit types) — keep the commit types honest and the title follows.
 
-   When non-shippable, note `no release (developer-tooling/docs only)` in the PR body
+   When `releaseTriggering` is `false`, note `no release (<type>-only)` in the PR body
    so reviewers can confirm the non-release type was intentional.
 
 ### Step 7: Author or update the dated changelog entry — delegate to the `changelog` skill
@@ -334,40 +356,31 @@ does **not** bump versions, write any `CHANGELOG.md`, or tag.
 > and 8 completely** — author nothing, run no `changelog` scripts, make no
 > `docs(changelog)` commit — and note "changelog step disabled (no changelog flow in
 > this repo)" in the run summary. This is for repos with no `changelog/` directory and
-> no `changelog` skill installed; the shippability decision from Step 6 still drives
-> the PR title. When `changelog` is unset or `true`, follow the `changelogScope` gate
-> below.
+> no `changelog` skill installed; the category decision from Step 6 still drives the PR
+> title. When `changelog` is unset or `true`, **always author an entry** (the
+> `changelogScope` knob was removed — A-600).
 >
-> **Gated by `changelogScope`.** Read `changelogScope` from [`config.json`](config.json)
-> (default `"all"` when unset):
->
-> - **`"all"`** (default) — author a `changelog/` entry for **every** PR, shippable
->   *and* non-shippable. The dated changelog is the full record of merged work; release
->   notes filter it to the version-stamped (shippable) entries, so a non-shippable entry
->   simply carries no `version`.
-> - **`"shippable"`** — author an entry **only when the change is shippable** (you
->   composed a release-triggering `feat`/`fix`/breaking title). Skip it for non-shippable
->   changes so the changelog mirrors just the published-change surface.
->
-> `changelog: false` still wins outright over either scope.
+> **An entry for every PR.** send-it authors a dated `changelog/` entry for **every**
+> PR, release-triggering or not — the "record everything, filter later" model. The
+> dated changelog is the full record of merged work; release notes filter it to the
+> version-stamped (release-triggering) entries at release time, so a non-release entry
+> simply carries no `version`. `changelog: false` is the only thing that suppresses
+> authoring.
 
 Follow the [`changelog`](../changelog/SKILL.md) skill to author or update the entry:
 
 1. Detect an existing entry for this branch (by the `branch` frontmatter field) →
    update vs create. On update, preserve the filename and `created_at`.
 2. Write/refresh `changelog/<YYYYMMDD-HHMMSS>-<slug>.md` (the `<slug>` from Step 6),
-   deriving `title`/`release_note`/`category`/`breaking`/`issues` from the branch.
-   Set `category` to match the PR title you composed in Step 6:
-   - **Shippable** entry → follow the bump: `major`/`minor` (`feat`/`feat!`) → `feature`,
-     `patch` (`fix`) → `fix`; `breaking: true` iff the bump is `major`.
-   - **Non-shippable** entry (only reached under `changelogScope: "all"`) → follow the
-     non-release PR-title type: `docs`→`docs`, `refactor`→`refactor`, `perf`→`perf`, and
-     `chore`/`ci`/`build`/`test`/`style`→`chore` (the `changelog` category enum is
-     `chore, docs, feature, fix, perf, refactor`). `breaking` is always `false`;
-     `release_note` may be blank when there's no user-facing impact.
+   deriving `title`/`release_note`/`issues` from the branch. Set `category` and
+   `breaking` straight from `derive-bump`'s output (Step 6): `category` is its
+   `category` field (`feature`/`fix`/`perf`/`docs`/`refactor`/`chore` — the changelog
+   enum), and `breaking` is its `breaking` flag. For a non-release entry
+   (`releaseTriggering: false`), `release_note` may be blank when there's no
+   user-facing impact.
 
    Leave the post-merge fields (`merged_at`, `commit`, `pr`, `merge_strategy`, `stats`)
-   and `version` as blank placeholders — the release step finalises them (a non-shippable
+   and `version` as blank placeholders — the release step finalises them (a non-release
    entry keeps `version` blank, as no release is cut for it).
 3. Run the enrichment scripts: `node skills/changelog/scripts/set-affected-packages.mjs`
    then `node skills/changelog/scripts/add-links.mjs`.
@@ -376,7 +389,7 @@ Follow the [`changelog`](../changelog/SKILL.md) skill to author or update the en
 
 ### Step 8: Commit the changelog entry and push
 
-If a `changelog/` entry was written (per the `changelogScope` gate in Step 7), commit
+If a `changelog/` entry was written in Step 7 (i.e. `changelog` is not `false`), commit
 only that file:
 
 ```bash
@@ -449,9 +462,9 @@ Skip silently if `linear-sync` or the Linear MCP server is unavailable.
   non-`main` target.
 - `--title="<conventional subject>"` — set the PR title verbatim instead of deriving
   it (escape hatch for when derivation picks the wrong type). It must still be a valid
-  Conventional Commits subject (CI lints it). The shippability decision still runs (it
-  drives the entry's `category` and, under `changelogScope: "shippable"`, the changelog
-  gate); send-it **warns** if the supplied type contradicts it.
+  Conventional Commits subject (CI lints it). `derive-bump` still runs (its `category`
+  drives the changelog entry); send-it **warns** if the supplied type contradicts the
+  derived `type`/`releaseTriggering`.
 - `--skip-preflight` — skip the Step 5 lint gate entirely, printing a bypass warning.
 - `--ready` — open the PR ready-for-review instead of draft (default is draft).
 - `--merge-when-ready` — after create/update, enable `gh pr merge --auto --squash`.

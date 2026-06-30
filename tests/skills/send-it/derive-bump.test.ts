@@ -1,7 +1,9 @@
 import {
   deriveBody,
   deriveBump,
+  deriveCategory,
   deriveSlug,
+  deriveType,
 } from "../../../skills/send-it/scripts/derive-bump.mjs";
 import { describe, expect, it } from "vitest";
 
@@ -103,5 +105,105 @@ describe("deriveBody", () => {
 
   it("returns an empty string when there are no commits", () => {
     expect(deriveBody([])).toBe("");
+  });
+});
+
+describe("deriveType", () => {
+  it("reads the conventional type, scoped or not", () => {
+    expect(deriveType("feat: add x")).toBe("feat");
+    expect(deriveType("fix(scope): y")).toBe("fix");
+    expect(deriveType("perf!: z")).toBe("perf");
+    expect(deriveType("docs: readme")).toBe("docs");
+  });
+
+  it("folds a non-conventional subject to chore", () => {
+    expect(deriveType("WIP random subject")).toBe("chore");
+  });
+});
+
+describe("deriveCategory (A-598 — release-type by semantic category, not path)", () => {
+  it("treats feat as a release with the feature category", () => {
+    expect(deriveCategory([{ body: "", subject: "feat: add export" }])).toEqual(
+      {
+        breaking: false,
+        category: "feature",
+        releaseTriggering: true,
+        type: "feat",
+      },
+    );
+  });
+
+  it("treats fix and perf as releases (patch category)", () => {
+    expect(
+      deriveCategory([{ body: "", subject: "fix: handle null" }]),
+    ).toMatchObject({ category: "fix", releaseTriggering: true, type: "fix" });
+    expect(
+      deriveCategory([{ body: "", subject: "perf: cache lookups" }]),
+    ).toMatchObject({
+      category: "perf",
+      releaseTriggering: true,
+      type: "perf",
+    });
+  });
+
+  it("does NOT release on docs/refactor/chore, even though they may touch a shippable path", () => {
+    expect(
+      deriveCategory([{ body: "", subject: "docs: rewrite SKILL.md" }]),
+    ).toMatchObject({
+      category: "docs",
+      releaseTriggering: false,
+      type: "docs",
+    });
+    expect(
+      deriveCategory([{ body: "", subject: "refactor: extract helper" }]),
+    ).toMatchObject({ category: "refactor", releaseTriggering: false });
+    expect(
+      deriveCategory([{ body: "", subject: "chore: bump dep" }]),
+    ).toMatchObject({ category: "chore", releaseTriggering: false });
+  });
+
+  it("folds ci/build/test/style into the chore category, no release", () => {
+    for (const type of ["ci", "build", "test", "style"]) {
+      expect(
+        deriveCategory([{ body: "", subject: `${type}: tweak` }]),
+      ).toMatchObject({ category: "chore", releaseTriggering: false, type });
+    }
+  });
+
+  it("is a breaking release on a bang or BREAKING CHANGE trailer, regardless of type", () => {
+    expect(
+      deriveCategory([{ body: "", subject: "feat!: drop legacy" }]),
+    ).toMatchObject({ breaking: true, releaseTriggering: true, type: "feat" });
+    // A `!` makes even a refactor a (major) release per release-please.
+    expect(
+      deriveCategory([{ body: "", subject: "refactor!: rip out API" }]),
+    ).toMatchObject({
+      breaking: true,
+      category: "refactor",
+      releaseTriggering: true,
+    });
+    expect(
+      deriveCategory([
+        { body: "BREAKING CHANGE: removes Y", subject: "fix: patch" },
+      ]),
+    ).toMatchObject({ breaking: true, releaseTriggering: true });
+  });
+
+  it("keys the type/category off the lead commit (mirrors deriveBump/deriveBody)", () => {
+    expect(
+      deriveCategory([
+        { body: "", subject: "docs: notes" },
+        { body: "", subject: "feat: later feature" },
+      ]),
+    ).toMatchObject({ category: "docs", releaseTriggering: false });
+  });
+
+  it("defaults to a non-release chore for an empty branch", () => {
+    expect(deriveCategory([])).toEqual({
+      breaking: false,
+      category: "chore",
+      releaseTriggering: false,
+      type: "chore",
+    });
   });
 });
