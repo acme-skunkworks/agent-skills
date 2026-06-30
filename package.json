@@ -28,8 +28,8 @@
   ],
   "scripts": {
     "changelog:finalise": "node skills/changelog/scripts/finalise-changelog.mjs",
-    "lint": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/scripts/**/*.mjs' 'infrastructure/tests/**/*.ts' 'lib/**/*.mjs' 'skills/**/*.mjs' --cache --cache-location ./.eslintcache",
-    "lint:fix": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/scripts/**/*.mjs' 'infrastructure/tests/**/*.ts' 'lib/**/*.mjs' 'skills/**/*.mjs' --fix --cache --cache-location ./.eslintcache",
+    "lint": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/scripts/**/*.mjs' 'infrastructure/tests/**/*.ts' 'tests/**/*.ts' 'lib/**/*.mjs' 'skills/**/*.mjs' --cache --cache-location ./.eslintcache",
+    "lint:fix": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/scripts/**/*.mjs' 'infrastructure/tests/**/*.ts' 'tests/**/*.ts' 'lib/**/*.mjs' 'skills/**/*.mjs' --fix --cache --cache-location ./.eslintcache",
     "lint:md": "markdownlint-cli2",
     "lint:md:fix": "markdownlint-cli2 --fix",
     "lint:sh": "bash -c 'if command -v shellcheck >/dev/null 2>&1; then shellcheck scripts/*.sh infrastructure/scripts/*.sh .husky/pre-commit .husky/pre-push .husky/commit-msg; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  shellcheck not installed — skipping. Install: brew install shellcheck\"; else echo \"⚠️  shellcheck not installed — skipping. Install: apt-get install shellcheck\"; fi'",
