@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { loadConfig } from "./lib/config.mjs";
 import { buildIssueRe } from "./lib/vendor/issue-keys.mjs";
+import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { argv } from "node:process";
@@ -92,16 +93,55 @@ export function splitFrontmatter(raw) {
   return { body: raw.slice(match[0].length), fm: match[0] };
 }
 
+// The `branch:` value from a changelog entry's frontmatter (quotes stripped), or
+// `null` when the entry has no frontmatter or no `branch:` field. Used to scope
+// the default write pass to the entry(ies) authored on the current branch.
+export function frontmatterBranch(raw) {
+  const { fm } = splitFrontmatter(raw);
+  const match = fm.match(/^branch:(.*)$/m);
+  if (!match) {
+    return null;
+  }
+
+  const value = match[1].trim().replaceAll(/^['"]|['"]$/g, "");
+  return value || null;
+}
+
+// The current git branch, or `null` when git is unavailable or HEAD is detached
+// — callers fall back to the full-directory sweep in that case.
+function currentGitBranch() {
+  try {
+    const result = spawnSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
+      encoding: "utf8",
+    });
+    if (result.status !== 0) {
+      return null;
+    }
+
+    const branch = result.stdout.trim();
+    return branch && branch !== "HEAD" ? branch : null;
+  } catch {
+    return null;
+  }
+}
+
 const USAGE = `add-links — rewrite bare Linear issue IDs in changelog bodies to Linear URLs
 
 Usage:
-  node add-links.mjs                 Linkify every changelog/<ts>-<slug>.md body (writes)
-  node add-links.mjs --check         Report which files would change; write nothing
+  node add-links.mjs                 Linkify the current branch's entry/entries (writes)
+  node add-links.mjs --all           Linkify every changelog/<ts>-<slug>.md body (writes)
+  node add-links.mjs --check         Report which files would change across ALL entries; write nothing
   node add-links.mjs --dry-run       Alias for --check
   node add-links.mjs --self-test     Run the built-in offline smoke test
   node add-links.mjs --help          Show this message (alias: -h)
 
---check exits 1 when a rewrite is needed, 0 when nothing would change.`;
+By default the write pass is scoped to the entry(ies) whose \`branch:\` frontmatter
+matches the current git branch, so authoring a new entry never rewrites unrelated,
+already-merged entries (A-603). Use --all for the historical full-directory sweep.
+When git is unavailable the default falls back to the full sweep.
+
+--check always scans every entry (it's a completeness gate) and exits 1 when a
+rewrite is needed, 0 when nothing would change.`;
 
 // Offline smoke test for the pure rewriteBody: linkify a sample body and check
 // the masking rules (fenced/inline code and existing links are left alone).
@@ -191,6 +231,7 @@ function main() {
   const check = args.some(
     (argument) => argument === "--check" || argument === "--dry-run",
   );
+  const all = args.includes("--all");
 
   let stat;
   try {
@@ -205,9 +246,22 @@ function main() {
     process.exit(2);
   }
 
-  const files = readdirSync(CHANGELOG_DIR)
+  let files = readdirSync(CHANGELOG_DIR)
     .filter((name) => name.endsWith(".md") && name !== "README.md")
     .map((name) => join(CHANGELOG_DIR, name));
+
+  // Default write pass: scope to the entry(ies) authored on the current branch
+  // (matched by `branch:` frontmatter), so linkifying a new entry never churns
+  // unrelated, already-merged entries (A-603). `--all` and `--check` keep the
+  // full-directory scan; a non-git context (no branch) also falls back to it.
+  if (!all && !check) {
+    const branch = currentGitBranch();
+    if (branch) {
+      files = files.filter(
+        (file) => frontmatterBranch(readFileSync(file, "utf8")) === branch,
+      );
+    }
+  }
 
   let touched = 0;
   for (const file of files) {

@@ -5,6 +5,7 @@
 // covers the issue-key rewrite happy path plus inline-code / fenced-block
 // masking and the splitFrontmatter contract.
 import {
+  frontmatterBranch,
   rewriteBody,
   splitFrontmatter,
 } from "../../../skills/changelog/scripts/add-links.mjs";
@@ -110,5 +111,37 @@ describe("splitFrontmatter", () => {
       body: "## Added\r\n",
       fm: "---\r\ntitle: x\r\n---\r\n",
     });
+  });
+});
+
+describe("frontmatterBranch — branch-scoped default (A-603)", () => {
+  it("reads the branch from an entry's frontmatter", () => {
+    const raw =
+      "---\ntitle: x\nbranch: a-603-add-links-scope\nversion:\n---\n## Added\n";
+    expect(frontmatterBranch(raw)).toBe("a-603-add-links-scope");
+  });
+
+  it("strips surrounding quotes", () => {
+    expect(frontmatterBranch('---\nbranch: "a-1-foo"\n---\nbody')).toBe(
+      "a-1-foo",
+    );
+  });
+
+  it("returns null when there is no branch field", () => {
+    expect(frontmatterBranch("---\ntitle: x\n---\nbody")).toBeNull();
+  });
+
+  it("returns null when there is no frontmatter at all", () => {
+    expect(frontmatterBranch("## Added\n\n- a change\n")).toBeNull();
+  });
+
+  it("returns null for a blank branch value", () => {
+    expect(frontmatterBranch("---\nbranch:\n---\nbody")).toBeNull();
+  });
+
+  it("only reads the frontmatter region, not a `branch:`-like line in the body", () => {
+    const raw =
+      "---\ntitle: x\n---\nThe branch: main note in prose is ignored.\n";
+    expect(frontmatterBranch(raw)).toBeNull();
   });
 });
