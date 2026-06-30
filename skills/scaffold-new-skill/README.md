@@ -18,16 +18,17 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill scaffold-
 
 ## Configure
 
-The shipped [`config.json`](config.json) carries the defaults the generator
-stamps into a new skill:
+This skill ships only [`config.example.json`](config.example.json), a neutral
+template — the per-skill `config.json` is generated on install, not vendored. Its
+keys are the defaults the generator stamps into a new skill:
 
 | Key | Meaning | Default |
 | --- | --- | --- |
 | `scope` | The npm scope used in the generated `package.json` name (`<scope>/skill-<name>`). | `"@acme-skunkworks"` |
 | `author` | The default author string for the generated `SKILL.md` `metadata.author` and `package.json`. | `"Rob Easthope"` |
 
-A neutral [`config.example.json`](config.example.json) ships alongside as a
-template; its key set is identical to `config.json`.
+Run the `initialise-skills` skill to generate `config.json` from the example, or
+copy [`config.example.json`](config.example.json) to `config.json` and adjust.
 
 ## Usage
 

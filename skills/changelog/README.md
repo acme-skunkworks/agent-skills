@@ -18,14 +18,16 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill changelog
 
 ## Configure
 
-The shipped [`config.json`](config.json) carries **ACME Skunkworks values**.
+This skill ships only [`config.example.json`](config.example.json), a neutral
+template — the per-skill `config.json` is generated on install, not vendored.
 `issueKeys` and `linearWorkspaceSlug` are **required and have no default** — a
 missing `config.json`, or either key absent, makes the scripts **fail loudly**
-rather than silently inherit ACME's identity (which would emit wrong issue-ID
-detection and Linear links in a foreign repo). Copy
-[`config.example.json`](config.example.json) over `config.json` (or edit
-`config.json` directly) and set them for your organisation. The remaining keys
-are structural and keep generic, overridable defaults.
+rather than silently inherit another org's identity (which would emit wrong
+issue-ID detection and Linear links in a foreign repo). Run the
+`initialise-skills` skill to generate `config.json`, or copy
+[`config.example.json`](config.example.json) to `config.json` and set them for
+your organisation. The remaining keys are structural and keep generic, overridable
+defaults.
 
 | Key | Meaning | Default |
 | --- | --- | --- |

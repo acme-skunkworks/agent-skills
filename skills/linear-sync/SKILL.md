@@ -15,7 +15,7 @@ compatibility: >-
   read needs the `git` CLI. If the Linear MCP server is unavailable the skill
   cannot run — it has no non-MCP fallback.
 metadata:
-  version: 0.3.2
+  version: 0.3.3
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---

@@ -23,11 +23,21 @@ Architectural decisions live under `architecture/` as ADRs (sequentially numbere
 
 ```bash
 pnpm install              # install deps (runs husky via the prepare script)
+pnpm bootstrap:config     # materialise this repo's own skills/*/config.json from infrastructure/dogfood-config/ (A-615) — run once after clone
 pnpm test                 # vitest — changelog + send-it helper unit tests
 pnpm validate:changelog   # validate changelog/<ts>-<slug>.md entries against the schema
 pnpm validate:skills      # assert each skills/*/ package.json + SKILL.md metadata.version are consistent (A-364)
 pnpm changelog:finalise   # enrich + version-stamp dated changelog/ entries (orchestrator-run at release)
 ```
+
+> **Per-skill `config.json` is generated, not tracked (A-615).** `skills add --copy`
+> vendors every tracked file under `skills/<name>/`, so a tracked `config.json`
+> would leak this repo's own values into consumers — only the neutral
+> `config.example.json` ships. This repo's real values live in the tracked
+> `infrastructure/dogfood-config/<name>.json` tree; `pnpm bootstrap:config`
+> materialises them into the gitignored `skills/<name>/config.json` (auto-run in CI
+> and via the `pre*` hooks of the scripts that read a config). Edit the
+> dogfood-config source, not the generated file.
 
 Versioning runs through **release-please**, driven by Conventional Commits PR titles — there is no `pnpm changeset` here any more (A-380). The bump is decided by the merged PR title; `release.yml` publishes on a version-vs-tag gate.
 
@@ -43,7 +53,7 @@ Node 22 required (`.nvmrc`, `engines.node: ">=22"`, `engine-strict=true` in `.np
 - **Skill bundle metadata contract.** Every `skills/<name>/` ships a `package.json` with `name: "@acme-skunkworks/skill-<name>"` (the `skill-` prefix + directory name), `private: true`, a semver `version` (starts at `0.1.0`), and `repository.directory: "skills/<name>"`; plus a `SKILL.md` whose `name` equals the directory and whose `metadata.version` **matches** the `package.json` version. Full layout in [ADR-0001 Decision 3](architecture/0001-skill-layout.md). `pnpm validate:skills` enforces the naming/`private`/version + `metadata.version` parity rules in CI (the `🧩 Validate skill bundle metadata` step in `build-and-lint`); `skills-ref validate` (the `skill-manifests` job) covers the rest of the spec.
 - **Branch naming.** `<linear-id>-<slug>` lower-cased, matching Linear's `gitBranchName` (e.g. `a-132-set-up-the-agent-skills-repo`).
 - **Trunk config key (intentional divergence).** The diff-based skills name the trunk `baseBranch` (`changelog`, `send-it` — they diff `origin/<baseBranch>...HEAD`); `cleanup-repo` names it `mainBranch` (it's the merge-detection target, `git branch --merged origin/<mainBranch>`). The two names reflect the two different roles, so they are **not** converged — `initialise-skills` maps between them when reconciling config. Don't "fix" one to match the other (A-538).
-- **Config/example key parity.** Every `skills/<name>/` that ships both `config.json` and `config.example.json` must keep their **key sets identical** (values may differ — the example carries placeholders). `pnpm validate:skills` enforces this (A-538); a skill that ships only the example (e.g. `preflight`, whose config lives at the consumer root) is exempt.
+- **Config/example key parity.** The shipped `config.example.json` and this repo's own real config must keep their **key sets identical** (values may differ — the example carries placeholders). Since A-615 the per-skill `config.json` is gitignored (it would otherwise be vendored into consumers by `skills add --copy`), so the real values live in the tracked `infrastructure/dogfood-config/<name>.json` tree — that is what `pnpm validate:skills` compares against each `config.example.json` (A-538). A skill with no dogfood config (e.g. `preflight`, whose config lives at the consumer root) is exempt.
 
 ## Shipping changes (`/send-it`)
 

@@ -35,10 +35,11 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill preflight
 
 ## Configure
 
-The shipped [`config.json`](config.json) parameterises the ship flow for this repo.
-A neutral [`config.example.json`](config.example.json) ships alongside it as a
-template — copy it over `config.json` and fill in your values, or edit `config.json`
-directly.
+This skill ships only [`config.example.json`](config.example.json), a neutral
+template — the per-skill `config.json` that parameterises the ship flow is
+generated on install, not vendored. Run the `initialise-skills` skill to generate
+`config.json` from the example with your repo's facts, or copy it to `config.json`
+and fill it in by hand.
 
 | Key | Meaning | Default |
 | --- | --- | --- |

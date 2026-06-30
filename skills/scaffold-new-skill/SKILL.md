@@ -14,7 +14,7 @@ license: MIT
 compatibility: >-
   Requires Node.js ≥22 for the bundled generator script. No network access.
 metadata:
-  version: 0.1.0
+  version: 0.1.1
   author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(pnpm:*)
 ---

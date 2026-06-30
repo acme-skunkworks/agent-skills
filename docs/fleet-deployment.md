@@ -113,46 +113,29 @@ officially supported by the CLI — prefer the local-clone path.)
 
 `npx skills add … --copy` over an existing copy **overwrites** the vendored
 bundle files in place — it is the upgrade path, not a duplicator. To move a repo
-to a newer bundle, re-run the same `add` command; then re-run steps 3–4 (reset
-each `config.json` from its example, then reconcile) to pick up any new config
-keys. The upgrade re-vendors agent-skills' own `config.json`, so the reset in step
-3 must run again — not just the reconcile. Because installs are `--copy`, an
-upgrade is a clean file replacement with no symlink drift.
+to a newer bundle, re-run the same `add` command; then re-run step 3 (reconcile)
+to pick up any new config keys. Because agent-skills no longer ships a
+`config.json` (only the neutral `config.example.json` travels — A-615), an upgrade
+re-copies the example but **never touches your own `config.json`**, so your
+reconciled values — including deliberate no-detector edits — survive untouched.
+Because installs are `--copy`, an upgrade is a clean file replacement with no
+symlink drift.
 
-## Step 3 — Reset each config.json from its example
+> **No config reset needed (A-615).** Earlier revisions of this runbook had a
+> "reset each `config.json` from its example" step here, because `skills add`
+> used to vendor agent-skills' *own* config values into the consumer (A-554), and
+> upgrades re-vendored them (regressing no-detector edits — A-612). agent-skills
+> now gitignores its per-skill `config.json` and ships only `config.example.json`,
+> so there is nothing to scrub: go straight from install to reconcile.
 
-`skills add … --copy` vendors **agent-skills' own** `config.json` for every skill —
-the values agent-skills uses for itself (e.g. `send-it.shippablePaths=["skills/"]`,
-`changelog.packageRoots=["skills"]`), not the neutral `config.example.json`. If you
-skip this step, `initialise-skills` reads those pre-populated values as deliberate
-edits (`drift` / `manual-kept`) and **won't overwrite them** — so the repo silently
-inherits agent-skills' config instead of its own (A-554).
-
-Before reconciling, overwrite each installed skill's `config.json` with its
-`config.example.json`, in **every** agent skills dir the install populated (both
-`.claude/skills/` and `.agents/skills/` when you installed for two agents):
-
-```bash
-for agent_dir in .claude/skills .agents/skills; do
-  [ -d "$agent_dir" ] || continue
-  for example in "$agent_dir"/*/config.example.json; do
-    target="${example%.example.json}.json"
-    # Only reset skills that ship a config.json; skip example-only skills
-    # (e.g. preflight, whose config lives at the consumer root).
-    [ -e "$target" ] && cp "$example" "$target"
-  done
-done
-```
-
-This gives `initialise-skills` a pristine, neutral baseline to reconcile from, so the
-detected facts are written as `inferred` rather than skipped as drift.
-
-## Step 4 — Reconcile config
+## Step 3 — Reconcile config
 
 Write each skill's `config.json` from detected repo facts (base branch, package
-roots, changelog dir, Linear keys, review bots, …). Dry-run first; it is
-idempotent and never clobbers a deliberate edit (drift is reported, not
-overwritten).
+roots, changelog dir, Linear keys, review bots, …). On a fresh install the
+consumer has only `config.example.json` (agent-skills ships no `config.json` —
+A-615), so `initialise-skills` **creates** each `config.json` from the example's
+key set plus the detected/supplied facts. Dry-run first; it is idempotent and
+never clobbers a deliberate edit (drift is reported, not overwritten).
 
 ```bash
 # Preview:
@@ -175,7 +158,7 @@ for the full key → detection-source table.
 > (`"issueKeys":["A"]`, as above) to override. The `facts.issueKeys` value always
 > wins over detection, so it is the canonical fix for a renamed team.
 
-## Step 5 — Verify
+## Step 4 — Verify
 
 1. **Idempotency** — re-run `initialise.mjs --dry-run`; the second run must report
    no inferred changes (every key `unchanged`/`drift`/`manual-kept`).
@@ -192,6 +175,5 @@ for the full key → detection-source table.
 
 - [ ] Previewed and wiped bespoke command shims / prototype skills (step 1).
 - [ ] Installed the repo-type-appropriate set via `skills add … --copy` (step 2).
-- [ ] Reset each `config.json` from its `config.example.json` baseline (step 3).
-- [ ] Reconciled config with `initialise-skills` `--dry-run` then `--write`, supplying `facts.issueKeys` for a renamed team (step 4).
-- [ ] Verified idempotency, safe previews, and CI (step 5).
+- [ ] Reconciled config with `initialise-skills` `--dry-run` then `--write`, supplying `facts.issueKeys` for a renamed team (step 3).
+- [ ] Verified idempotency, safe previews, and CI (step 4).

@@ -18,7 +18,10 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill triage-pr
 
 ## Configure
 
-Edit [`config.json`](config.json) in your installed copy:
+This skill ships only [`config.example.json`](config.example.json), a template —
+the per-skill `config.json` is generated on install, not vendored. Run the
+`initialise-skills` skill to generate `config.json`, or copy the example to
+`config.json`, then edit it in your installed copy:
 
 | Key | Meaning | Default |
 | --- | --- | --- |
