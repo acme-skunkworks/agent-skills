@@ -68,4 +68,69 @@ describe("buildSummary", () => {
     expect(buildSummary(SCOPE, {}, withPreExisting, false).deferred).toBe(true);
     expect(buildSummary(SCOPE, {}, withPreExisting, true).deferred).toBe(false);
   });
+
+  describe("warn-severity introduced findings (A-601)", () => {
+    const withWarning = {
+      introduced: [
+        {
+          file: "test.ts",
+          line: 1,
+          message: "Forbidden non-null assertion.",
+          severity: "warning",
+        },
+      ],
+      preExisting: [],
+    };
+    const withError = {
+      introduced: [
+        { file: "src.ts", line: 1, message: "boom", severity: "error" },
+      ],
+      preExisting: [],
+    };
+
+    it("does not block on an introduced warning by default", () => {
+      const summary = buildSummary(
+        SCOPE,
+        { actionlintStatus: "skipped" },
+        withWarning,
+        false,
+      );
+      expect(summary.blocking).toBe(false);
+      expect(summary.passed).toBe(true);
+      // The finding is still surfaced — just non-blocking.
+      expect(summary.violations.introducedCount).toBe(1);
+      expect(summary.violations.introducedBlockingCount).toBe(0);
+      expect(summary.violations.introducedWarningCount).toBe(1);
+    });
+
+    it("blocks on an introduced warning when blockOnWarnings is set", () => {
+      const summary = buildSummary(
+        SCOPE,
+        { actionlintStatus: "skipped" },
+        withWarning,
+        false,
+        true,
+      );
+      expect(summary.blocking).toBe(true);
+      expect(summary.passed).toBe(false);
+      expect(summary.violations.introducedBlockingCount).toBe(1);
+      expect(summary.results.blockOnWarnings).toBe(true);
+    });
+
+    it("always blocks on an introduced error, regardless of blockOnWarnings", () => {
+      expect(
+        buildSummary(SCOPE, { actionlintStatus: "skipped" }, withError, false)
+          .blocking,
+      ).toBe(true);
+      expect(
+        buildSummary(
+          SCOPE,
+          { actionlintStatus: "skipped" },
+          withError,
+          false,
+          false,
+        ).blocking,
+      ).toBe(true);
+    });
+  });
 });

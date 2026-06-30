@@ -1,4 +1,8 @@
-import { parseMarkdownlintText } from "../../../skills/preflight/scripts/classify-lint.mjs";
+import {
+  parseEslintJson,
+  parseMarkdownlintText,
+  splitBySeverity,
+} from "../../../skills/preflight/scripts/classify-lint.mjs";
 import { describe, expect, it } from "vitest";
 
 // Real markdownlint-cli2 v0.22.1 default output (the format preflight parses).
@@ -56,6 +60,7 @@ describe("parseMarkdownlintText", () => {
         line: 4,
         message: "Line length [Expected: 80; Actual: 90]",
         ruleId: "MD013/line-length",
+        severity: "error",
         source: "markdownlint",
       },
     ]);
@@ -89,5 +94,52 @@ some-pkg@1.2.3: deprecated do not use`;
       line: 10,
       ruleId: "MD009/no-trailing-spaces",
     });
+  });
+});
+
+describe("parseEslintJson severity tagging (A-601)", () => {
+  const json = JSON.stringify([
+    {
+      filePath: "/repo/src/a.ts",
+      messages: [
+        { column: 1, line: 10, message: "boom", ruleId: "no-x", severity: 2 },
+        { column: 1, line: 20, message: "meh", ruleId: "no-y", severity: 1 },
+        { column: 1, line: 30, message: "off", ruleId: "no-z", severity: 0 },
+      ],
+    },
+  ]);
+
+  it("tags severity 2 as error and severity 1 as warning, dropping severity 0", () => {
+    const violations = parseEslintJson(json);
+    expect(violations).toHaveLength(2);
+    expect(violations[0]).toMatchObject({ line: 10, severity: "error" });
+    expect(violations[1]).toMatchObject({ line: 20, severity: "warning" });
+  });
+});
+
+describe("splitBySeverity (A-601)", () => {
+  const introduced = [
+    { file: "a.ts", line: 1, message: "e", severity: "error" as const },
+    { file: "a.ts", line: 2, message: "w", severity: "warning" as const },
+  ];
+
+  it("excludes warnings from the blocking set by default", () => {
+    const { blocking, warnings } = splitBySeverity(introduced, false);
+    expect(blocking).toHaveLength(1);
+    expect(blocking[0].severity).toBe("error");
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].severity).toBe("warning");
+  });
+
+  it("folds warnings into the blocking set under blockOnWarnings", () => {
+    const { blocking, warnings } = splitBySeverity(introduced, true);
+    expect(blocking).toHaveLength(2);
+    // `warnings` still reports the warn-severity findings for visibility.
+    expect(warnings).toHaveLength(1);
+  });
+
+  it("treats an untagged violation as blocking (back-compat)", () => {
+    const { blocking } = splitBySeverity([{ file: "x.ts", line: 1 }], false);
+    expect(blocking).toHaveLength(1);
   });
 });
