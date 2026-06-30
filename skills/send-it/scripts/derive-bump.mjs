@@ -117,7 +117,12 @@ export function deriveCategory(commits) {
   const type = commits.length > 0 ? deriveType(commits[0].subject) : "chore";
   return {
     breaking,
-    category: CATEGORY_BY_TYPE[type] ?? "chore",
+    // `Object.hasOwn` guard so a type colliding with an inherited Object key
+    // (`constructor`, `toString`, …) resolves to `chore`, not the prototype's
+    // value — `?? "chore"` alone wouldn't catch a non-null inherited property.
+    category: Object.hasOwn(CATEGORY_BY_TYPE, type)
+      ? CATEGORY_BY_TYPE[type]
+      : "chore",
     releaseTriggering: breaking || RELEASE_TYPES.has(type),
     type,
   };

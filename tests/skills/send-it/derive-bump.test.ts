@@ -206,4 +206,17 @@ describe("deriveCategory (A-598 — release-type by semantic category, not path)
       type: "chore",
     });
   });
+
+  it("folds a type colliding with an inherited Object key to chore (no prototype leak)", () => {
+    // `CATEGORY_BY_TYPE["constructor"]` resolves to Object.prototype.constructor
+    // on a plain object; the Object.hasOwn guard must return "chore" instead.
+    // (deriveType lower-cases, so `constructor` is the real all-lowercase
+    // collision — `toString` becomes the harmless `tostring`.)
+    expect(deriveCategory([{ body: "", subject: "constructor: x" }])).toEqual({
+      breaking: false,
+      category: "chore",
+      releaseTriggering: false,
+      type: "constructor",
+    });
+  });
 });
