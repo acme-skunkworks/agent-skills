@@ -1,15 +1,3 @@
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { join, sep } from "node:path";
-
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`). cleanup-repo is the
 // one skill that irreversibly removes branches, worktrees, and directories, yet it
 // shipped only an in-script `--self-test` that `pnpm test` never ran — so a
@@ -20,16 +8,31 @@ import {
   assertGitRepo,
   detect,
 } from "../../../skills/cleanup-repo/scripts/filesystem-hygiene.mjs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, sep } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 let root: string;
 
-/** Build the same fixture the bundle's in-script self-test uses. */
+/**
+ * Build the same fixture the bundle's in-script self-test uses.
+ */
 function buildFixture(): string {
-  const dir = mkdtempSync(join(tmpdir(), "cleanup-repo-fs-"));
-  const makeDirectory = (...segments: string[]) =>
-    mkdirSync(join(dir, ...segments), { recursive: true });
-  const makeFile = (rel: string, body = "") =>
-    writeFileSync(join(dir, rel), body);
+  const directory = mkdtempSync(join(tmpdir(), "cleanup-repo-fs-"));
+  function makeDirectory(...segments: string[]) {
+    return mkdirSync(join(directory, ...segments), { recursive: true });
+  }
+
+  function makeFile(relPath: string, body = "") {
+    return writeFileSync(join(directory, relPath), body);
+  }
 
   // A repo-like root marker so the root always has content (and the git guard
   // accepts it).
@@ -53,11 +56,15 @@ function buildFixture(): string {
   //    NOT be reported as empty.
   makeDirectory("nested-repo", ".git");
 
-  return dir;
+  return directory;
 }
 
 function rel(path: string): string {
   return path.slice(root.length).split(sep).filter(Boolean).join("/");
+}
+
+function hasGit(paths: string[]): boolean {
+  return paths.map(rel).some((path) => path.split("/").includes(".git"));
 }
 
 beforeEach(() => {
@@ -102,8 +109,6 @@ describe("detect", () => {
 
   it("never reports or traverses .git", () => {
     const { emptyDirs, orphanNodeModules } = detect(root);
-    const hasGit = (paths: string[]) =>
-      paths.map(rel).some((path) => path.split("/").includes(".git"));
     expect(hasGit(emptyDirs)).toBe(false);
     expect(hasGit(orphanNodeModules)).toBe(false);
   });

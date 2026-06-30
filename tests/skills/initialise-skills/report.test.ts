@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE lib directly (the distributed `.mjs`). Covers the pure
 // reconcile-report builder and its human renderer (A-465): aggregation of
 // per-key statuses into totals + drift/manual buckets, and the text formatting
@@ -9,17 +7,18 @@ import {
   buildReport,
   formatHuman,
 } from "../../../skills/initialise-skills/scripts/lib/report.mjs";
+import { describe, expect, it } from "vitest";
 
 const SKILL_REPORTS = [
   {
-    name: "changelog",
     configPath: "skills/changelog/config.json",
     malformed: false,
+    name: "changelog",
     results: {
       baseBranch: { status: "inferred", write: "main" },
-      issueKeys: { status: "drift", keep: ["ABC"], detected: ["XYZ"] },
-      linearWorkspaceSlug: { status: "needs-manual-input" },
       changelogDir: { status: "unchanged" },
+      issueKeys: { detected: ["XYZ"], keep: ["ABC"], status: "drift" },
+      linearWorkspaceSlug: { status: "needs-manual-input" },
     },
   },
 ];
@@ -30,26 +29,26 @@ describe("buildReport", () => {
 
     expect(report.mode).toBe("dry-run");
     expect(report.totals).toEqual({
-      inferred: 1,
       drift: 1,
+      inferred: 1,
       "needs-manual-input": 1,
       unchanged: 1,
     });
 
     expect(report.driftKeys).toEqual([
       {
-        skill: "changelog",
         configPath: "skills/changelog/config.json",
-        key: "issueKeys",
-        kept: ["ABC"],
         detected: ["XYZ"],
+        kept: ["ABC"],
+        key: "issueKeys",
+        skill: "changelog",
       },
     ]);
     expect(report.manualKeys).toEqual([
       {
-        skill: "changelog",
         configPath: "skills/changelog/config.json",
         key: "linearWorkspaceSlug",
+        skill: "changelog",
       },
     ]);
   });
@@ -68,7 +67,9 @@ describe("formatHuman", () => {
     expect(text).toContain("inferred");
     expect(text).toContain('keeps ["ABC"] vs detected ["XYZ"]');
     expect(text).toContain("1 drifted key(s) kept");
-    expect(text).toContain("1 key(s) need manual input: changelog.linearWorkspaceSlug.");
+    expect(text).toContain(
+      "1 key(s) need manual input: changelog.linearWorkspaceSlug.",
+    );
   });
 
   it("flags an unparseable config and skips its keys", () => {
@@ -76,9 +77,9 @@ describe("formatHuman", () => {
       buildReport(
         [
           {
-            name: "broken",
             configPath: "skills/broken/config.json",
             malformed: true,
+            name: "broken",
             results: {},
           },
         ],

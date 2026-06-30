@@ -23,8 +23,11 @@ function makeRunner(handlers: Record<string, () => string>): Runner {
   };
 }
 
-const COMMITS = (n: number) =>
-  JSON.stringify(Array.from({ length: n }, () => ({ parents: [{ sha: "p" }] })));
+function COMMITS(count: number): string {
+  return JSON.stringify(
+    Array.from({ length: count }, () => ({ parents: [{ sha: "p" }] })),
+  );
+}
 
 // An entry with a recorded `pr` and a blank-placeholder stats block.
 function entryWithPr(): string {
@@ -59,7 +62,10 @@ describe("backfillEntry", () => {
       .split("\n")
       .filter((line) => !raw.split("\n").includes(line));
     expect(added).toEqual(["  commits: 5"]);
-    expect((parseFrontmatter(out as string).data.stats as { commits: number }).commits).toBe(5);
+    expect(
+      (parseFrontmatter(out as string).data.stats as { commits: number })
+        .commits,
+    ).toBe(5);
   });
 
   it("is idempotent — re-running yields no change", () => {
@@ -75,7 +81,9 @@ describe("backfillEntry", () => {
       "  loc_removed:\n  commits: 2",
     );
     const out = backfillEntry(seeded, run) as string;
-    expect((parseFrontmatter(out).data.stats as { commits: number }).commits).toBe(8);
+    expect(
+      (parseFrontmatter(out).data.stats as { commits: number }).commits,
+    ).toBe(8);
     expect(out.match(/commits:/g)).toHaveLength(1); // not duplicated
   });
 
@@ -86,7 +94,10 @@ describe("backfillEntry", () => {
       "gh pr list": () => JSON.stringify([{ number: 77 }]),
     });
     const out = backfillEntry(raw, run);
-    expect((parseFrontmatter(out as string).data.stats as { commits: number }).commits).toBe(3);
+    expect(
+      (parseFrontmatter(out as string).data.stats as { commits: number })
+        .commits,
+    ).toBe(3);
   });
 
   it("returns null when no merged PR resolves", () => {
@@ -99,10 +110,11 @@ describe("backfillEntry", () => {
 describe("resolvePrNumber", () => {
   it("prefers the recorded pr field without calling gh", () => {
     let called = false;
-    const run: Runner = () => {
+    function run(): string {
       called = true;
       return "[]";
-    };
+    }
+
     expect(resolvePrNumber(run, { pr: 42 })).toBe(42);
     expect(called).toBe(false);
   });

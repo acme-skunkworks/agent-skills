@@ -1,9 +1,3 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`). These cover the
 // pure, git-free surface of the preflight scope helpers (A-465): the
 // changed-file classifier, the workspace-relativiser, the workspace
@@ -16,6 +10,10 @@ import {
   relativiseToWorkspace,
   resolveConfig,
 } from "../../../skills/preflight/scripts/lib/scope.mjs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const WORKSPACES = {
   web: { filter: "@acme/web", prefix: "apps/web/" },
@@ -35,7 +33,10 @@ describe("classifyChangedFiles", () => {
     expect(out.codeChanged).toBe(true);
     expect(out.eslint.web).toEqual(["apps/web/src/index.ts"]);
     expect(out.eslint.scripts).toEqual(["scripts/release.mjs"]);
-    expect(out.eslint.root).toEqual(["eslint.config.js", "tsconfig.eslint.json"]);
+    expect(out.eslint.root).toEqual([
+      "eslint.config.js",
+      "tsconfig.eslint.json",
+    ]);
   });
 
   it("collects markdown but ignores vendored skill bundles", () => {
@@ -89,7 +90,10 @@ describe("classifyChangedFiles", () => {
 describe("relativiseToWorkspace", () => {
   it("strips a workspace prefix so paths resolve from the workspace cwd", () => {
     expect(
-      relativiseToWorkspace(["apps/web/src/a.ts", "apps/web/b.ts"], "apps/web/"),
+      relativiseToWorkspace(
+        ["apps/web/src/a.ts", "apps/web/b.ts"],
+        "apps/web/",
+      ),
     ).toEqual(["src/a.ts", "b.ts"]);
   });
 
@@ -102,47 +106,56 @@ describe("relativiseToWorkspace", () => {
 });
 
 describe("detectWorkspaces / resolveConfig", () => {
-  let dir: string;
+  let directory: string;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "preflight-scope-"));
+    directory = mkdtempSync(join(tmpdir(), "preflight-scope-"));
   });
 
   afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(directory, { force: true, recursive: true });
   });
 
   function writeWorkspace(relative: string, pkg: object) {
-    mkdirSync(join(dir, relative), { recursive: true });
-    writeFileSync(join(dir, relative, "package.json"), JSON.stringify(pkg));
+    mkdirSync(join(directory, relative), { recursive: true });
+    writeFileSync(
+      join(directory, relative, "package.json"),
+      JSON.stringify(pkg),
+    );
   }
 
   it("includes only workspaces that declare a lint script", () => {
-    writeFileSync(join(dir, "pnpm-workspace.yaml"), 'packages:\n  - "apps/*"\n');
+    writeFileSync(
+      join(directory, "pnpm-workspace.yaml"),
+      'packages:\n  - "apps/*"\n',
+    );
     writeWorkspace("apps/web", {
       name: "@acme/web",
       scripts: { lint: "eslint ." },
     });
     writeWorkspace("apps/docs", { name: "@acme/docs", scripts: {} });
 
-    const workspaces = detectWorkspaces(dir);
+    const workspaces = detectWorkspaces(directory);
     expect(Object.keys(workspaces)).toEqual(["web"]);
-    expect(workspaces.web).toEqual({ filter: "@acme/web", prefix: "apps/web/" });
+    expect(workspaces.web).toEqual({
+      filter: "@acme/web",
+      prefix: "apps/web/",
+    });
   });
 
   it("returns no workspaces when there is no pnpm-workspace.yaml", () => {
-    expect(detectWorkspaces(dir)).toEqual({});
+    expect(detectWorkspaces(directory)).toEqual({});
   });
 
   it("lets a preflight.config.json override win over auto-detection", () => {
     writeFileSync(
-      join(dir, "preflight.config.json"),
+      join(directory, "preflight.config.json"),
       JSON.stringify({
         baseBranch: "develop",
         workspaces: { api: { filter: "@acme/api", prefix: "services/api" } },
       }),
     );
-    const config = resolveConfig(dir);
+    const config = resolveConfig(directory);
     expect(config.baseBranch).toBe("develop");
     // The slash-less prefix is normalised to a trailing slash.
     expect(config.workspaces.api).toEqual({

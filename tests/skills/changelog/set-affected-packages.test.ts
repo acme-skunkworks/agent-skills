@@ -1,17 +1,16 @@
-import { describe, expect, it } from "vitest";
-
+import { derivePackagesFromPaths } from "../../../skills/changelog/scripts/lib/derive-packages.mjs";
 // Imports the BUNDLE scripts directly (the distributed `.mjs`). The empty-data
 // overwrite guard and the canonical-slot insertion are covered against the
 // bundle in ./changelog-frontmatter.test.ts; this suite
 // covers the path->package derivation feeding the rebuild and the idempotent
 // overwrite of an existing affected_packages.
 import { buildAffectedPackagesFrontmatter } from "../../../skills/changelog/scripts/set-affected-packages.mjs";
-import { derivePackagesFromPaths } from "../../../skills/changelog/scripts/lib/derive-packages.mjs";
+import { describe, expect, it } from "vitest";
 
 const DERIVE_OPTS = {
-  packageRoots: ["skills"],
-  fallbackPackage: "infrastructure",
   changelogDir: "changelog",
+  fallbackPackage: "infrastructure",
+  packageRoots: ["skills"],
 };
 
 describe("affected_packages derivation -> frontmatter", () => {
@@ -31,18 +30,18 @@ describe("affected_packages derivation -> frontmatter", () => {
       packages,
     );
     // affected_packages lands immediately before stats.
-    expect(Object.keys(fm)).toEqual([
-      "branch",
-      "affected_packages",
-      "stats",
+    expect(Object.keys(fm)).toEqual(["branch", "affected_packages", "stats"]);
+    expect(fm.affected_packages).toEqual([
+      "changelog",
+      "infrastructure",
+      "send-it",
     ]);
-    expect(fm.affected_packages).toEqual(["changelog", "infrastructure", "send-it"]);
   });
 
   it("idempotently overwrites an existing affected_packages with the freshly derived set", () => {
     const stale = {
-      branch: "my-branch",
       affected_packages: ["old-package"],
+      branch: "my-branch",
       stats: { files_changed: 1 },
     };
     const fresh = derivePackagesFromPaths(

@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`), so the published
 // release-status bundle stays test-free whilst its pure-logic surface — the
 // bump-rule derivation, the stale-`autorelease: pending` detector, and the
@@ -15,6 +13,7 @@ import {
   requiredCheckState,
   tagParity,
 } from "../../../skills/release-status/scripts/release-status.mjs";
+import { describe, expect, it } from "vitest";
 
 describe("classifyTitle — Conventional-Commit bump rules", () => {
   it("feat → minor", () => {
@@ -61,9 +60,9 @@ describe("previewBump — strongest bump across merged PRs", () => {
   });
 
   it("a breaking title wins over everything", () => {
-    expect(
-      previewBump([{ title: "feat: a" }, { title: "refactor!: b" }]),
-    ).toBe("major");
+    expect(previewBump([{ title: "feat: a" }, { title: "refactor!: b" }])).toBe(
+      "major",
+    );
   });
 
   it("BREAKING CHANGE in a body promotes to major", () => {
@@ -136,21 +135,26 @@ describe("detectStalePending — the autorelease: pending stall", () => {
 
   it("is clear when the label is absent", () => {
     expect(
-      detectStalePending({ labels: [{ name: "autorelease: tagged" }], number: 42 })
-        .detected,
+      detectStalePending({
+        labels: [{ name: "autorelease: tagged" }],
+        number: 42,
+      }).detected,
     ).toBe(false);
   });
 
   it("handles labels given as plain strings", () => {
     expect(
-      detectStalePending({ labels: ["autorelease: pending"], number: 7 }).detected,
+      detectStalePending({ labels: ["autorelease: pending"], number: 7 })
+        .detected,
     ).toBe(true);
   });
 
   it("honours a custom label name", () => {
     expect(
-      detectStalePending({ labels: ["release: blocked"], number: 9 }, "release: blocked")
-        .detected,
+      detectStalePending(
+        { labels: ["release: blocked"], number: 9 },
+        "release: blocked",
+      ).detected,
     ).toBe(true);
   });
 
@@ -164,7 +168,8 @@ describe("detectStalePending — the autorelease: pending stall", () => {
 describe("requiredCheckState — required-check rollup reading", () => {
   it("reads an Actions conclusion", () => {
     expect(
-      requiredCheckState([{ conclusion: "SUCCESS", name: "🔬 Build & Lint" }]).state,
+      requiredCheckState([{ conclusion: "SUCCESS", name: "🔬 Build & Lint" }])
+        .state,
     ).toBe("success");
   });
 

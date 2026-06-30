@@ -11,7 +11,8 @@
   "extends": "./tsconfig.json",
   "include": [
     "infrastructure/scripts/**/*.ts",
-    "infrastructure/tests/**/*.ts"
+    "infrastructure/tests/**/*.ts",
+    "tests/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

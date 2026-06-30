@@ -1,17 +1,16 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`). Covers the pure
 // auto-fix command planner (A-465): run order, the root+scripts eslint merge,
 // one `--filter`ed invocation per workspace with changes, and the markdownlint
 // tail. The actual spawning stays behind the CLI `main()` guard.
 import { planFixCommands } from "../../../skills/preflight/scripts/lint-fix.mjs";
+import { describe, expect, it } from "vitest";
 
 const EMPTY_SCOPE = {
   codeChanged: false,
-  markdownChanged: false,
+  eslint: { root: [], scripts: [] },
   markdown: [],
+  markdownChanged: false,
   workspaces: {},
-  eslint: { scripts: [], root: [] },
 };
 
 describe("planFixCommands", () => {
@@ -23,7 +22,7 @@ describe("planFixCommands", () => {
     const commands = planFixCommands({
       ...EMPTY_SCOPE,
       codeChanged: true,
-      eslint: { scripts: ["scripts/a.mjs"], root: ["eslint.config.js"] },
+      eslint: { root: ["eslint.config.js"], scripts: ["scripts/a.mjs"] },
     });
     expect(commands).toHaveLength(1);
     expect(commands[0].argv).toEqual([
@@ -40,15 +39,15 @@ describe("planFixCommands", () => {
     const commands = planFixCommands({
       ...EMPTY_SCOPE,
       codeChanged: true,
-      workspaces: {
-        web: { filter: "@acme/web", prefix: "apps/web/" },
-        api: { filter: "@acme/api", prefix: "services/api/" },
-      },
       eslint: {
-        scripts: [],
-        root: [],
-        web: ["apps/web/src/x.ts"],
         api: [],
+        root: [],
+        scripts: [],
+        web: ["apps/web/src/x.ts"],
+      },
+      workspaces: {
+        api: { filter: "@acme/api", prefix: "services/api/" },
+        web: { filter: "@acme/web", prefix: "apps/web/" },
       },
     });
     expect(commands).toHaveLength(1);
@@ -66,8 +65,8 @@ describe("planFixCommands", () => {
   it("appends a markdownlint --fix command for changed markdown", () => {
     const commands = planFixCommands({
       ...EMPTY_SCOPE,
-      markdownChanged: true,
       markdown: ["README.md"],
+      markdownChanged: true,
     });
     expect(commands).toHaveLength(1);
     expect(commands[0].argv).toEqual([

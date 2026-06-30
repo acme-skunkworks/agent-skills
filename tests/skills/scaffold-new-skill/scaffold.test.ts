@@ -1,15 +1,3 @@
-import {
-  existsSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-} from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 // Import the BUNDLE script directly (the distributed `.mjs`).
 import {
   buildSkeleton,
@@ -19,6 +7,16 @@ import {
   validateName,
   writeSkeleton,
 } from "../../../skills/scaffold-new-skill/scripts/scaffold.mjs";
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // A standalone copy of the `validate-skills.ts` parity check, so these tests
 // prove the generated skeleton passes the very same rules the CI gate enforces
@@ -41,7 +39,7 @@ function frontmatter(skillRaw: string): {
   let version: string | undefined;
   let inMetadata = false;
   for (const line of lines) {
-    const top = /^([A-Za-z0-9_-]+):\s*(.*)$/.exec(line);
+    const top = /^([\w-]+):(.*)$/.exec(line);
     if (top && !line.startsWith(" ")) {
       inMetadata = top[1] === "metadata";
       if (top[1] === "name") {
@@ -51,7 +49,7 @@ function frontmatter(skillRaw: string): {
       continue;
     }
 
-    const nested = /^\s+([A-Za-z0-9_-]+):\s*(.*)$/.exec(line);
+    const nested = /^\s+([\w-]+):(.*)$/.exec(line);
     if (inMetadata && nested && nested[1] === "version") {
       version = nested[2].trim();
     }
@@ -114,7 +112,8 @@ describe("buildSkeleton — the generated skeleton passes the validate-skills ru
     expect(typeof files[`tests/skills/${name}/${name}.test.ts`]).toBe("string");
     // No tests/ path should live inside the skill bundle directory.
     const insideBundleTest = Object.keys(files).some(
-      (p) => p.startsWith(`${base}/`) && p.includes("/tests/"),
+      (filePath) =>
+        filePath.startsWith(`${base}/`) && filePath.includes("/tests/"),
     );
     expect(insideBundleTest).toBe(false);
   });
@@ -137,7 +136,7 @@ describe("writeSkeleton — filesystem behaviour", () => {
   });
 
   afterEach(() => {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { force: true, recursive: true });
   });
 
   it("writes every file from the skeleton", () => {
@@ -165,12 +164,14 @@ describe("writeSkeleton — filesystem behaviour", () => {
   it("refuses to clobber a non-empty target", () => {
     const name = "clobber-skill";
     writeSkeleton(name, { root });
-    expect(() => writeSkeleton(name, { root })).toThrow(/Refusing to overwrite/);
+    expect(() => writeSkeleton(name, { root })).toThrow(
+      /Refusing to overwrite/,
+    );
   });
 
   it("allows --force to overwrite", () => {
     const name = "forced-skill";
     writeSkeleton(name, { root });
-    expect(() => writeSkeleton(name, { root, force: true })).not.toThrow();
+    expect(() => writeSkeleton(name, { force: true, root })).not.toThrow();
   });
 });
