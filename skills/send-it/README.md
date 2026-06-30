@@ -45,11 +45,13 @@ or edit `config.json` directly.
 | `shippablePaths` | Path prefixes whose changes reach consumers. A change touching any of these makes the PR **shippable** → a release-triggering `feat`/`fix`/`feat!` title. | `["skills/"]` |
 | `shippableManifestKeys` | `package.json` keys whose change is itself shippable (the published-`files` surface). A `package.json` diff touching any of these is shippable. | `["name", "version", "files", "publishConfig"]` |
 | `bundleVersioning` *(optional)* | For repos that ship many independently-versioned skill bundles. An object `{ root, manifest, skillFile }` that turns on the per-bundle version-bump check: when a bundle's content changed but its version didn't, send-it offers to bump its `manifest` `version` + `skillFile` `metadata.version` in lockstep. **Omit it in single-package repos** — the check no-ops. | unset (disabled) |
+| `changelogScope` *(optional)* | Which PRs get a dated `changelog/` entry: `"all"` (default) authors one for **every** PR so the changelog is a full record of merged work (release notes filter to the version-stamped entries); `"shippable"` authors one **only for shippable changes** so the changelog mirrors just the published surface. Subordinate to `changelog: false`. | `"all"` |
 
 A change is **shippable** iff the branch diff touches a `shippablePaths` prefix
 **or** the `package.json` diff touches a `shippableManifestKeys` key. Everything
 else is **non-shippable** and gets a non-release type (`docs`/`chore`/`ci`/…) — no
-changelog entry, no version bump.
+version bump. A non-shippable PR still gets a `changelog/` entry under the default
+`changelogScope: "all"`; set `"shippable"` to skip entries for non-shippable changes.
 
 The team name, issue-ID prefixes, and workspace slug are **not** configured here —
 they live in the `linear-sync` and `changelog` skills' own `config.json` files,
