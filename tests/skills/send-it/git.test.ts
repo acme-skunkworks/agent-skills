@@ -1,15 +1,17 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`). Covers the pure,
 // git-free base-ref candidate logic (A-532): derive-bump / check-skill-bumps must
 // honour config.json's baseBranch, not the hardcoded origin/main → main chain, so a
 // consumer whose trunk is `develop` diffs against the right base. The git-backed
 // resolveBaseRef itself needs a live repo and is exercised by the skill end-to-end.
 import { baseRefCandidates } from "../../../skills/send-it/scripts/lib/git.mjs";
+import { describe, expect, it } from "vitest";
 
 describe("baseRefCandidates", () => {
   it("collapses to the original chain when baseBranch is main", () => {
-    expect(baseRefCandidates("main", undefined)).toEqual(["origin/main", "main"]);
+    expect(baseRefCandidates("main", undefined)).toEqual([
+      "origin/main",
+      "main",
+    ]);
   });
 
   it("probes the configured trunk before the origin/main fallback", () => {
@@ -40,6 +42,9 @@ describe("baseRefCandidates", () => {
 
   it("falls back to main for an empty or blank baseBranch", () => {
     expect(baseRefCandidates("", undefined)).toEqual(["origin/main", "main"]);
-    expect(baseRefCandidates("   ", undefined)).toEqual(["origin/main", "main"]);
+    expect(baseRefCandidates("   ", undefined)).toEqual([
+      "origin/main",
+      "main",
+    ]);
   });
 });

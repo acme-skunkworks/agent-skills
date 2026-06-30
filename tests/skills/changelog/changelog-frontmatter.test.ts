@@ -83,7 +83,7 @@ describe("findEntryByBranch — parse-error context (bug 6)", () => {
   });
 
   afterEach(() => {
-    rmSync(directory, { recursive: true, force: true });
+    rmSync(directory, { force: true, recursive: true });
   });
 
   it("names the offending file when an entry has malformed frontmatter", () => {
@@ -117,10 +117,16 @@ describe("buildAffectedPackagesFrontmatter — destructive-overwrite guard (bug 
   });
 
   it("inserts affected_packages immediately before stats for a valid entry", () => {
-    const fm = buildAffectedPackagesFrontmatter(
-      { branch: "my-branch", title: "x", stats: { added: 1 } },
-      ["api", "web"],
-    );
+    // Input key order is load-bearing: the function preserves insertion order
+    // and slots affected_packages in just before `stats`. Build the fixture by
+    // assignment so its branch→title→stats order survives (an inline literal
+    // would be alphabetised by the sort-objects lint).
+    const entry: Record<string, unknown> = {};
+    entry.branch = "my-branch";
+    entry.title = "x";
+    entry.stats = { added: 1 };
+
+    const fm = buildAffectedPackagesFrontmatter(entry, ["api", "web"]);
     expect(Object.keys(fm)).toEqual([
       "branch",
       "title",
@@ -139,14 +145,14 @@ describe("buildAffectedPackagesFrontmatter — destructive-overwrite guard (bug 
   });
 
   it("replaces an existing affected_packages in its canonical slot", () => {
-    const fm = buildAffectedPackagesFrontmatter(
-      {
-        branch: "my-branch",
-        affected_packages: ["stale"],
-        stats: { added: 1 },
-      },
-      ["fresh"],
-    );
+    // Build by assignment so the branch→affected_packages→stats order is
+    // preserved (an inline literal would be alphabetised by sort-objects).
+    const entry: Record<string, unknown> = {};
+    entry.branch = "my-branch";
+    entry.affected_packages = ["stale"];
+    entry.stats = { added: 1 };
+
+    const fm = buildAffectedPackagesFrontmatter(entry, ["fresh"]);
     expect(Object.keys(fm)).toEqual(["branch", "affected_packages", "stats"]);
     expect(fm.affected_packages).toEqual(["fresh"]);
   });

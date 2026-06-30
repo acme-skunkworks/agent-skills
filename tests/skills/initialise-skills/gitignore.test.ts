@@ -1,9 +1,3 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 // Imports the BUNDLE lib directly (the distributed `.mjs`). Covers the .gitignore
 // reconcile (A-569): the append-only, idempotent edit that excludes preflight's
 // `.preflight-summary.json` scratch output from a consumer repo. Uses a tmp repo
@@ -13,26 +7,36 @@ import {
   IGNORE_ENTRY,
   reconcilePreflightIgnore,
 } from "../../../skills/initialise-skills/scripts/lib/gitignore.mjs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 describe("reconcilePreflightIgnore", () => {
-  let dir: string;
-  const ignorePath = () => join(dir, ".gitignore");
-  const read = () => readFileSync(ignorePath(), "utf8");
+  let directory: string;
+
+  function ignorePath() {
+    return join(directory, ".gitignore");
+  }
+
+  function read() {
+    return readFileSync(ignorePath(), "utf8");
+  }
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "preflight-gitignore-"));
+    directory = mkdtempSync(join(tmpdir(), "preflight-gitignore-"));
   });
 
   afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(directory, { force: true, recursive: true });
   });
 
   it("creates .gitignore with the entry when none exists", () => {
-    expect(reconcilePreflightIgnore(dir, { write: false }).status).toBe(
+    expect(reconcilePreflightIgnore(directory, { write: false }).status).toBe(
       "would-create",
     );
 
-    const result = reconcilePreflightIgnore(dir, { write: true });
+    const result = reconcilePreflightIgnore(directory, { write: true });
     expect(result.status).toBe("created");
     expect(read()).toBe(`${IGNORE_COMMENT}\n${IGNORE_ENTRY}\n`);
   });
@@ -40,11 +44,11 @@ describe("reconcilePreflightIgnore", () => {
   it("appends the entry to an existing .gitignore, preserving prior content", () => {
     writeFileSync(ignorePath(), "node_modules/\ndist/\n");
 
-    expect(reconcilePreflightIgnore(dir, { write: false }).status).toBe(
+    expect(reconcilePreflightIgnore(directory, { write: false }).status).toBe(
       "would-add",
     );
 
-    const result = reconcilePreflightIgnore(dir, { write: true });
+    const result = reconcilePreflightIgnore(directory, { write: true });
     expect(result.status).toBe("added");
     const text = read();
     expect(text.startsWith("node_modules/\ndist/\n")).toBe(true);
@@ -55,17 +59,15 @@ describe("reconcilePreflightIgnore", () => {
   it("adds a trailing newline before appending when the file lacks one", () => {
     writeFileSync(ignorePath(), "node_modules/");
 
-    reconcilePreflightIgnore(dir, { write: true });
+    reconcilePreflightIgnore(directory, { write: true });
     const text = read();
-    expect(text).toBe(
-      `node_modules/\n\n${IGNORE_COMMENT}\n${IGNORE_ENTRY}\n`,
-    );
+    expect(text).toBe(`node_modules/\n\n${IGNORE_COMMENT}\n${IGNORE_ENTRY}\n`);
   });
 
   it("handles an existing but empty .gitignore (no leading blank line)", () => {
     writeFileSync(ignorePath(), "");
 
-    const result = reconcilePreflightIgnore(dir, { write: true });
+    const result = reconcilePreflightIgnore(directory, { write: true });
     expect(result.status).toBe("added");
     expect(read()).toBe(`${IGNORE_COMMENT}\n${IGNORE_ENTRY}\n`);
   });
@@ -73,7 +75,7 @@ describe("reconcilePreflightIgnore", () => {
   it("preserves CRLF line endings on append", () => {
     writeFileSync(ignorePath(), "node_modules/\r\ndist/\r\n");
 
-    reconcilePreflightIgnore(dir, { write: true });
+    reconcilePreflightIgnore(directory, { write: true });
     // The appended block round-trips as CRLF — no bare-LF line slips in.
     expect(read()).toBe(
       `node_modules/\r\ndist/\r\n\r\n${IGNORE_COMMENT}\r\n${IGNORE_ENTRY}\r\n`,
@@ -81,10 +83,10 @@ describe("reconcilePreflightIgnore", () => {
   });
 
   it("is idempotent — a second write leaves the file byte-identical", () => {
-    reconcilePreflightIgnore(dir, { write: true });
+    reconcilePreflightIgnore(directory, { write: true });
     const after1 = read();
 
-    const result = reconcilePreflightIgnore(dir, { write: true });
+    const result = reconcilePreflightIgnore(directory, { write: true });
     expect(result.status).toBe("present");
     expect(read()).toBe(after1);
   });
@@ -92,7 +94,7 @@ describe("reconcilePreflightIgnore", () => {
   it("reports 'present' (no write) when the entry already exists", () => {
     writeFileSync(ignorePath(), `# notes\n${IGNORE_ENTRY}\n`);
 
-    const result = reconcilePreflightIgnore(dir, { write: false });
+    const result = reconcilePreflightIgnore(directory, { write: false });
     expect(result.status).toBe("present");
     // Dry-run must not mutate.
     expect(read()).toBe(`# notes\n${IGNORE_ENTRY}\n`);
@@ -100,7 +102,7 @@ describe("reconcilePreflightIgnore", () => {
 
   it("treats the leading-slash anchored form as already present", () => {
     writeFileSync(ignorePath(), `/${IGNORE_ENTRY}\n`);
-    expect(reconcilePreflightIgnore(dir, { write: true }).status).toBe(
+    expect(reconcilePreflightIgnore(directory, { write: true }).status).toBe(
       "present",
     );
   });

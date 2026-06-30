@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`). `rewriteBody`
 // reads the bundle's own config.json (workspace `acme-skunkworks`, key
 // A). Reference-style label masking is covered against the bundle
@@ -10,20 +8,17 @@ import {
   rewriteBody,
   splitFrontmatter,
 } from "../../../skills/changelog/scripts/add-links.mjs";
+import { describe, expect, it } from "vitest";
 
-const url = (id: string) => `https://linear.app/acme-skunkworks/issue/${id}`;
+function url(id: string) {
+  return `https://linear.app/acme-skunkworks/issue/${id}`;
+}
 
 describe("rewriteBody — issue-key linking (happy path)", () => {
   it("links a bare issue ID for each configured team key", () => {
-    expect(rewriteBody("Closes A-12.")).toBe(
-      `Closes [A-12](${url("A-12")}).`,
-    );
-    expect(rewriteBody("Closes A-3.")).toBe(
-      `Closes [A-3](${url("A-3")}).`,
-    );
-    expect(rewriteBody("Closes A-9.")).toBe(
-      `Closes [A-9](${url("A-9")}).`,
-    );
+    expect(rewriteBody("Closes A-12.")).toBe(`Closes [A-12](${url("A-12")}).`);
+    expect(rewriteBody("Closes A-3.")).toBe(`Closes [A-3](${url("A-3")}).`);
+    expect(rewriteBody("Closes A-9.")).toBe(`Closes [A-9](${url("A-9")}).`);
     expect(rewriteBody("Closes A-401.")).toBe(
       `Closes [A-401](${url("A-401")}).`,
     );
@@ -65,8 +60,7 @@ describe("rewriteBody — masking", () => {
   it("links a bare ID whilst leaving a fenced/inline-code occurrence masked", () => {
     const body = "Closes A-12; see `A-12` and:\n```\nA-12\n```\n";
     expect(rewriteBody(body)).toBe(
-      `Closes [A-12](${url("A-12")}); see \`A-12\` and:\n` +
-        "```\nA-12\n```\n",
+      `Closes [A-12](${url("A-12")}); see \`A-12\` and:\n\`\`\`\nA-12\n\`\`\`\n`,
     );
   });
 
@@ -88,14 +82,14 @@ describe("splitFrontmatter", () => {
   it("splits leading frontmatter from the body", () => {
     const raw = "---\ntitle: x\n---\n## Added\n\n- A change\n";
     expect(splitFrontmatter(raw)).toEqual({
-      fm: "---\ntitle: x\n---\n",
       body: "## Added\n\n- A change\n",
+      fm: "---\ntitle: x\n---\n",
     });
   });
 
   it("returns the whole string as body when there is no frontmatter", () => {
     const raw = "## Added\n\n- A change\n";
-    expect(splitFrontmatter(raw)).toEqual({ fm: "", body: raw });
+    expect(splitFrontmatter(raw)).toEqual({ body: raw, fm: "" });
   });
 
   it("splits CRLF frontmatter from the body", () => {
@@ -103,8 +97,8 @@ describe("splitFrontmatter", () => {
     // changelog file must split the same way as an LF one.
     const raw = "---\r\ntitle: x\r\n---\r\n## Added\r\n";
     expect(splitFrontmatter(raw)).toEqual({
-      fm: "---\r\ntitle: x\r\n---\r\n",
       body: "## Added\r\n",
+      fm: "---\r\ntitle: x\r\n---\r\n",
     });
   });
 });

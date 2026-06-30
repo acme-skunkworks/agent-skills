@@ -1,7 +1,3 @@
-import { join } from "node:path";
-
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE CLI directly (the distributed `.mjs`). Covers the pure
 // argument/stdin helpers (A-465): flag parsing, the lenient acceptDrift coercion,
 // and the per-skill drift-key resolution that keys off either the skill name or
@@ -12,6 +8,8 @@ import {
   asKeyList,
   parseArgs,
 } from "../../../skills/initialise-skills/scripts/initialise.mjs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
 
 describe("parseArgs", () => {
   it("defaults to a dry run reporting in human form", () => {
@@ -31,10 +29,10 @@ describe("parseArgs", () => {
       "/repo/skills",
     ]);
     expect(options).toMatchObject({
-      write: true,
       json: true,
       repoRoot: "/repo",
       skillsDir: "/repo/skills",
+      write: true,
     });
   });
 
@@ -60,8 +58,8 @@ describe("asKeyList", () => {
 
 describe("acceptedDriftFor", () => {
   const skill = {
-    name: "changelog",
     configPath: join("/repo", "skills/changelog/config.json"),
+    name: "changelog",
   };
 
   it("unions drift keys addressed by skill name and by relative config path", () => {

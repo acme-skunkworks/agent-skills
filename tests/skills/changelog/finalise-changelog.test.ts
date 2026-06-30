@@ -177,9 +177,7 @@ describe("makeResolver", () => {
           { parents: [{ sha: "p5" }] },
         ]),
       "gh pr list": () =>
-        JSON.stringify([
-          { mergeCommit: { oid: "merge111" }, number: 42 },
-        ]),
+        JSON.stringify([{ mergeCommit: { oid: "merge111" }, number: 42 }]),
       "git cat-file": () => "tree x\nparent p1\n",
     });
     expect(makeResolver(run)("a-1-branch")?.commits).toBe("3");

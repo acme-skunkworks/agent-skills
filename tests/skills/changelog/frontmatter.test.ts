@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`), so the published
 // bundle stays test-free whilst the parser/serialiser is still covered in CI.
 //
@@ -12,6 +10,7 @@ import {
   parseFrontmatter,
   stringifyFrontmatter,
 } from "../../../skills/changelog/scripts/lib/frontmatter.mjs";
+import { describe, expect, it } from "vitest";
 
 describe("parseFrontmatter — scalar shapes", () => {
   it("parses strings, integers, booleans and the null literal", () => {
@@ -26,11 +25,11 @@ describe("parseFrontmatter — scalar shapes", () => {
       "body\n";
     const { data } = parseFrontmatter(raw);
     expect(data).toMatchObject({
-      title: "A change",
-      pr: 42,
       breaking: false,
       draft: true,
+      pr: 42,
       release_note: null,
+      title: "A change",
     });
   });
 
@@ -48,7 +47,7 @@ describe("parseFrontmatter — scalar shapes", () => {
 
   it("returns empty data and the raw text as content when there is no frontmatter", () => {
     const raw = "no frontmatter here\n";
-    const { data, content } = parseFrontmatter(raw);
+    const { content, data } = parseFrontmatter(raw);
     expect(data).toEqual({});
     expect(content).toBe(raw);
   });
@@ -57,7 +56,7 @@ describe("parseFrontmatter — scalar shapes", () => {
     // parseFrontmatter drops a leading U+FEFF before looking for fences, so a
     // BOM-prefixed file is not misread as having no frontmatter / stray bytes.
     const raw = "﻿no frontmatter here\n";
-    const { data, content } = parseFrontmatter(raw);
+    const { content, data } = parseFrontmatter(raw);
     expect(data).toEqual({});
     expect(content).toBe("no frontmatter here\n");
   });
@@ -109,8 +108,7 @@ describe("parseFrontmatter — arrays and nested mappings", () => {
 
 describe("parseFrontmatter — block scalars", () => {
   it("folds a `>-` block to a single line", () => {
-    const raw =
-      "---\nrelease_note: >-\n  Tidied the\n  parser.\n---\nbody\n";
+    const raw = "---\nrelease_note: >-\n  Tidied the\n  parser.\n---\nbody\n";
     expect(parseFrontmatter(raw).data.release_note).toBe("Tidied the parser.");
   });
 

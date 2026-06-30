@@ -22,7 +22,7 @@ describe("deepEqual", () => {
     // key-order-insensitive comparison (the meaningful case here).
     expect(
       deepEqual(
-        { root: "skills", manifest: "package.json" },
+        { manifest: "package.json", root: "skills" },
         { manifest: "package.json", root: "skills" },
       ),
     ).toBe(true);

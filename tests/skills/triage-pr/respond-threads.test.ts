@@ -1,13 +1,9 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`), so the published
 // triage-pr bundle stays test-free whilst the symmetric reply/resolve +
 // idempotency logic is still covered in CI. The `gh` mutation layer is not
 // exercised here — only the pure planning/formatting functions, which is exactly
 // the surface A-410's "verifiable without spamming a real PR" criterion needs.
 import {
-  SUMMARY_MARKER,
-  THREAD_MARKER,
   buildConsolidatedComment,
   buildReplyBody,
   findExistingAckComment,
@@ -16,7 +12,10 @@ import {
   parseArgs,
   parseReplyOnAccept,
   planThreadResponses,
+  SUMMARY_MARKER,
+  THREAD_MARKER,
 } from "../../../skills/triage-pr/scripts/respond-threads.mjs";
+import { describe, expect, it } from "vitest";
 
 describe("planThreadResponses — symmetric accept/decline", () => {
   it("accepts → reply-resolve referencing the fixing sha + marker", () => {
@@ -99,7 +98,9 @@ describe("planThreadResponses — guardrails and idempotency", () => {
   it("skips a thread already carrying our marker (no double-post)", () => {
     const [action] = planThreadResponses([
       {
-        comments: [{ author: "me", body: `Addressed in x.\n\n${THREAD_MARKER}` }],
+        comments: [
+          { author: "me", body: `Addressed in x.\n\n${THREAD_MARKER}` },
+        ],
         decision: "accept",
         sha: "feed123",
         threadId: "T_done",
@@ -244,14 +245,14 @@ describe("hasMarker", () => {
 
 describe("arg parsing", () => {
   it("parses flags, camel-cases keys, and reads --dry-run", () => {
-    const o = parseArgs([
+    const parsed = parseArgs([
       "--thread",
       "PRRT_1",
       "--reply-on-accept",
       "false",
       "--dry-run",
     ]);
-    expect(o).toMatchObject({
+    expect(parsed).toMatchObject({
       dryRun: true,
       replyOnAccept: "false",
       thread: "PRRT_1",

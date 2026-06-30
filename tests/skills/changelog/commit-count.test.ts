@@ -43,15 +43,18 @@ describe("nonMergeCommitCount", () => {
   });
 
   it("returns null when the response is not an array", () => {
-    expect(nonMergeCommitCount(runnerReturning('{"message":"Not Found"}'), 1)).toBeNull();
+    expect(
+      nonMergeCommitCount(runnerReturning('{"message":"Not Found"}'), 1),
+    ).toBeNull();
   });
 
   it("requests the merged PR's commits via the {owner}/{repo} REST endpoint", () => {
-    const calls: { args: readonly string[]; cmd: string }[] = [];
-    const run: Runner = (cmd, args) => {
+    const calls: Array<{ args: readonly string[]; cmd: string }> = [];
+    function run(cmd: string, args: readonly string[]): string {
       calls.push({ args, cmd });
       return "[]";
-    };
+    }
+
     nonMergeCommitCount(run, 99);
     expect(calls).toHaveLength(1);
     expect(calls[0].cmd).toBe("gh");

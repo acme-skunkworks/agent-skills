@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 // Imports the BUNDLE script directly (the distributed `.mjs`). Covers the pure
 // version-parsing helpers (A-465): the no-semver-dependency parsing of
 // `.nvmrc` / `process.version` / `engines.node` ranges and the comparison the
@@ -11,6 +9,7 @@ import {
   parseVersion,
   satisfiesGte,
 } from "../../../skills/changelog/scripts/preflight-changelog-ci.mjs";
+import { describe, expect, it } from "vitest";
 
 describe("parseVersion", () => {
   it("parses full, partial, and v-prefixed versions, padding missing parts", () => {

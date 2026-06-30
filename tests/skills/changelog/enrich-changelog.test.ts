@@ -99,8 +99,13 @@ describe("enrichFrontmatter", () => {
   });
 
   it("writes stats.commits from the commits input", () => {
-    const out = enrichFrontmatter(placeholderEntry(), { ...BASE, commits: "7" });
-    expect((parseFrontmatter(out).data.stats as { commits: number }).commits).toBe(7);
+    const out = enrichFrontmatter(placeholderEntry(), {
+      ...BASE,
+      commits: "7",
+    });
+    expect(
+      (parseFrontmatter(out).data.stats as { commits: number }).commits,
+    ).toBe(7);
   });
 
   it("treats an empty-string commits input as absent (no NaN written)", () => {
