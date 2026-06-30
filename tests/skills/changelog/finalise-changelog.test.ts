@@ -77,6 +77,51 @@ describe("finaliseEntry", () => {
     );
   });
 
+  it("re-enriches when stats is present but the commits child is missing (A-579)", () => {
+    // An entry finalised between stats existing (A-380) and stats.commits
+    // (A-560): every other post-merge field is set and stats is populated, but
+    // commits is absent. The gate must still treat it as enrichable so the
+    // resolver fills commits — before version-stamping makes it permanent.
+    const raw = [
+      "---",
+      'title: "Fix a thing"',
+      "version:",
+      'created_at: "2026-05-23T14:55:37Z"',
+      'merged_at: "2026-05-24T09:00:00Z"',
+      'branch: "asw-123-fix-a-thing"',
+      "pr: 42",
+      'commit: "abc1234"',
+      "category: fix",
+      "breaking: false",
+      "stats:",
+      "  files_changed: 3",
+      "  loc_added: 10",
+      "  loc_removed: 2",
+      'issues: ["A-123"]',
+      "---",
+      "",
+      "## Fixed",
+      "",
+      "- A thing for A-123.",
+      "",
+    ].join("\n");
+    let called = false;
+    const out = finaliseEntry(raw, "1.2.0", () => {
+      called = true;
+      return PR;
+    });
+    expect(called).toBe(true);
+    expect(out).not.toBeNull();
+    const { data } = parseFrontmatter(out as string);
+    expect(data.version).toBe("1.2.0");
+    expect(data.stats).toEqual({
+      commits: 4,
+      files_changed: 3,
+      loc_added: 10,
+      loc_removed: 2,
+    });
+  });
+
   it("returns null for an already-finalised entry (version set)", () => {
     const raw = placeholderEntry().replace("version:", 'version: "1.0.0"');
     expect(finaliseEntry(raw, "1.2.0", () => PR)).toBeNull();
