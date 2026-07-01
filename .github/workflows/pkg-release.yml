@@ -1,0 +1,52 @@
+name: Package release
+
+on:
+  push:
+    branches:
+      - main
+  # No workflow_dispatch (A-326). Re-run a failed release via "Re-run jobs" on
+  # the original push run.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# Defence-in-depth: deny default token permissions; each job declares only what
+# it needs (ASW-313).
+permissions: {}
+
+jobs:
+  config:
+    name: ⚙️ Load repo config
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      npm_scope: ${{ steps.repo.outputs.npm_scope }}
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: ⚙️ Load repo config
+        id: repo
+        uses: ./.github/actions/load-repo-config
+
+  release:
+    needs: config
+    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-pkg-release.yml@6cbcab65ca27950387b145888a68dd8e5e0d3ebe # v1.0.0
+    with:
+      npm-scope: ${{ needs.config.outputs.npm_scope }}
+    permissions:
+      # Required by the reusable release workflow to create releases and tags.
+      contents: write
+      # Required for npm trusted publishing / provenance.
+      id-token: write
+      # Required by release automation for release notes/issues integration.
+      issues: write
+      # Required for GitHub Packages publication.
+      packages: write
+      # Required for artifact attestations.
+      attestations: write

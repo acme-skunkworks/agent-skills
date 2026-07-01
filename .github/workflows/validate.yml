@@ -5,7 +5,7 @@ on:
     # `edited` is included so the changelog-completeness gate re-runs when a
     # title is corrected — the PR title is the release-please bump signal
     # (SK-380), so a stale pass on an old title would be unsafe. (The
-    # Conventional-Commit title lint now lives in its own pr-title.yml.)
+    # Conventional-Commit title lint lives in its own validate-pr-title.yml.)
     # The default set is opened/synchronize/reopened.
     types: [opened, edited, synchronize, reopened]
 
@@ -18,18 +18,75 @@ concurrency:
 permissions:
   contents: read
 
+# Wave 3 consumer (A-589 / A-594): the static lint/build/test checks run through
+# the estate's shared reusable workflows, SHA-pinned to v1.0.0 so Dependabot
+# bumps them together. The `lint` caller runs ESLint + Markdown + YAML/actionlint;
+# the `build-test` caller runs the tsc typecheck + ShellCheck + bats (`build:
+# false` — agent-skills ships skills.sh bundles, nothing to compile).
+#
+# The repo-specific EXECUTION checks stay local in the `skills` job: they need
+# `pnpm bootstrap:config` to materialise the gitignored per-skill config.json
+# (A-615) first, so they cannot run inside the reusable callers (which have no
+# pre-step hook). Vitest is local for the same reason — the composite runs
+# `pnpm exec vitest run`, which skips the `pretest` bootstrap hook. The
+# `GO/NO GO` aggregator (A-418) is the required status check.
 jobs:
-  build-and-lint:
-    name: 🔬 Build & Lint
-    # Deliberately NOT skipped on the release-please branch — this job is the
-    # required status check that gates the release PR (ASW-311). The
-    # road-runner-bot orchestrator authors the release PR (App-token), which fires
-    # this run, then merges once it's green. The release PR's title is a
-    # non-release `chore: release …`, so the changelog-completeness step below is
-    # a clean no-op on it. Hard gates: frozen-lockfile install, the vitest unit
-    # tests for the changelog/send-it helpers, changelog-entry validation, the
-    # per-skill bundle-metadata guard (ASW-364), and the changelog-completeness
-    # gate (SK-380 — a release-triggering PR title must carry a dated entry).
+  config:
+    name: ⚙️ Load repo config
+    runs-on: ubuntu-latest
+    outputs:
+      node_version_file: ${{ steps.repo.outputs.node_version_file }}
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: ⚙️ Load repo config
+        id: repo
+        uses: ./.github/actions/load-repo-config
+
+  lint:
+    needs: config
+    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-lint.yml@6cbcab65ca27950387b145888a68dd8e5e0d3ebe # v1.0.0
+    with:
+      node-version-file: ${{ needs.config.outputs.node_version_file }}
+      # Mirror the repo's own `pnpm lint` glob set (the TypeScript infra surface
+      # + the .mjs skill helpers). ESLint expands these globs itself.
+      eslint-args: infrastructure/scripts/**/*.ts infrastructure/scripts/**/*.mjs infrastructure/tests/**/*.ts tests/**/*.ts lib/**/*.mjs skills/**/*.mjs
+      # Mirror .markdownlint-cli2.jsonc so vendored skill bundles and build
+      # output stay excluded.
+      markdown-globs: |
+        **/*.{md,mdx}
+        !**/node_modules/**
+        !**/dist/**
+        !.agents/skills/**
+        !.claude/skills/**
+      # `validate:changelog` loads the per-skill config at runtime, so it must run
+      # after `bootstrap:config` — it stays in the local `skills` job below.
+      changelog: false
+
+  build-test:
+    needs: config
+    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-build-test.yml@6cbcab65ca27950387b145888a68dd8e5e0d3ebe # v1.0.0
+    with:
+      node-version-file: ${{ needs.config.outputs.node_version_file }}
+      # agent-skills ships skills.sh bundles — nothing to compile.
+      build: false
+      # Vitest needs the `pretest` bootstrap hook (skipped by the composite's
+      # direct `vitest run`), so it runs in the local `skills` job instead.
+      test: false
+      shellcheck-paths: "infrastructure/scripts .husky/pre-commit .husky/pre-push .husky/commit-msg"
+      # No bats suite — the only .bats tests covered the now-removed publish
+      # scripts (centralised in reusable-pkg-release.yml).
+      bats: false
+
+  skills:
+    name: 🧩 Skills & changelog
+    needs: config
+    # Deliberately NOT skipped on the release-please branch — the changelog
+    # validation + completeness gates must run on the release PR too.
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -41,10 +98,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: ⚙️ Load repo config
-        id: repo
-        uses: ./.github/actions/load-repo-config
-
       - name: 📦 Install pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v4.4.0
         with:
@@ -53,7 +106,7 @@ jobs:
       - name: 🟢 Setup Node.js
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version-file: ${{ steps.repo.outputs.node_version_file }}
+          node-version-file: ${{ needs.config.outputs.node_version_file }}
           cache: pnpm
 
       - name: 📥 Install dependencies
@@ -61,32 +114,19 @@ jobs:
 
       - name: 🥾 Bootstrap dogfood config
         # skills/*/config.json is gitignored (A-615) so `skills add --copy` never
-        # vendors this repo's own config into consumers — only config.example.json
-        # ships. This repo's real values live in infrastructure/dogfood-config/ and
-        # are materialised into skills/<name>/config.json here, so the scripts and
-        # tests below (which read a real config and fail loudly without one) work.
+        # vendors this repo's own config into consumers. This repo's real values
+        # live in infrastructure/dogfood-config/ and are materialised into
+        # skills/<name>/config.json here, so the scripts and tests below (which
+        # read a real config and fail loudly without one) work.
         run: pnpm bootstrap:config
-
-      - name: 🔠 Typecheck (tsc)
-        # Type-check-only (tsconfig.json sets noEmit) over the infrastructure
-        # CLI tooling (SK-394). agent-skills ships skills.sh bundles, so there's
-        # nothing to emit — this just enforces the strict tsconfig in CI.
-        run: pnpm tsc
-
-      - name: 🧹 ESLint
-        # Adopts the shared @acme-skunkworks/eslint-config over the infra .ts
-        # surface (scripts + tests) (SK-394). The .mjs skill helpers are linted
-        # separately once SK-439 lands standalone-.mjs support in the preset.
-        run: pnpm lint
 
       - name: 🧪 Unit tests (changelog + send-it helpers)
         run: pnpm test
 
       - name: 🧪 Skill bundle self-tests
-        # Runs each skills/*/scripts/*.mjs that ships a built-in `--self-test`
-        # (cleanup-repo, triage-pr, the changelog scripts, release-status,
-        # scaffold-new-skill) so their offline smoke tests are CI-gated too —
-        # pnpm test only exercises the exported helpers, not the self-test path.
+        # Runs each skills/*/scripts/*.mjs shipping a `--self-test` so their
+        # offline smoke tests are CI-gated — pnpm test only exercises the
+        # exported helpers, not the self-test path.
         run: pnpm test:self
 
       - name: 📒 Validate changelog entries
@@ -95,186 +135,28 @@ jobs:
       - name: 🧩 Validate skill bundle metadata
         # Hard gate (ASW-364): every skills/*/ must have a package.json named
         # @acme-skunkworks/skill-<dir>, private: true, a semver version, and a
-        # SKILL.md whose metadata.version matches. Stops per-skill version
-        # metadata drifting silently (skills version out-of-band — ADR-0002).
+        # SKILL.md whose metadata.version matches.
         run: pnpm validate:skills
 
       - name: 🧬 Vendor drift-check
         # Drift gate (ADR-0004 / A-534): each bundle's scripts/lib/vendor/ copy
-        # must be byte-identical to its canonical lib/*.mjs source. Bundles stay
-        # independently installable (no cross-bundle imports), so shared logic is
-        # vendored by `pnpm vendor:sync`; this fails the build if a copy drifts
-        # (e.g. the canonical file changed without re-running the sync).
+        # must be byte-identical to its canonical lib/*.mjs source.
         run: pnpm vendor:check
 
       # Changelog-completeness gate (SK-380): a release-triggering PR title
-      # (feat/fix/breaking) must carry a dated changelog/ entry. Restores the
-      # no-changeset-no-release coupling now that the bump is inferred from the
-      # PR title. Non-release titles (docs/chore/ci/…) — including the
-      # release-please PR's own `chore: release …` — are a clean pass.
+      # (feat/fix/breaking) must carry a dated changelog/ entry. Non-release
+      # titles — including the release-please PR's own `chore: release …` — pass.
       - name: 📓 Changelog completeness
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           BASE_REF: ${{ github.base_ref }}
         run: node skills/changelog/scripts/check-changelog-completeness.mjs
 
-  yaml-lint:
-    name: 📝 YAML & Workflows
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      # Single source of truth for the actionlint version (ASW-349): the cache
-      # key below and the `ensure-actionlint.sh` step both read this, so a bump
-      # touches one line instead of two. Job-level env is exported to every
-      # step, so the script picks it up via its `${ACTIONLINT_VERSION:-…}` default.
-      ACTIONLINT_VERSION: "1.7.5"
-    steps:
-      - name: ⬇️ Checkout repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: 📦 Cache yamllint (pip --user)
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.local
-          # Keyed on the hash-locked requirements file (ASW-327): a version or
-          # transitive-dependency bump busts the cache automatically. No
-          # restore-keys prefix fallback on purpose — a prefix hit would restore
-          # an old ~/.local with yamllint already present, and ensure-yamllint.sh
-          # only installs when `command -v yamllint` fails, so the bumped /
-          # hash-verified version would be silently skipped until the old cache
-          # evicts. Exact-key-or-cold-install keeps the pin honest.
-          key: ${{ runner.os }}-python-yamllint-${{ hashFiles('infrastructure/requirements-yamllint.txt') }}
-
-      - name: 📦 Cache actionlint binary
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ./actionlint
-          # Exact-key-or-cold, like the yamllint cache above — no restore-keys
-          # prefix fallback, which could restore an older actionlint under a
-          # bumped version key. ensure-actionlint.sh also version-gates the
-          # binary (re-downloads a stale hit), so this is belt-and-braces.
-          # Version comes from the job-level ACTIONLINT_VERSION env (ASW-349).
-          key: ${{ runner.os }}-actionlint-${{ env.ACTIONLINT_VERSION }}
-
-      - name: 📝 Run yamllint
-        # Logic lives in infrastructure/scripts/ensure-yamllint.sh — install
-        # if missing, then run. Tested via bats; see infrastructure/tests/.
-        run: bash infrastructure/scripts/ensure-yamllint.sh
-
-      - name: 🔍 Run actionlint
-        # Logic lives in infrastructure/scripts/ensure-actionlint.sh — download
-        # the pinned binary if missing, then run. Tested via bats.
-        run: bash infrastructure/scripts/ensure-actionlint.sh
-
-  markdown-lint:
-    name: 📑 Markdown
-    # Skipped on the release-please branch, like the other ancillary lint jobs:
-    # markdown style is not a release gate, and `changelog:finalise`-generated
-    # content shouldn't be able to block the release PR. markdownlint-cli2 is an
-    # npm devDep, so this job reuses the build-and-lint toolchain setup (pnpm +
-    # frozen-lockfile install) rather than the binary-bootstrap pattern above.
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      HUSKY: 0
-    steps:
-      - name: ⬇️ Checkout repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: ⚙️ Load repo config
-        id: repo
-        uses: ./.github/actions/load-repo-config
-
-      - name: 📦 Install pnpm
-        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v4.4.0
-        with:
-          run_install: false
-
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version-file: ${{ steps.repo.outputs.node_version_file }}
-          cache: pnpm
-
-      - name: 📥 Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: 📑 Lint Markdown
-        # Config + globs live in .markdownlint-cli2.jsonc (extends the shared
-        # @acme-skunkworks/markdownlint-config). Same binary the preflight gate
-        # invokes (SK-393 / SK-406).
-        run: pnpm lint:md
-
-  infra:
-    name: 🧪 Infrastructure scripts
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      HUSKY: 0
-    steps:
-      - name: ⬇️ Checkout repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: 📦 Install pnpm
-        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v4.4.0
-        with:
-          run_install: false
-
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version-file: .nvmrc
-
-      # No `pnpm install` here: the publish-script bats tests invoke `node`
-      # (for package.json parsing) and `shellcheck`/`bats` directly — none of
-      # them touch node_modules, so installing deps would be wasted work. node
-      # comes from setup-node; pnpm (for `pnpm lint:sh`/`pnpm test:sh`) from the
-      # action-setup step above.
-
-      - name: 📦 Cache bats binary
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          path: ~/.local
-          # Exact-key-or-cold, matching the yamllint + actionlint caches above —
-          # no restore-keys prefix fallback (ASW-349). A prefix hit would restore
-          # an old ~/.local with bats already present; ensure-bats.sh's
-          # needs_install() version-gate would catch and re-download it, but only
-          # after a wasted restore + re-install. Keeping the policy consistent.
-          key: ${{ runner.os }}-bats-1.13.0
-
-      - name: 🐚 Install shellcheck (apt)
-        run: |
-          sudo apt-get update && sudo apt-get install -y shellcheck
-          shellcheck --version | head -2
-
-      - name: 🐚 Install bats (pinned)
-        # Logic lives in infrastructure/scripts/ensure-bats.sh — bootstraps
-        # bats-core from GitHub releases at the pinned version.
-        run: bash infrastructure/scripts/ensure-bats.sh
-
-      - name: 🔬 Shellcheck
-        run: pnpm lint:sh
-
-      - name: 🧪 Bats
-        run: pnpm test:sh
-
   skill-manifests:
     name: 🧪 Validate skill manifests
-    # Skipped on the release-please branch for consistency with yaml-lint/infra:
-    # the orchestrator's release PRs don't touch skills/, so there's nothing new
-    # to validate there. Still a hard gate on feature PRs that add/change a skill.
+    # Skipped on the release-please branch for consistency: the orchestrator's
+    # release PRs don't touch skills/, so there's nothing new to validate there.
+    # Still a hard gate on feature PRs that add/change a skill.
     if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -316,7 +198,6 @@ jobs:
         # Hard gate: any skills/*/scripts/*.mjs shipping a `--self-test` is
         # exercised here, so a script regression can't ship green. Discovery is
         # grep-based, so new self-testing scripts are picked up automatically.
-        # These scripts are zero-dependency (Node built-ins), so no install runs.
         run: |
           shopt -s nullglob
           found=0
@@ -330,3 +211,21 @@ jobs:
           if [ "$found" -eq 0 ]; then
             echo "No skill self-tests found — nothing to run."
           fi
+
+  go-no-go:
+    name: GO/NO GO
+    needs: [config, lint, build-test, skills, skill-manifests]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: ⚖️ Verdict
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |
+          set -euo pipefail
+          echo "$NEEDS_JSON" \
+            | jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")' >/dev/null \
+            || { echo "::error::a required check failed — refusing to go"; exit 1; }
+          echo "All required checks passed — GO."

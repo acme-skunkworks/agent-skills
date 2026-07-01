@@ -26,8 +26,9 @@ To deploy the shared set across a target repo — wipe its bespoke skill/command
 │   ├── actions/
 │   │   └── load-repo-config/ # infrastructure/repo-config.yaml → step outputs
 │   └── workflows/
-│       ├── release.yml       # publish-only: build → npm (OIDC) → GitHub Packages (dormant)
-│       └── validate.yml      # PR gate: build & lint, changelog validation, PR-title lint, infra tests
+│       ├── pkg-release.yml       # publish-only caller of shared-workflows' reusable-pkg-release.yml (npm OIDC + GitHub Packages)
+│       ├── validate.yml          # PR gate: config + reusable lint/build-test callers, local skills + skill-manifests, GO/NO GO
+│       └── validate-pr-title.yml # caller of reusable-validate-pr-title.yml (conventional PR title)
 ├── .husky/                  # git hooks (block main pushes; lint-staged; strip Claude trailer)
 ├── architecture/            # ADRs (sequentially numbered, immutable)
 ├── changelog/               # dated per-change release-note entries (the repo's only changelog)
@@ -36,8 +37,7 @@ To deploy the shared set across a target repo — wipe its bespoke skill/command
 ├── infrastructure/
 │   ├── repo-config.yaml      # non-secret CI/release knobs
 │   ├── scripts/              # validate-skills, ensure-*.sh bootstraps, fleet-wipe.mjs
-│   └── tests/                # bats (publish scripts) + vitest (changelog)
-├── scripts/                 # publish wrappers (npm OIDC + GitHub Packages)
+│   └── tests/                # bats (ensure-*.sh) + vitest (changelog)
 ├── skills/                  # one folder per skill
 ├── CLAUDE.md
 ├── LICENSE
