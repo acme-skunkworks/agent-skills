@@ -78,7 +78,9 @@ jobs:
       # direct `vitest run`), so it runs in the local `skills` job instead.
       test: false
       shellcheck-paths: "infrastructure/scripts .husky/pre-commit .husky/pre-push .husky/commit-msg"
-      bats: true
+      # No bats suite — the only .bats tests covered the now-removed publish
+      # scripts (centralised in reusable-pkg-release.yml).
+      bats: false
 
   skills:
     name: 🧩 Skills & changelog
