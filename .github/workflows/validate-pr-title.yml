@@ -17,5 +17,5 @@ permissions:
 
 jobs:
   pr-title:
-    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-validate-pr-title.yml@6cbcab65ca27950387b145888a68dd8e5e0d3ebe # v1.0.0
+    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-validate-pr-title.yml@9febdb14373f383e3ae4f5a6e3f6bb75a59d0c3d # v1.0.2
     secrets: inherit
