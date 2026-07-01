@@ -1,15 +1,5 @@
 name: Claude Code
 
-# Inline (SHA-pinned) copy of the estate's interactive `@claude` workflow.
-#
-# Deliberately NOT a caller of shared-workflows' `reusable-claude.yml`: a called
-# reusable workflow's job `permissions:` cannot exceed the caller's granted
-# token, so the Claude pair (which needs `id-token: write` / `pull-requests` etc.)
-# dies at compile time with an opaque `startup_failure` — no jobs, no logs, and
-# the REST API hides the reason (A-621). Inlining puts `permissions:` at the job
-# level, where they apply directly. Mirror the hardened body in
-# acme-skunkworks/shared-workflows (.github/workflows/claude.yml) — keep in sync.
-
 on:
   issue_comment:
     types: [created]
@@ -20,54 +10,15 @@ on:
   pull_request_review:
     types: [submitted]
 
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  id-token: write
+  actions: read
+
 jobs:
   claude:
-    # Author-association gate (A-313): these triggers run in trusted base-repo
-    # context with secrets available, so restrict to the maintainer set (OWNER /
-    # MEMBER / COLLABORATOR). Without this, any public user could fire a
-    # privileged run by commenting "@claude".
-    if: |
-      (github.event_name == 'issue_comment' &&
-        contains(github.event.comment.body, '@claude') &&
-        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)) ||
-      (github.event_name == 'pull_request_review_comment' &&
-        contains(github.event.comment.body, '@claude') &&
-        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)) ||
-      (github.event_name == 'pull_request_review' &&
-        contains(github.event.review.body, '@claude') &&
-        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.review.author_association)) ||
-      (github.event_name == 'issues' &&
-        (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
-        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association))
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      pull-requests: read
-      issues: read
-      # Required: claude-code-action exchanges an OIDC token for its short-lived
-      # GitHub token (getOidcToken → setupGitHubToken). Removing it fails the run
-      # with "Could not fetch an OIDC token" — it is NOT just for publishing, so
-      # the A-329 least-privilege drop was reverted.
-      id-token: write
-      actions: read # Required for Claude to read CI results on PRs
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 1
-          # claude-code-action supplies its own token (OIDC exchange), so don't
-          # leave GITHUB_TOKEN in .git/config (artipacked credential exposure).
-          persist-credentials: false
-
-      - name: Run Claude Code
-        id: claude
-        # If startup crashes with an AJV schema error, see anthropics/claude-code-action#947
-        # and pin to a known-good version (e.g. v1.0.51).
-        uses: anthropics/claude-code-action@428971d2ecd6e3a7cb0ee0da2a3a8b33fdb3678d # v1.0.157
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-
-          # Allows Claude to read CI results on PRs.
-          additional_permissions: |
-            actions: read
+    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-claude.yml@9febdb14373f383e3ae4f5a6e3f6bb75a59d0c3d # v1.0.2
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
