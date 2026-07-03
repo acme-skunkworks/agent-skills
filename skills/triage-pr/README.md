@@ -1,9 +1,12 @@
 # triage-pr
 
 Take a pull request from **draft + failing CI** to **merge-ready**: fix in-scope
-CI failures while the PR is a draft, then — once a human marks it ready — fetch
-the unresolved AI review feedback, validate each finding, fix the valid ones and
-decline the invalid ones with reasoning, and re-watch CI until green.
+CI failures while the PR is a draft, then — by default — promote the cleanly-green
+draft to ready itself (`promoteOnGreen`, on by default) and fetch the unresolved AI
+review feedback, validate each finding, fix the valid ones and decline the invalid
+ones with reasoning, and re-watch CI until green. Opt out with `--no-promote`
+(or `promoteOnGreen: false`) to stop at green for a human to flip; the final merge
+to the trunk always stays with a human.
 
 ## Install
 
