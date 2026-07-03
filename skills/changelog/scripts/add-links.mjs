@@ -2,7 +2,13 @@
 import { loadConfig } from "./lib/config.mjs";
 import { buildIssueRe } from "./lib/vendor/issue-keys.mjs";
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { argv } from "node:process";
 
@@ -291,7 +297,21 @@ function main() {
 }
 
 // Only run the filesystem pass when invoked as a CLI, not when imported (e.g.
-// by unit tests exercising `rewriteBody`).
-if (argv[1] && import.meta.filename === argv[1]) {
+// by unit tests exercising `rewriteBody`). realpathSync on both sides so a
+// symlinked entrypoint (macOS /var→/private/var, pnpm's store) isn't a false
+// negative that skips main().
+function isCliEntry() {
+  if (!argv[1]) {
+    return false;
+  }
+
+  try {
+    return realpathSync(import.meta.filename) === realpathSync(argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
   main();
 }

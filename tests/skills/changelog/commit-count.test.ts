@@ -38,6 +38,18 @@ describe("nonMergeCommitCount", () => {
     expect(nonMergeCommitCount(run, 1)).toBe("1");
   });
 
+  it("counts a commit with a missing parents field as a normal commit (A-613)", () => {
+    // The REST endpoint always includes `parents`; if a commit object arrives
+    // without it, err toward counting authored work rather than dropping it.
+    const run = runnerReturning(
+      JSON.stringify([
+        { parents: [{ sha: "p1" }] },
+        { sha: "no-parents-field" },
+      ]),
+    );
+    expect(nonMergeCommitCount(run, 5)).toBe("2");
+  });
+
   it("returns '0' for a PR with no commits", () => {
     expect(nonMergeCommitCount(runnerReturning("[]"), 1)).toBe("0");
   });
