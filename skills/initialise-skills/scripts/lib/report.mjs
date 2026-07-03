@@ -9,6 +9,7 @@ import { IGNORE_ENTRY } from "./gitignore.mjs";
 const GITIGNORE_LABEL = {
   added: `added ${IGNORE_ENTRY} to .gitignore`,
   created: `created .gitignore with ${IGNORE_ENTRY}`,
+  negated: `${IGNORE_ENTRY} deliberately un-ignored (left untouched)`,
   present: `${IGNORE_ENTRY} already ignored`,
   "would-add": `will add ${IGNORE_ENTRY} to .gitignore`,
   "would-create": `will create .gitignore with ${IGNORE_ENTRY}`,

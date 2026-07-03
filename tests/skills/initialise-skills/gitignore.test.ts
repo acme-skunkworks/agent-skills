@@ -107,21 +107,31 @@ describe("reconcilePreflightIgnore", () => {
     );
   });
 
-  it("leaves an explicit !-unignore untouched rather than flipping it (A-582)", () => {
+  it("reports an explicit !-unignore as 'negated', leaving it untouched (A-582, A-613)", () => {
     // Appending a positive rule after a deliberate negation would, under
     // last-match-wins, silently re-ignore the file the consumer chose to track.
+    // The status is distinct from 'present' so it doesn't read as "already
+    // ignored" when the file is in fact deliberately un-ignored (A-613).
     const original = `node_modules/\n!${IGNORE_ENTRY}\n`;
     writeFileSync(ignorePath(), original);
     expect(reconcilePreflightIgnore(directory, { write: false }).status).toBe(
-      "present",
+      "negated",
     );
     const result = reconcilePreflightIgnore(directory, { write: true });
-    expect(result.status).toBe("present");
+    expect(result.status).toBe("negated");
     expect(read()).toBe(original);
   });
 
-  it("treats the anchored !-unignore form as already settled too", () => {
+  it("treats the anchored !-unignore form as 'negated' too", () => {
     writeFileSync(ignorePath(), `!/${IGNORE_ENTRY}\n`);
+    expect(reconcilePreflightIgnore(directory, { write: true }).status).toBe(
+      "negated",
+    );
+  });
+
+  it("honours last-match-wins: a positive rule after a negation reports 'present' (A-613)", () => {
+    // The un-ignore is overridden by a later ignore rule, so the file IS ignored.
+    writeFileSync(ignorePath(), `!${IGNORE_ENTRY}\n${IGNORE_ENTRY}\n`);
     expect(reconcilePreflightIgnore(directory, { write: true }).status).toBe(
       "present",
     );
