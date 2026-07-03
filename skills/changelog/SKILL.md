@@ -16,7 +16,7 @@ compatibility: >-
   `preflight-changelog-ci.mjs` step assumes the consumer repo uses pnpm with a
   committed lockfile; skip it if yours does not.
 metadata:
-  version: 0.9.0
+  version: 0.9.1
   author: Rob Easthope
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(node:*), Bash(pnpm:*)
 ---
@@ -108,11 +108,10 @@ for the full rules. In short:
 - **`created_at` is sacred** — set once on create (UTC time of first run); on
   update, preserve it verbatim.
 - **Never authored here:** `stats` (`files_changed`, `loc_added`, `loc_removed`,
-  `commits`) and the post-merge fields `merged_at` / `commit` / `merge_strategy`. A release
-  step finalises them from canonical GitHub PR data after merge. Emit them as
+  `commits`) and the post-merge fields `merged_at` / `commit` / `pr` / `merge_strategy`. A release
+  step finalises them from canonical GitHub PR data after merge — `pr` included, resolved
+  from the merged PR by its `branch:` (never written by the ship flow). Emit them as
   blank placeholders on create; leave existing values untouched on update.
-- `pr` is back-filled by the ship flow once the PR exists (not here when
-  standalone).
 
 The skill **emits the derived `issues` array** as a handoff — a ship flow reuses
 it for the PR body and any Linear writeback (e.g. via a `linear-sync` skill).
@@ -143,8 +142,8 @@ enrichment round-trip; quoting keeps them lossless.
 
 **On update:** preserve `created_at` and the filename; rewrite `title`,
 `release_note`, `category`, `breaking`, `co_authors`, `issues`, and the body;
-leave `merged_at` / `commit` / `merge_strategy` / `stats` alone; update `pr` only
-if it was blank and a PR now exists.
+leave `merged_at` / `commit` / `pr` / `merge_strategy` / `stats` alone (the
+release/enrich step fills them post-merge, `pr` branch-resolved).
 
 Use the frontmatter field order shown in
 [`references/changelog-contract.md`](references/changelog-contract.md). **Only when
@@ -202,7 +201,8 @@ continuing — do not hand a malformed entry to the ship flow.
   never pushes or opens a PR.
 - **Inside a ship flow** the same steps run before push; the ship flow then
   commits the entry (`docs(changelog): <title>`), pushes, and opens or updates the
-  PR, back-filling `pr:` once the PR number is known.
+  PR. It leaves `pr` blank — the release/enrich step fills it post-merge,
+  branch-resolved from the merged PR.
 
 ## Implementation
 
