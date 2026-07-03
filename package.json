@@ -29,6 +29,8 @@
   ],
   "scripts": {
     "bootstrap:config": "node infrastructure/scripts/bootstrap-config.mjs",
+    "changelog:enrich": "node skills/changelog/scripts/enrich-changelog.mjs",
+    "prechangelog:enrich": "pnpm bootstrap:config",
     "changelog:finalise": "node skills/changelog/scripts/finalise-changelog.mjs",
     "prechangelog:finalise": "pnpm bootstrap:config",
     "lint": "eslint 'infrastructure/scripts/**/*.ts' 'infrastructure/scripts/**/*.mjs' 'infrastructure/tests/**/*.ts' 'tests/**/*.ts' 'lib/**/*.mjs' 'skills/**/*.mjs' --cache --cache-location ./.eslintcache",

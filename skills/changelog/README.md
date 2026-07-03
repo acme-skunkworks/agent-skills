@@ -67,8 +67,9 @@ deliberately chosen so the bundle is drop-in with no tooling. They span the whol
 changelog lifecycle: the authoring scripts the skill runs (`set-affected-packages`,
 `add-links`, `preflight-changelog-ci`, `validate-changelog`) and the
 finalisation/CI-gate scripts the consumer wires into its `package.json` / CI /
-release orchestrator (`finalise-changelog`, `check-changelog-completeness`) — see
-the SKILL.md "Implementation" section for which actor runs each. Every script takes
+release orchestrator (`finalise-changelog` for npm targets, `enrich-changelog` for
+deploy targets, `check-changelog-completeness`) — see the SKILL.md
+"Implementation" section for which actor runs each. Every script takes
 `--help` (usage, exit 0) and `--self-test` (an offline smoke test of its pure
 logic). Their **unit tests are maintained in the
 [`agent-skills`](https://github.com/acme-skunkworks/agent-skills) repo**, not
