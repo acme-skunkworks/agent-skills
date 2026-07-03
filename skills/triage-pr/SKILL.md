@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.5.1
+  version: 0.5.2
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -178,8 +178,9 @@ git diff --name-only origin/<base>...HEAD   # files this PR actually touches
 - Apply the smallest fix that addresses the **root cause** within the PR's scope.
 - Re-run the **specific** failing command locally and read its exit code before
   claiming it fixed (e.g. `pnpm lint`,
-  `npx skills-ref validate ./skills/<name>`, the failing test). Evidence before
-  claims — never assert a fix on "should" or "probably".
+  `npx --yes skills-ref@0.1.5 validate ./skills/<name>`, the failing test). Pin the
+  version so the local check matches CI exactly and can't be rug-pulled. Evidence
+  before claims — never assert a fix on "should" or "probably".
 - Commit with a Conventional Commit subject, then push. One fix → one
   verification → next fix.
 
@@ -369,9 +370,10 @@ Create these 2 issues in Linear? [y/N]
 ```
 
 On a single explicit **yes**, create one Linear issue per candidate with
-`mcp__linear-server__save_issue` — resolve the team by **name** and the state by
-**type**, never a stale key (the renamed-team gotcha; see
-[`skills/linear-sync/SKILL.md`](../linear-sync/SKILL.md)):
+`mcp__linear-server__save_issue` — resolve the team by **name** (`config.linearTeamName`)
+and the state by **type** (e.g. `Todo`/`Backlog`), never a hard-coded team key or
+state id. Team keys get renamed and state ids differ per workspace, so a stale
+literal silently targets the wrong team or fails; name/type always resolve:
 
 - `team` = `config.linearTeamName`; `title` derived from the finding.
 - `description` = the bot's rationale, a back-link to the PR **and** the specific

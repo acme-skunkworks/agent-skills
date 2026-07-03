@@ -22,7 +22,7 @@ compatibility: >-
   config.example.json for its key set, so newly-added skills are picked up with no
   change here.
 metadata:
-  version: 0.6.1
+  version: 0.6.2
   author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(git:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---
@@ -116,12 +116,16 @@ reorders or removes existing lines. The dry-run report shows the pending edit
    ```
 
    Report what was written from the returned `totals`, plus the `gitignore` field
-   (its `status` — `added`, `created`, or `present`).
+   (its `status` — `added`, `created`, `present`, or `negated`; the field is absent
+   entirely when `preflight` isn't installed, as the `.gitignore` step is skipped).
 
 5. **Confirm idempotency.** Run the dry run once more; every key should now be
    `unchanged` (apart from drifts you chose to keep and any still-missing manual
-   values), and `gitignore.status` should be `present`. This proves the configs
-   and the `.gitignore` are stable and a future re-run is a no-op.
+   values). When `preflight` is installed, `gitignore.status` should be `present`
+   (or `negated`, if the repo deliberately un-ignores the file — also a stable
+   no-op); when it isn't, the `.gitignore` step is skipped and there's no
+   `gitignore` field to check. This proves the configs and the `.gitignore` are
+   stable and a future re-run is a no-op.
 
 6. **Multi-bundle repos — one manual step.** If this repo itself ships several
    independently-versioned skill bundles, `send-it`'s `bundleVersioning` is **not**

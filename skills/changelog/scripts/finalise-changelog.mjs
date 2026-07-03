@@ -26,7 +26,12 @@ import { enrichFrontmatter } from "./lib/enrich.mjs";
 import { parseFrontmatter } from "./lib/frontmatter.mjs";
 import { readPackageVersion, stampVersion } from "./lib/stamp.mjs";
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { argv } from "node:process";
 
@@ -338,7 +343,21 @@ function main() {
 }
 
 // Only run the filesystem pass when invoked as a CLI, not when imported (e.g.
-// by unit tests exercising finaliseEntry/makeResolver).
-if (argv[1] && import.meta.filename === argv[1]) {
+// by unit tests exercising finaliseEntry/makeResolver). realpathSync on both
+// sides so a symlinked entrypoint (macOS /var→/private/var, pnpm's store) isn't
+// a false negative that skips main().
+function isCliEntry() {
+  if (!argv[1]) {
+    return false;
+  }
+
+  try {
+    return realpathSync(import.meta.filename) === realpathSync(argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
   main();
 }

@@ -101,6 +101,42 @@ describe("backfillEntry", () => {
     ).toBe(6);
   });
 
+  it("synthesises a stats block for an entry that omits stats entirely (A-613)", () => {
+    // The contract allows an entry to omit `stats` altogether; backfill must
+    // create the block rather than throwing "no stats block to extend".
+    const raw = [
+      "---",
+      'title: "Fix a thing"',
+      "branch: a-1-fix",
+      "pr: 42",
+      "category: fix",
+      "breaking: false",
+      "---",
+      "",
+      "## Fixed",
+      "",
+      "- A thing.",
+      "",
+    ].join("\n");
+    const out = backfillEntry(
+      raw,
+      makeRunner({ "gh api": () => COMMITS(4) }),
+    ) as string;
+    expect(out).not.toBeNull();
+    // A minimal stats: block is appended as the last frontmatter field.
+    const added = out
+      .split("\n")
+      .filter((line) => !raw.split("\n").includes(line));
+    expect(added).toEqual(["stats:", "  commits: 4"]);
+    expect(
+      (parseFrontmatter(out).data.stats as { commits: number }).commits,
+    ).toBe(4);
+    // Idempotent on the synthesised block, too.
+    expect(
+      backfillEntry(out, makeRunner({ "gh api": () => COMMITS(4) })),
+    ).toBeNull();
+  });
+
   it("is idempotent — re-running yields no change", () => {
     const run = makeRunner({ "gh api": () => COMMITS(5) });
     const once = backfillEntry(entryWithPr(), run) as string;

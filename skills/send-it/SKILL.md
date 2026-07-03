@@ -21,7 +21,7 @@ compatibility: >-
   `linear-sync` skills — install them alongside this one. The In Review writeback
   needs the Linear MCP server (via `linear-sync`); it is skipped if unavailable.
 metadata:
-  version: 0.5.1
+  version: 0.5.2
   author: Rob Easthope
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -381,7 +381,9 @@ Follow the [`changelog`](../changelog/SKILL.md) skill to author or update the en
 
    Leave the post-merge fields (`merged_at`, `commit`, `pr`, `merge_strategy`, `stats`)
    and `version` as blank placeholders — the release step finalises them (a non-release
-   entry keeps `version` blank, as no release is cut for it).
+   entry keeps `version` blank, as no release is cut for it). This includes `pr`: no
+   step here writes it back after the PR opens; the release/enrich step resolves it
+   post-merge from the entry's `branch:`.
 3. Run the enrichment scripts: `node skills/changelog/scripts/set-affected-packages.mjs`
    then `node skills/changelog/scripts/add-links.mjs`.
 4. **Validate:** `node skills/changelog/scripts/validate-changelog.mjs`. It must pass
