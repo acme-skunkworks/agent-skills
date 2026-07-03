@@ -78,7 +78,10 @@ Four owners, never overlapping:
 3. **The release-orchestrator (post-merge, privileged).** `merged_at`, `commit`,
    `merge_strategy`, and authoritative `stats`, plus the published `version` where
    a consumer adds one. Emit these as blank placeholders; never hand-edit them —
-   so an in-flight PR never shows numbers that drift as commits land.
+   so an in-flight PR never shows numbers that drift as commits land. npm targets
+   fill these at release time (`finalise-changelog.mjs`); deploy targets, never
+   checked out during the release flow, fill them afterwards from the enrichment
+   cron (`enrich-changelog.mjs`, minus `version`).
 4. **The ship flow (`/send-it`).** `pr` — back-filled when the PR is opened; left
    blank by the author and untouched by enrichment until then.
 
