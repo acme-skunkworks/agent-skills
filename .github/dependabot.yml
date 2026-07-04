@@ -6,8 +6,11 @@ updates:
     schedule:
       interval: weekly
     # Group all action bumps into a single PR per week. Keeps notification
-    # noise low and ensures SHA-pinned `uses:` lines stay current across
-    # validate.yml + pkg-release.yml + shared-workflows callers. Grouped PRs
+    # noise low and ensures the remaining SHA-pinned third-party `uses:` lines
+    # (actions/checkout, actions/setup-node, pnpm/action-setup in the local
+    # config/skills jobs) stay current. The shared-workflows callers now ride
+    # the floating `@v1` major tag (A-672 / A-662), so Dependabot no longer
+    # SHA-bumps them — it would only surface a future major (`@v2`). Grouped PRs
     # land or revert atomically.
     groups:
       actions:
