@@ -15,7 +15,7 @@ compatibility: >-
   Linear MCP server; if it is unavailable, skip that step silently. The
   filesystem pass needs Node.js ≥22.
 metadata:
-  version: 0.3.3
+  version: 0.4.0
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -33,7 +33,7 @@ rationale and the deliberately-deferred future extensions.
 
 ## Configuration
 
-Four knobs live in [`config.json`](config.json) beside this file. Read it at the
+Five knobs live in [`config.json`](config.json) beside this file. Read it at the
 start of a run and use its values throughout. Edit your copied `config.json` to
 match the consuming repo:
 
@@ -43,6 +43,7 @@ match the consuming repo:
 | `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. | `["A"]` |
 | `mainBranch` | The trunk a branch must be merged into to count as merged — both passes diff against `origin/<mainBranch>`. Set it for repos whose trunk is `master`, `develop`, or similar. | `"main"` |
 | `protectedBranches` | Branches that are **never** deleted, locally or remotely. | `["main"]` |
+| `linearWritebackDefault` | Seeds the yes/no default of the Step 10 Linear `Done` writeback prompt — `"yes"` pre-fills yes, `"no"` pre-fills no. The interactive gate always stays; this never auto-applies. Absent or unrecognised → treated as `"no"`. | `"no"` |
 
 Build the issue-ID regex **deterministically**: escape each key's regex
 metacharacters, and when there is more than one key wrap the alternation in
@@ -338,9 +339,14 @@ runs **after** worktree removal so a just-emptied worktree parent (e.g.
 If any Linear issues from Step 4 are not `Done`:
 
 - Ask: `These Linear issues are linked to merged branches but aren't Done. Set
-  them to Done? (yes/no)`. **Default no** — Linear's GitHub integration normally
-  handles this on PR merge, so this exists only for the rare case where it didn't
-  fire (e.g. the issue ID was added after the merge).
+  them to Done? (yes/no)`. Seed the default from `linearWritebackDefault` —
+  `"yes"` pre-fills the prompt with yes, anything else — `"no"`, an absent key,
+  or an unrecognised value — pre-fills no. The prompt is always shown and the
+  answer always confirmed — the knob only moves the default, it never
+  auto-applies. The default is `no` because Linear's GitHub integration normally
+  handles this on PR merge, so the writeback exists only for the rare case where
+  it didn't fire (e.g. the issue ID was added after the merge); a repo not wired
+  to that integration can flip the default to `yes`.
 - If yes:
   - Resolve the live `Done` state ID **once** via
     `mcp__linear-server__list_issue_statuses` with `team: <linearTeamName>` —
