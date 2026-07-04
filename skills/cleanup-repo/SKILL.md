@@ -342,12 +342,11 @@ If any Linear issues from Step 4 are not `Done`:
   them to Done? (yes/no)`. Seed the default from `linearWritebackDefault` —
   `"yes"` pre-fills the prompt with yes, anything else — `"no"`, an absent key,
   or an unrecognised value — pre-fills no. The prompt is always shown and the
-  answer always confirmed — the
-  knob only moves the default, it never auto-applies. The default is `no` because
-  Linear's GitHub integration normally handles this on PR merge, so the writeback
-  exists only for the rare case where it didn't fire (e.g. the issue ID was added
-  after the merge); a repo not wired to that integration can flip the default to
-  `yes`.
+  answer always confirmed — the knob only moves the default, it never
+  auto-applies. The default is `no` because Linear's GitHub integration normally
+  handles this on PR merge, so the writeback exists only for the rare case where
+  it didn't fire (e.g. the issue ID was added after the merge); a repo not wired
+  to that integration can flip the default to `yes`.
 - If yes:
   - Resolve the live `Done` state ID **once** via
     `mcp__linear-server__list_issue_statuses` with `team: <linearTeamName>` —
