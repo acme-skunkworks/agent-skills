@@ -86,6 +86,28 @@ describe("deriveBump", () => {
     ).toBe("patch");
   });
 
+  it("is patch when the dominant type is a perf (third release tier)", () => {
+    // HEAD chore + earlier perf → patch (perf ranks alongside fix).
+    expect(
+      deriveBump([
+        { body: "", subject: "chore: tidy" },
+        { body: "", subject: "perf: cache lookups" },
+      ]),
+    ).toBe("patch");
+  });
+
+  it("promotes a later release type over a HEAD `constructor:` commit (no prototype collision)", () => {
+    // Guards significance() against the Object.prototype.constructor collision:
+    // without the Object.hasOwn guard, significance("constructor") is a function,
+    // `3 > <function>` is `3 > NaN` (false), and the feat is never promoted.
+    expect(
+      deriveBump([
+        { body: "", subject: "constructor: x" },
+        { body: "", subject: "feat: real feature" },
+      ]),
+    ).toBe("minor");
+  });
+
   it("is minor on a scoped feat", () => {
     expect(deriveBump([{ body: "", subject: "feat(react): add hook" }])).toBe(
       "minor",
@@ -233,6 +255,36 @@ describe("deriveCategory (A-598 — release-type by semantic category, not path)
       category: "fix",
       releaseTriggering: true,
       type: "fix",
+    });
+  });
+
+  it("takes an earlier perf over a lead chore commit (third release tier, A-387)", () => {
+    // HEAD chore + earlier perf → perf / releaseTriggering.
+    expect(
+      deriveCategory([
+        { body: "", subject: "chore: tidy" },
+        { body: "", subject: "perf: cache lookups" },
+      ]),
+    ).toMatchObject({
+      category: "perf",
+      releaseTriggering: true,
+      type: "perf",
+    });
+  });
+
+  it("promotes a later release type over a HEAD `constructor:` commit (no prototype collision)", () => {
+    // significance() must guard against Object.prototype.constructor: without the
+    // Object.hasOwn guard the HEAD `constructor:` pins the dominant type and the
+    // later feat is silently dropped — defeating the all-commits scan (A-387).
+    expect(
+      deriveCategory([
+        { body: "", subject: "constructor: x" },
+        { body: "", subject: "feat: real feature" },
+      ]),
+    ).toMatchObject({
+      category: "feature",
+      releaseTriggering: true,
+      type: "feat",
     });
   });
 

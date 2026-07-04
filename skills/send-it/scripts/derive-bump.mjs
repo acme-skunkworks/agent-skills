@@ -109,7 +109,13 @@ export function deriveType(subject) {
 const TYPE_SIGNIFICANCE = { feat: 3, fix: 2, perf: 2 };
 
 function significance(type) {
-  return TYPE_SIGNIFICANCE[type] ?? 0;
+  // `Object.hasOwn` guard for the same reason `CATEGORY_BY_TYPE` carries one: a
+  // type colliding with an inherited Object key (`constructor` survives
+  // deriveType's lower-casing) would otherwise resolve to the prototype's value
+  // (a function, not nullish), so `?? 0` wouldn't fire — and `n > <function>`
+  // coerces to `n > NaN` (false), silently pinning the dominant type to that
+  // commit and defeating the all-commits scan.
+  return Object.hasOwn(TYPE_SIGNIFICANCE, type) ? TYPE_SIGNIFICANCE[type] : 0;
 }
 
 // The strongest Conventional-Commit type across ALL commits (A-387). Starts from
