@@ -19,10 +19,12 @@ permissions:
   contents: read
 
 # Wave 3 consumer (A-589 / A-594): the static lint/build/test checks run through
-# the estate's shared reusable workflows, SHA-pinned to v1.0.0 so Dependabot
-# bumps them together. The `lint` caller runs ESLint + Markdown + YAML/actionlint;
-# the `build-test` caller runs the tsc typecheck + ShellCheck + bats (`build:
-# false` — agent-skills ships skills.sh bundles, nothing to compile).
+# the estate's shared reusable workflows, pinned to the floating `@v1` major tag
+# (A-672 / A-662) — `move-floating-major.yml` in shared-workflows keeps `v1` on
+# each release commit, so we ride the latest v1.x fixes without a Dependabot SHA
+# bump. The `lint` caller runs ESLint + Markdown + YAML/actionlint; the
+# `build-test` caller runs the tsc typecheck + ShellCheck + bats (`build: false`
+# — agent-skills ships skills.sh bundles, nothing to compile).
 #
 # The repo-specific EXECUTION checks stay local in the `skills` job: they need
 # `pnpm bootstrap:config` to materialise the gitignored per-skill config.json
@@ -49,7 +51,7 @@ jobs:
 
   lint:
     needs: config
-    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-lint.yml@6cbcab65ca27950387b145888a68dd8e5e0d3ebe # v1.0.0
+    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-lint.yml@v1
     with:
       node-version-file: ${{ needs.config.outputs.node_version_file }}
       # Mirror the repo's own `pnpm lint` glob set (the TypeScript infra surface
@@ -69,7 +71,7 @@ jobs:
 
   build-test:
     needs: config
-    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-build-test.yml@6cbcab65ca27950387b145888a68dd8e5e0d3ebe # v1.0.0
+    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-build-test.yml@v1
     with:
       node-version-file: ${{ needs.config.outputs.node_version_file }}
       # agent-skills ships skills.sh bundles — nothing to compile.
