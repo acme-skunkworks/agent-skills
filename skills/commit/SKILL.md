@@ -52,6 +52,11 @@ One knob lives in [`config.json`](config.json) beside this skill (a neutral
 
 Throughout this document `<base>` is the `baseBranch` value.
 
+When a ship flow delegates to this skill (e.g. `/send-it`), it may direct the
+classification against a **different** base for that run — for instance send-it's
+`--base` for a stacked PR. Honour the base the caller resolves; fall back to
+`config.json` `baseBranch` only for a standalone `/commit` run.
+
 ## Process
 
 1. `git status --porcelain`. If clean, there is nothing to commit — say so and

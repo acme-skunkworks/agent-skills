@@ -187,8 +187,12 @@ origin/<base>`), show a staging plan flagging any out-of-scope files (never `git
 add -A`; stray files from another branch/worktree are never staged silently), and
 create **logical atomic Conventional Commits** (type + optional scope +
 British-English body; `!` / `BREAKING CHANGE:` for breaking changes). If clean,
-skip this step. `<base>` is `baseBranch` (from `config.json`, or `--base` for this
-run); the `commit` skill reads its own `baseBranch` from its `config.json`.
+skip this step. Direct the `commit` skill to classify against **this** send-it
+run's resolved base — `<base>` is `baseBranch` (from `config.json`), or `--base`
+when passed — **not** the `commit` skill's own `config.json` `baseBranch`, which
+differs on a `--base` run (the stacked-PR case). The scope classification and the
+out-of-scope guard must be computed against the same base send-it ships against,
+or a stacked PR would mis-classify files.
 
 The Conventional-Commit types this step writes are the input to Step 6's release
 decision (`derive-bump.mjs` reads them back out of the commits), so the honest
