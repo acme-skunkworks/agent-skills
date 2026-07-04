@@ -43,7 +43,7 @@ match the consuming repo:
 | `issueKeys` | Team-key prefixes that may appear in branch names. The issue-ID regex is built from these. | `["A"]` |
 | `mainBranch` | The trunk a branch must be merged into to count as merged — both passes diff against `origin/<mainBranch>`. Set it for repos whose trunk is `master`, `develop`, or similar. | `"main"` |
 | `protectedBranches` | Branches that are **never** deleted, locally or remotely. | `["main"]` |
-| `linearWritebackDefault` | Seeds the yes/no default of the Step 10 Linear `Done` writeback prompt — `"yes"` pre-fills yes, `"no"` pre-fills no. The interactive gate always stays; this never auto-applies. Absent → treated as `"no"`. | `"no"` |
+| `linearWritebackDefault` | Seeds the yes/no default of the Step 10 Linear `Done` writeback prompt — `"yes"` pre-fills yes, `"no"` pre-fills no. The interactive gate always stays; this never auto-applies. Absent or unrecognised → treated as `"no"`. | `"no"` |
 
 Build the issue-ID regex **deterministically**: escape each key's regex
 metacharacters, and when there is more than one key wrap the alternation in
@@ -340,8 +340,9 @@ If any Linear issues from Step 4 are not `Done`:
 
 - Ask: `These Linear issues are linked to merged branches but aren't Done. Set
   them to Done? (yes/no)`. Seed the default from `linearWritebackDefault` —
-  `"yes"` pre-fills the prompt with yes, `"no"` pre-fills no; treat an absent key
-  as `"no"`. The prompt is always shown and the answer always confirmed — the
+  `"yes"` pre-fills the prompt with yes, anything else — `"no"`, an absent key,
+  or an unrecognised value — pre-fills no. The prompt is always shown and the
+  answer always confirmed — the
   knob only moves the default, it never auto-applies. The default is `no` because
   Linear's GitHub integration normally handles this on PR merge, so the writeback
   exists only for the rare case where it didn't fire (e.g. the issue ID was added
