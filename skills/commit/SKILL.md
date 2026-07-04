@@ -87,8 +87,13 @@ classification against a **different** base for that run — for instance send-i
      reads the bump signal back out of these commit messages, so the markers must
      be accurate.
 6. On confirmation, create the commits with `git add <specific files>` (**never**
-   `git add -A`) and `git commit -m "<subject>"`. Stage only the files named in the
-   plan; out-of-scope files stay in the working tree, untouched.
+   `git add -A`) and `git commit`. Stage only the files named in the plan;
+   out-of-scope files stay in the working tree, untouched. Pass one `-m` per block
+   to add a body or footer beyond the subject — `git commit -m "<subject>" -m
+   "<body>"`, and for a breaking change `git commit -m "feat(api)!: <subject>" -m
+   "BREAKING CHANGE: <what changed and the migration>"` (or `git commit -F
+   <message-file>` for a longer body). A bare `git commit -m "<subject>"` is fine
+   when no body is needed.
 
 If a pre-commit hook reformats files, the commit still succeeds with the formatted
 content.
