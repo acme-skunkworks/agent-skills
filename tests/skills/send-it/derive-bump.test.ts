@@ -55,14 +55,33 @@ describe("deriveBump", () => {
     ).toBe("minor");
   });
 
-  it("is patch when the first commit is a fix even if a later commit is a feat", () => {
-    // Documents an intentional asymmetry in deriveBump: only commits[0] is
-    // checked for `feat:`, while breaking-change detection scans all commits.
-    // The send-it heuristic treats the lead commit as the release intent.
+  it("takes the strongest type across all commits: a later feat wins over a lead fix", () => {
+    // A-387: the type signal is the strongest Conventional-Commit type across
+    // ALL commits, mirroring the all-commits breaking-change scan — not HEAD only.
     expect(
       deriveBump([
         { body: "", subject: "fix: stabilise" },
         { body: "", subject: "feat: new export" },
+      ]),
+    ).toBe("minor");
+  });
+
+  it("is minor when the HEAD commit is a chore but an earlier commit is a feat", () => {
+    // A-387 acceptance criteria: HEAD chore + earlier feat → minor.
+    expect(
+      deriveBump([
+        { body: "", subject: "chore: tidy" },
+        { body: "", subject: "feat: add export" },
+      ]),
+    ).toBe("minor");
+  });
+
+  it("is patch when the HEAD commit is a docs but an earlier commit is a fix", () => {
+    // A-387 acceptance criteria: HEAD docs + earlier fix → patch.
+    expect(
+      deriveBump([
+        { body: "", subject: "docs: notes" },
+        { body: "", subject: "fix: handle null" },
       ]),
     ).toBe("patch");
   });
@@ -189,13 +208,46 @@ describe("deriveCategory (A-598 — release-type by semantic category, not path)
     ).toMatchObject({ breaking: true, releaseTriggering: true });
   });
 
-  it("keys the type/category off the lead commit (mirrors deriveBump/deriveBody)", () => {
+  it("takes the strongest type/category across all commits, not HEAD (A-387)", () => {
+    // HEAD chore + earlier feat → feature / releaseTriggering (acceptance criteria).
+    expect(
+      deriveCategory([
+        { body: "", subject: "chore: tidy" },
+        { body: "", subject: "feat: later feature" },
+      ]),
+    ).toMatchObject({
+      category: "feature",
+      releaseTriggering: true,
+      type: "feat",
+    });
+  });
+
+  it("takes an earlier fix over a lead docs commit (A-387)", () => {
+    // HEAD docs + earlier fix → fix / releaseTriggering (acceptance criteria).
     expect(
       deriveCategory([
         { body: "", subject: "docs: notes" },
-        { body: "", subject: "feat: later feature" },
+        { body: "", subject: "fix: handle null" },
       ]),
-    ).toMatchObject({ category: "docs", releaseTriggering: false });
+    ).toMatchObject({
+      category: "fix",
+      releaseTriggering: true,
+      type: "fix",
+    });
+  });
+
+  it("stays on the lead commit's type when no commit is a release type", () => {
+    // Non-release branch: neither docs nor refactor ranks, so the lead (docs) wins.
+    expect(
+      deriveCategory([
+        { body: "", subject: "docs: notes" },
+        { body: "", subject: "refactor: extract helper" },
+      ]),
+    ).toMatchObject({
+      category: "docs",
+      releaseTriggering: false,
+      type: "docs",
+    });
   });
 
   it("defaults to a non-release chore for an empty branch", () => {
