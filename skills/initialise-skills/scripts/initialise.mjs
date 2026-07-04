@@ -15,11 +15,23 @@
 // Exit codes: 0 success; 2 usage/IO error.
 
 import { createDetectors } from "./lib/detectors.mjs";
-import { discoverSkills, isPreflightInstalled } from "./lib/discover.mjs";
+import {
+  defaultSkillsDirectory,
+  discoverSkills,
+  isPreflightInstalled,
+} from "./lib/discover.mjs";
 import { reconcilePreflightIgnore } from "./lib/gitignore.mjs";
 import { serialiseConfig } from "./lib/jsonio.mjs";
 import { mergeConfig } from "./lib/merge.mjs";
 import { buildReport, formatHuman } from "./lib/report.mjs";
+import { readInstalledVersions } from "./lib/skill-version.mjs";
+import {
+  buildLock,
+  readLock,
+  resolveRef,
+  resolveSource,
+  writeLock,
+} from "./lib/skills-lock.mjs";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
 
@@ -219,7 +231,40 @@ function main() {
     }
   }
 
-  const report = buildReport(skillReports, options.write, gitignore);
+  // Emit/refresh the consumer's .claude/skills.lock inventory (A-616). A full walk
+  // of every installed bundle (not the config-filtered `skills` list), gated on at
+  // least one bundle being present so a skill-less repo gets no spurious file. The
+  // source/ref provenance is facts-only — supplied via stdin, preserved from any
+  // existing lock, else written as null and flagged (needsFacts). Mirrors the
+  // gitignore block: dry-run reports the pending action, write persists it, and an
+  // IO error is named before funnelling to exit(2).
+  let lock = null;
+  const skillsDirectory = options.skillsDir ?? defaultSkillsDirectory();
+  const installedVersions = readInstalledVersions(skillsDirectory);
+  if (Object.keys(installedVersions).length > 0) {
+    const existingLock = readLock(options.repoRoot);
+    const source = resolveSource(existingLock, facts);
+    const ref = resolveRef(existingLock, facts);
+    try {
+      const result = writeLock(
+        options.repoRoot,
+        buildLock({ installedVersions, ref, source }),
+        { write: options.write },
+      );
+      lock = {
+        needsFacts: source === null || ref === null,
+        path: relative(options.repoRoot, result.path),
+        status: result.status,
+      };
+    } catch (error) {
+      console.error(
+        `initialise-skills: could not write skills.lock: ${error.message}`,
+      );
+      process.exit(2);
+    }
+  }
+
+  const report = buildReport(skillReports, options.write, gitignore, lock);
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
