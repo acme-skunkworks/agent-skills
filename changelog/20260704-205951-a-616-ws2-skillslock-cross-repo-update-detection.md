@@ -51,5 +51,5 @@ prints the per-skill bump list (`updates`, `added`, `removed`, `downgrades`,
 `upToDate`). This is the foundation for detecting which repos are behind and for a
 push fleet-update orchestrator.
 
-The `initialise-skills` bundle version is bumped `0.6.2` → `0.7.0`
+The `initialise-skills` bundle version is bumped `0.8.0` → `0.9.0`
 ([A-616](https://linear.app/acme-skunkworks/issue/A-616)).

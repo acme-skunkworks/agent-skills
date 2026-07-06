@@ -35,6 +35,13 @@ invoke the bundled script directly:
 # Preview (writes nothing)
 node skills/initialise-skills/scripts/initialise.mjs --dry-run
 
+# Review the current config of every installed skill — read-only, no reconcile
+node skills/initialise-skills/scripts/initialise.mjs --review
+
+# Set an arbitrary value a detector wouldn't produce (repeatable; validated
+# against the skill's config.example.json; dry-run first, --write to apply)
+node skills/initialise-skills/scripts/initialise.mjs --set changelog.baseBranch=develop --write
+
 # Write, supplying the facts the script can't detect on its own — and, optionally,
 # the drifted keys you've chosen to accept (keyed by skill name or config path)
 echo '{"facts":{"linearTeamName":"Acme Co","linearWorkspaceSlug":"acme-co"},"acceptDrift":{"changelog":["issueKeys"]}}' \
@@ -54,6 +61,11 @@ into `inferred` (write it), `unchanged`, `drift` (a deliberate edit — kept),
 written; drift is preserved unless you opt in per key. See
 [`references/detectable-keys.md`](references/detectable-keys.md) for every key,
 its detection source, and fallback.
+
+To push a value detection can't derive, `--set <skill>.<key>=<value>` (repeatable)
+writes an arbitrary value into a named skill's `config.json`, validated against
+its `config.example.json` key set and placeholder type — dry-run first, `--write`
+to apply, and it overrides detection for that key.
 
 `preflight` is skipped on purpose — it self-detects base branch and workspaces and
 reads an optional root-level `preflight.config.json`, so there is nothing in-bundle

@@ -43,6 +43,55 @@ describe("parseArgs", () => {
   it("sets help and ignores the rest", () => {
     expect(parseArgs(["--help"]).help).toBe(true);
   });
+
+  it("reads --review as a read-only mode that leaves write off", () => {
+    const options = parseArgs(["--review"]);
+    expect(options.review).toBe(true);
+    expect(options.write).toBe(false);
+  });
+
+  it("defaults review to false", () => {
+    expect(parseArgs([]).review).toBe(false);
+  });
+
+  it("keeps --review read-only regardless of flag order", () => {
+    // --review must force write off even when --write is also passed, in either
+    // order — otherwise a config write would run and the review would then show
+    // a stale pre-write snapshot.
+    expect(parseArgs(["--write", "--review"])).toMatchObject({
+      review: true,
+      write: false,
+    });
+    expect(parseArgs(["--review", "--write"])).toMatchObject({
+      review: true,
+      write: false,
+    });
+  });
+
+  it("defaults --set to an empty list", () => {
+    expect(parseArgs([]).set).toEqual([]);
+  });
+
+  it("collects a --set assignment as a raw string", () => {
+    expect(parseArgs(["--set", "changelog.baseBranch=develop"]).set).toEqual([
+      "changelog.baseBranch=develop",
+    ]);
+  });
+
+  it("accumulates repeated --set flags in order", () => {
+    const options = parseArgs([
+      "--set",
+      "changelog.baseBranch=develop",
+      "--write",
+      "--set",
+      "cleanup-repo.mainBranch=trunk",
+    ]);
+    expect(options.set).toEqual([
+      "changelog.baseBranch=develop",
+      "cleanup-repo.mainBranch=trunk",
+    ]);
+    expect(options.write).toBe(true);
+  });
 });
 
 describe("asKeyList", () => {

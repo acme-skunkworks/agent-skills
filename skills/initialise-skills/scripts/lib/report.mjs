@@ -32,11 +32,13 @@ const STATUS_LABEL = {
   inferred: "inferred",
   "manual-kept": "manual-kept",
   "needs-manual-input": "needs-manual-input",
+  set: "set",
   unchanged: "unchanged",
   "unknown-kept": "unknown-kept",
 };
 
 const STATUS_ORDER = [
+  "set",
   "inferred",
   "drift",
   "needs-manual-input",
@@ -50,12 +52,27 @@ function fmt(value) {
 }
 
 /**
+ * Stable per-key ordering shared by the dry-run and review renders: group by
+ * status (via STATUS_ORDER), then alphabetically within a status.
+ */
+function byStatusThenKey(a, b) {
+  return (
+    STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) ||
+    a.key.localeCompare(b.key)
+  );
+}
+
+/**
  * @typedef {{
  *   name: string,
  *   configPath: string,
  *   malformed: boolean,
  *   results: Record<string, import('./merge.mjs').KeyResult>,
+ *   config?: Record<string, unknown>,
  * }} SkillReport
+ * `config` is the parsed config.json data. `main()` attaches it to every entry
+ * so the same shape feeds both `buildReport` (which ignores it) and
+ * `buildReviewReport` (which needs it); optional for the malformed stub.
  */
 
 /**
@@ -77,6 +94,7 @@ export function buildReport(
   const totals = {};
   const driftKeys = [];
   const manualKeys = [];
+  const setKeys = [];
 
   const skills = skillReports.map((skillReport) => {
     const keys = Object.entries(skillReport.results).map(([key, result]) => {
@@ -88,6 +106,15 @@ export function buildReport(
           kept: result.keep,
           key,
           skill: skillReport.name,
+        });
+      }
+
+      if (result.status === "set") {
+        setKeys.push({
+          configPath: skillReport.configPath,
+          key,
+          skill: skillReport.name,
+          value: result.write,
         });
       }
 
@@ -115,6 +142,7 @@ export function buildReport(
     lock,
     manualKeys,
     mode: wrote ? "write" : "dry-run",
+    setKeys,
     skills,
     totals,
   };
@@ -143,16 +171,17 @@ export function formatHuman(report) {
     }
 
     lines.push(skill.configPath);
-    const ordered = [...skill.keys].toSorted(
-      (a, b) =>
-        STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) ||
-        a.key.localeCompare(b.key),
-    );
+    const ordered = [...skill.keys].toSorted(byStatusThenKey);
     for (const keyResult of ordered) {
       const label = STATUS_LABEL[keyResult.status].padEnd(20);
       const name = keyResult.key.padEnd(22);
       let detail = "";
-      if (keyResult.status === "inferred") {
+      if (keyResult.status === "set") {
+        detail = `set to ${fmt(keyResult.write)}`;
+        if ("from" in keyResult) {
+          detail += ` (was ${fmt(keyResult.from)})`;
+        }
+      } else if (keyResult.status === "inferred") {
         detail = fmt(keyResult.write);
       } else if (keyResult.status === "drift") {
         detail = `keeps ${fmt(keyResult.keep)} vs detected ${fmt(keyResult.detected)}`;
@@ -192,6 +221,14 @@ export function formatHuman(report) {
   }
 
   if (report.mode === "dry-run") {
+    if (report.setKeys?.length) {
+      lines.push(
+        `${report.setKeys.length} key(s) will be set via --set: ${report.setKeys
+          .map((setKey) => `${setKey.skill}.${setKey.key}`)
+          .join(", ")}. Re-run with --write to apply.`,
+      );
+    }
+
     if (report.driftKeys.length) {
       lines.push(
         `${report.driftKeys.length} drifted key(s) kept. To accept a detected value, re-run --write with that key in acceptDrift.`,
@@ -206,6 +243,105 @@ export function formatHuman(report) {
       );
     }
   }
+
+  return lines.join("\n").replace(/\n+$/, "\n");
+}
+
+/**
+ * @typedef {{
+ *   name: string,
+ *   configPath: string,
+ *   malformed: boolean,
+ *   config?: Record<string, unknown>,
+ *   results: Record<string, import('./merge.mjs').KeyResult>,
+ * }} SkillReview
+ * `config` is absent on the malformed stub (it has no parseable config.json);
+ * `buildReviewReport` defaults it to `{}`.
+ */
+
+/**
+ * Build the read-only `--review` report: every installed skill's full current
+ * config, each key annotated with its current value, its merge classification,
+ * and a human description from references/detectable-keys.md (A-702). Unlike
+ * buildReport this writes nothing and needs no gitignore/mode plumbing — it is a
+ * complete snapshot of what each config currently holds.
+ * @param {SkillReview[]} skillReviews
+ * @param {Map<string, { usedBy: string, detectionSource: string, fallback: string }>} descriptions
+ * @returns {object}
+ */
+export function buildReviewReport(skillReviews, descriptions) {
+  const totals = {};
+
+  const skills = skillReviews.map((review) => {
+    const config = review.config ?? {};
+    const keys = Object.entries(review.results).map(([key, result]) => {
+      totals[result.status] = (totals[result.status] ?? 0) + 1;
+      const isSet = Object.prototype.hasOwnProperty.call(config, key);
+      const description = descriptions.get(key) ?? null;
+      return {
+        detectionSource: description?.detectionSource ?? null,
+        fallback: description?.fallback ?? null,
+        isSet,
+        key,
+        usedBy: description?.usedBy ?? null,
+        // The current value as it stands in config.json; omitted when the key is
+        // in the template but not yet set (rendered as "not set").
+        ...(isSet ? { value: config[key] } : {}),
+        ...result,
+      };
+    });
+    return {
+      configPath: review.configPath,
+      keys,
+      malformed: review.malformed,
+      name: review.name,
+    };
+  });
+
+  return { mode: "review", skills, totals };
+}
+
+/**
+ * Format the review report as human-readable text.
+ * @param {ReturnType<typeof buildReviewReport>} report
+ * @returns {string}
+ */
+export function formatReview(report) {
+  const lines = ["initialise-skills — review (read-only)", ""];
+
+  for (const skill of report.skills) {
+    if (skill.malformed) {
+      lines.push(
+        `${skill.configPath}  ⚠ existing config.json is unparseable — skipped`,
+        "",
+      );
+      continue;
+    }
+
+    lines.push(skill.configPath);
+    for (const keyResult of [...skill.keys].toSorted(byStatusThenKey)) {
+      const label = STATUS_LABEL[keyResult.status].padEnd(20);
+      const name = keyResult.key.padEnd(22);
+      const value = keyResult.isSet ? fmt(keyResult.value) : "— not set";
+      lines.push(`  ${label}${name}${value}`.trimEnd());
+      // Long detection-source prose lives on its own indented line so it never
+      // blows out the value column. Omitted for keys with no reference row (e.g.
+      // unknown-kept), which have nothing to describe.
+      if (keyResult.usedBy && keyResult.detectionSource) {
+        lines.push(
+          `      used by ${keyResult.usedBy} — ${keyResult.detectionSource}`,
+        );
+      }
+    }
+
+    lines.push("");
+  }
+
+  const totals = report.totals;
+  const summary = STATUS_ORDER.filter((status) => totals[status])
+    .map((status) => `${totals[status]} ${STATUS_LABEL[status]}`)
+    .join(", ");
+  lines.push(summary || "no keys to review", "");
 
   return lines.join("\n").replace(/\n+$/, "\n");
 }

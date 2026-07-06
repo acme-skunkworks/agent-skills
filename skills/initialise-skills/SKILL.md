@@ -23,7 +23,7 @@ compatibility: >-
   config.example.json for its key set, so newly-added skills are picked up with no
   change here.
 metadata:
-  version: 0.7.0
+  version: 0.9.0
   author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(git:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---
@@ -168,12 +168,85 @@ This is the foundation for detecting which repos are behind — see
    `{ "root": "<bundle-dir>", "manifest": "package.json", "skillFile": "SKILL.md" }`
    — to enable the per-bundle version-bump check. Single-package repos skip this.
 
+## Reviewing an existing config
+
+To inspect what a repo's skills are currently configured with — without
+reconciling or writing anything — run the read-only review:
+
+```bash
+node <skills-dir>/initialise-skills/scripts/initialise.mjs --review
+```
+
+For each installed skill it prints its full `config.json`: every key's current
+value, its classification (`inferred` / `unchanged` / `drift` / `manual-kept` /
+`needs-manual-input` / `unknown-kept` — see the table above), and a one-line
+description of what the key is and where its value comes from, drawn from
+[`references/detectable-keys.md`](references/detectable-keys.md). Keys a consumer
+set that no skill template knows about show as `unknown-kept` (kept verbatim, no
+description), and template keys not yet present in `config.json` show as
+`— not set`, so the review is the whole picture rather than just the pending
+diff a dry-run would show. The human text shows each key's `used by … —
+<detection source>` line; the key's fallback default is carried in the `--json`
+form only, to keep the human table readable. Add `--json` for the
+machine-readable form (a `skills[]` array of `{ key, value, isSet, status,
+usedBy, detectionSource, fallback }` entries, plus `totals`). It never writes to
+disk and skips the `.gitignore` step.
+
+## Setting an arbitrary value
+
+Detection, the stdin `facts`, and `acceptDrift` between them cover every value the
+script can derive or accept — but not a value you simply want to *choose* (a
+non-default base branch, a bespoke changelog directory, a boolean toggle). For
+those, `--set <skill>.<key>=<value>` writes an arbitrary value straight into a
+named skill's `config.json`:
+
+```bash
+# dry-run first (default) — preview the change, write nothing
+node <skills-dir>/initialise-skills/scripts/initialise.mjs \
+  --set changelog.baseBranch=develop \
+  --set changelog.affectedPackages=false
+
+# re-run with --write to apply
+node <skills-dir>/initialise-skills/scripts/initialise.mjs \
+  --set changelog.baseBranch=develop --write
+```
+
+The flag is **repeatable** and the address is `<skill>.<key>` — the skill's bundle
+directory name, then a top-level key. The value is parsed as JSON (`true` / `42` /
+`["A"]` type correctly) and falls back to a bare string when it isn't valid JSON
+(so `develop` stays `"develop"`). It is validated up front, before anything is
+written: the skill must be installed, the key must exist in that skill's
+`config.example.json` (unknown keys are **refused**, never silently created), and
+the value's type must match that key's example placeholder (so a string can't land
+in a boolean field). Any failure exits non-zero and touches nothing.
+
+`--set` rides the normal reconcile — detection still runs and your values are
+layered on top, winning over what a detector would produce for the same key — and
+goes through the same merge/serialise path, so key order and formatting are
+preserved and a re-run with the same value is a no-op. It is a write mode, so it
+**cannot be combined with `--review`** (which is read-only). In the report a set
+key shows as `set to <value> (was <old>)`.
+
 ## Flags
 
 - `--dry-run` (default) — detect, merge and report; write nothing.
 - `--write` — apply the reconcile to each skill's `config.json`.
-- `--json` — emit the machine-readable report (parse this to drive steps 2–3);
-  human text otherwise.
+- `--review` — **read-only.** Print every installed skill's full current config:
+  each key's current value, its classification (the same six statuses), and a
+  short description sourced from
+  [`references/detectable-keys.md`](references/detectable-keys.md). Unlike the
+  dry-run it shows the current value of every key — including `unknown-kept` keys
+  no template knows about — so it is a complete picture, not just the pending
+  diff. Writes nothing and skips the `.gitignore` step. See
+  [Reviewing an existing config](#reviewing-an-existing-config).
+- `--set <skill>.<key>=<value>` — **repeatable.** Write an arbitrary value into a
+  named skill's `config.json` (a value detection wouldn't produce). The key must
+  exist in that skill's `config.example.json` and the value's type must match its
+  placeholder, else it's refused. Rides the normal reconcile (dry-run first;
+  `--write` to apply) and overrides detection for that key. Cannot be combined with
+  `--review`. See [Setting an arbitrary value](#setting-an-arbitrary-value).
+- `--json` — emit the machine-readable report (parse this to drive steps 2–3, or
+  to consume the `--review` snapshot); human text otherwise.
 - `--repo-root <path>` — the host repo the detectors scan (default: cwd).
 - `--skills-dir <path>` — where the sibling bundles live (default: auto-detected
   relative to this script).
