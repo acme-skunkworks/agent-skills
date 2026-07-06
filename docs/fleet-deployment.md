@@ -87,13 +87,21 @@ files, not symlinks):
 
 ```bash
 npx skills add https://github.com/acme-skunkworks/agent-skills \
-  --skill send-it --skill preflight --skill changelog --skill linear-sync \
-  --skill cleanup-repo --skill initialise-skills \
+  --skill send-it --skill commit --skill preflight --skill changelog \
+  --skill linear-sync --skill cleanup-repo --skill initialise-skills \
+  --skill release-status \
   --agent claude-code --agent cursor --copy
 ```
 
 Omit `--skill` entirely to install all skills, or repeat it per skill for a
 subset. Never use `-g` / `--global` — installs belong in the consumer repo.
+
+> **`commit` is a hard dependency of `send-it`.** Since the `send-it` bundle
+> delegates its commit step to the standalone `commit` skill, install the two
+> together — a `send-it` vendored without `commit` has no working commit step.
+> `release-status` is a read-only sibling of `send-it` (it diagnoses the
+> release-please pipeline after merge); it ships alongside the set for any repo
+> that releases through release-please.
 
 ### Pinning and reproducibility
 
