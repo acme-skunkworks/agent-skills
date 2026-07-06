@@ -130,23 +130,26 @@ the callout below) and re-run step 3 (reconcile) to pick up any new config keys.
 Because installs are `--copy`, an upgrade is a clean file replacement with no
 symlink drift.
 
-> **⚠️ A re-vendor deletes your per-skill `config.json` — restore it before
+> **⚠️ A re-vendor clobbers your per-skill `config.json` — restore it before
 > reconciling (A-706).** agent-skills gitignores its per-skill `config.json` and
 > ships only the neutral `config.example.json` (A-615), so the source bundle
 > carries **no** `config.json`. A `--copy` install is a clean bundle-directory
-> replacement that mirrors the source exactly, so it **deletes** every existing
-> `config.json` in the consumer — in both the `.claude/skills/` and
-> `.agents/skills/` mirrors. Your reconciled values, including the deliberate
-> no-detector edits the detector can't reproduce, go with them.
+> replacement that mirrors the source exactly, so it **overwrites** (older CLIs
+> **delete**) every existing `config.json` in the consumer — in both the
+> `.claude/skills/` and `.agents/skills/` mirrors, resetting it to the neutral
+> example. Your reconciled values, including the deliberate no-detector edits the
+> detector can't reproduce, go with them.
 >
-> **Before** running step 3, restore the deleted (tracked) configs from the trunk.
-> `git diff HEAD` catches the deletions whether or not they've been staged, and the
-> guard skips the restore cleanly on a first-ever install (nothing deleted → no
-> `git checkout … --` with an empty file list to error on):
+> **Before** running step 3, restore the clobbered (tracked) configs from the
+> trunk. `git diff HEAD` catches both an overwrite (`M`) and a delete (`D`) whether
+> or not they've been staged, and the guard skips the restore cleanly on a
+> first-ever install (nothing clobbered → no `git checkout … --` with an empty file
+> list to error on). Restore from `HEAD` — not `origin/main` — so a config edit
+> that lives only on the local branch survives:
 >
 > ```bash
-> deleted=$(git diff HEAD --name-only --diff-filter=D | grep 'config\.json$')
-> [ -n "$deleted" ] && git checkout origin/main -- $deleted
+> clobbered=$(git diff HEAD --name-only --diff-filter=DM | grep 'config\.json$')
+> [ -n "$clobbered" ] && git checkout HEAD -- $clobbered
 > ```
 >
 > Step 3 then merges any genuinely new keys in while keeping your restored values
