@@ -54,8 +54,11 @@ export const SOURCE_URL = "https://github.com/acme-skunkworks/agent-skills";
 // install itself comes from SOURCE_URL. Overridable via --source.
 const SOURCE_DEFAULT = join(import.meta.dirname, "..", "..");
 
-// The shared skill set (mirrors docs/fleet-deployment.md). Only used to subtract
-// `changelog` when a `no-changelog` repo installs the default (unlisted) set.
+// The shared skill set (mirrors docs/fleet-deployment.md). This is the DEFAULT
+// install set when a profile omits `skills` — a bare `skills add <url> --copy`
+// (no `--skill`) would otherwise vendor the entire published set, including the
+// repo-internal `scaffold-new-skill` that must never reach consumers (A-729). A
+// `no-changelog` repo installs this set minus `changelog`.
 const CANONICAL_SKILLS = [
   "send-it",
   "commit",
@@ -170,12 +173,14 @@ export function parseProfile(json) {
 }
 
 /**
- * The effective skill list for the install, or `null` meaning "omit --skill so
- * skills.sh installs the full set". An explicit `skills` list wins; otherwise a
- * `no-changelog` repo gets the canonical set minus `changelog`, and every other
- * repo type installs all (null).
+ * The effective skill list for the install. An explicit `skills` list wins;
+ * otherwise the install defaults to `CANONICAL_SKILLS` (a `no-changelog` repo
+ * gets that set minus `changelog`). It never returns `null`: a bare install with
+ * no `--skill` flags would vendor the whole published set, pulling in the
+ * repo-internal `scaffold-new-skill` (A-729), so the omitted-list case resolves
+ * to the explicit canonical set instead.
  * @param {{ skills: string[] | undefined, repoType: string }} profile
- * @returns {string[] | null}
+ * @returns {string[]}
  */
 export function resolveSkills(profile) {
   if (Array.isArray(profile.skills)) {
@@ -186,7 +191,7 @@ export function resolveSkills(profile) {
     return CANONICAL_SKILLS.filter((skill) => skill !== "changelog");
   }
 
-  return null;
+  return CANONICAL_SKILLS;
 }
 
 /**
@@ -196,16 +201,18 @@ export function resolveSkills(profile) {
  * given into the consumer's `skills-lock.json`, so a local path would commit an
  * absolute machine path + `sourceType: local` into every consumer (A-718). A URL
  * install resolves the default branch — right for the recurring roll-onto-latest
- * fan-out. A null skill list omits --skill entirely (install all). Pure —
- * constructs argv, spawns nothing.
+ * fan-out. `resolveSkills` always yields an explicit list (the canonical set when
+ * the profile omits `skills`), so the install always names its `--skill`s and
+ * never pulls the whole published set (A-729). Pure — constructs argv, spawns
+ * nothing.
  * @param {{ skills: string[] | undefined, agents: string[], repoType: string }} profile
  * @returns {string[]}
  */
 export function buildSkillsAddArgs(profile) {
-  const skills = resolveSkills(profile);
-  const skillFlags = skills
-    ? skills.flatMap((skill) => ["--skill", skill])
-    : [];
+  const skillFlags = resolveSkills(profile).flatMap((skill) => [
+    "--skill",
+    skill,
+  ]);
   const agentFlags = profile.agents.flatMap((agent) => ["--agent", agent]);
   return ["add", SOURCE_URL, ...skillFlags, ...agentFlags, "--copy"];
 }
@@ -674,9 +681,15 @@ function selfTest() {
     });
 
     // resolveSkills.
+    const unlisted = resolveSkills({ repoType: "single", skills: undefined });
     cases.push({
-      name: "resolveSkills returns null (install all) for an unlisted single repo",
-      ok: resolveSkills({ repoType: "single", skills: undefined }) === null,
+      name: "resolveSkills defaults to the canonical set (no scaffold-new-skill) for an unlisted single repo",
+      ok:
+        Array.isArray(unlisted) &&
+        unlisted.includes("send-it") &&
+        unlisted.includes("triage-pr") &&
+        !unlisted.includes("scaffold-new-skill") &&
+        unlisted.length === CANONICAL_SKILLS.length,
     });
     const noChangelog = resolveSkills({
       repoType: "no-changelog",
@@ -697,11 +710,13 @@ function selfTest() {
       skills: undefined,
     });
     cases.push({
-      name: "buildSkillsAddArgs installs from the URL, omits --skill, fans out agents, ends --copy",
+      name: "buildSkillsAddArgs installs from the URL with the canonical --skill set (no scaffold-new-skill), fans out agents, ends --copy",
       ok:
         allArgs[0] === "add" &&
         allArgs[1] === SOURCE_URL &&
-        !allArgs.includes("--skill") &&
+        allArgs.filter((a) => a === "--skill").length ===
+          CANONICAL_SKILLS.length &&
+        !allArgs.includes("scaffold-new-skill") &&
         allArgs.filter((a) => a === "--agent").length === 2 &&
         allArgs.at(-1) === "--copy",
     });

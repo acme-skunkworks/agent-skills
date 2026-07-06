@@ -76,8 +76,13 @@ describe("parseProfile", () => {
 });
 
 describe("resolveSkills + buildSkillsAddArgs", () => {
-  it("returns null (install all) for an unlisted single repo", () => {
-    expect(resolveSkills({ repoType: "single", skills: undefined })).toBeNull();
+  it("defaults to the canonical set (no scaffold-new-skill) for an unlisted single repo", () => {
+    const skills = resolveSkills({ repoType: "single", skills: undefined });
+    expect(skills).toContain("send-it");
+    expect(skills).toContain("triage-pr");
+    // Never the whole published set: the repo-internal scaffold-new-skill must
+    // not be vendored into consumers (A-729).
+    expect(skills).not.toContain("scaffold-new-skill");
   });
 
   it("drops changelog for an unlisted no-changelog repo", () => {
@@ -95,7 +100,7 @@ describe("resolveSkills + buildSkillsAddArgs", () => {
     ]);
   });
 
-  it("installs from the GitHub URL, omits --skill, fans out agents, ends --copy", () => {
+  it("installs from the GitHub URL with the canonical --skill set (no scaffold-new-skill), fans out agents, ends --copy", () => {
     const args = buildSkillsAddArgs({
       agents: ["claude-code", "cursor"],
       repoType: "single",
@@ -104,7 +109,11 @@ describe("resolveSkills + buildSkillsAddArgs", () => {
     expect(args[0]).toBe("add");
     // The install source is the canonical URL, never a local path (A-718).
     expect(args[1]).toBe(SOURCE_URL);
-    expect(args).not.toContain("--skill");
+    // Defaults to explicit --skill pairs, never a bare install that would pull
+    // the whole published set incl. the repo-internal scaffold-new-skill (A-729).
+    expect(args).toContain("--skill");
+    expect(args).toContain("send-it");
+    expect(args).not.toContain("scaffold-new-skill");
     expect(args.filter((a) => a === "--agent")).toHaveLength(2);
     expect(args.at(-1)).toBe("--copy");
   });
