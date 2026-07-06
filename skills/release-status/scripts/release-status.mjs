@@ -310,7 +310,7 @@ function readTags() {
  * post-release titles count toward the next bump.
  *
  * `gh`'s `merged:>=<date>` filter only honours **day** precision, so it is used as
- * a coarse lower bound (the tag's calendar day) and the results are then re-filtered
+ * a coarse lower bound (the tag's UTC calendar day) and the results are re-filtered
  * against the tag's **full** ISO timestamp — otherwise a PR merged earlier on the
  * same calendar day as the tag slips past the day-only bound and is counted twice:
  * once in the release it already shipped in, and again toward the next bump.
@@ -321,14 +321,20 @@ function fetchMergedPrsSinceLastTag(repo) {
   try {
     const lastTag = run("git", ["describe", "--tags", "--abbrev=0"]).trim();
     if (lastTag) {
-      // %cI = committer date, strict ISO-8601.
+      // %cI = committer date, strict ISO-8601 (carries the offset).
       sinceTimestamp = run("git", [
         "log",
         "-1",
         "--format=%cI",
         lastTag,
       ]).trim();
-      sinceDate = sinceTimestamp.slice(0, 10);
+      // gh reads a bare `merged:YYYY-MM-DD` as UTC midnight, so anchor the coarse
+      // lower bound on the tag's UTC calendar day, not its local-offset day. A
+      // positive-offset local day (e.g. 2026-07-06 for an instant that is
+      // 2026-07-05T23:00Z) would start the search after the real tag instant and
+      // miss PRs merged in the gap — and the post-filter below can only trim, not
+      // recover them. The UTC day never excludes a valid same-day-after-tag PR.
+      sinceDate = new Date(sinceTimestamp).toISOString().slice(0, 10);
     }
   } catch {
     sinceDate = null; // no tags yet → all merged PRs count.
