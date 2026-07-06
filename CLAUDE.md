@@ -47,7 +47,7 @@ pnpm changelog:finalise   # enrich + version-stamp dated changelog/ entries (orc
 > not the generated `skills/<name>/config.json` (it's gitignored and overwritten on
 > the next bootstrap) and **not** `initialise-skills` (that's the _consumer_ path; it
 > isn't wired to the dogfood-config source). Changing a _consumer's_ setting is the
-> other way round — see [`skills/initialise-skills/SKILL.md`](skills/initialise-skills/SKILL.md).
+> other way round — see [`skills/initialise-skills/SKILL.md#changing-a-setting-later`](skills/initialise-skills/SKILL.md#changing-a-setting-later).
 
 Versioning runs through **release-please**, driven by Conventional Commits PR titles — there is no `pnpm changeset` here any more (A-380). The bump is decided by the merged PR title; `pkg-release.yml` (via `reusable-pkg-release.yml`) publishes on a version-vs-tag gate.
 
