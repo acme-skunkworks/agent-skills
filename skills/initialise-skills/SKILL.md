@@ -21,11 +21,14 @@ compatibility: >-
   server when available; without it, those two values are flagged for manual
   input and everything else is still detected. Reads each installed skill's
   config.example.json for its key set, so newly-added skills are picked up with no
-  change here.
+  change here. The GitHub App / `CLAUDE_CODE_OAUTH_TOKEN` check is optional and
+  best-effort: it uses the `gh` CLI when it is authenticated with repo-admin scope,
+  and degrades to a plain textual reminder when `gh` is absent or lacks permission —
+  it is never a hard requirement.
 metadata:
-  version: 0.9.1
+  version: 0.10.0
   author: Rob Easthope
-allowed-tools: Read, Bash(node:*), Bash(git:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
+allowed-tools: Read, Bash(node:*), Bash(git:*), Bash(gh:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---
 
 # initialise-skills
@@ -161,7 +164,32 @@ This is the foundation for detecting which repos are behind — see
    configs, the `.gitignore`, and the `skills.lock` are stable and a future re-run
    is a no-op.
 
-6. **Multi-bundle repos — one manual step.** If this repo itself ships several
+6. **GitHub App & token check.** If this repo will run the shared Claude workflows
+   (`reusable-claude*.yml` and their caller stubs), the GitHub App must be installed
+   and the `CLAUDE_CODE_OAUTH_TOKEN` repository Actions secret set — the workflows
+   authenticate with it and fail on an empty token (A-646). The required secret is
+   **`CLAUDE_CODE_OAUTH_TOKEN`, not `ANTHROPIC_API_KEY`**.
+
+   Probe for the secret (best-effort — skip silently if `gh` is unavailable or
+   unauthenticated; a repo that runs no Claude workflows needs neither):
+
+   ```bash
+   gh secret list --repo <owner>/<repo> --app actions | grep -q CLAUDE_CODE_OAUTH_TOKEN
+   ```
+
+   - **present** (exit 0) → report OK; nothing to do.
+   - **absent** (grep finds nothing) → **warn** and remind the operator to run
+     **`/install-github-app`**, which installs the App and adds the secret.
+   - **can't verify** (the `gh` call itself errors — e.g. a `403` without repo-admin
+     scope, or `gh` not installed) → surface it as "couldn't verify the token —
+     please confirm `CLAUDE_CODE_OAUTH_TOKEN` is set manually", **never block or fail
+     the run**. A can't-tell is not an absence.
+
+   The App install itself can't be reliably introspected without the App's own token,
+   so the secret's presence is the reliable proxy; the `/install-github-app` reminder
+   covers installing the App and setting the secret together.
+
+7. **Multi-bundle repos — one manual step.** If this repo itself ships several
    independently-versioned skill bundles, `send-it`'s `bundleVersioning` is **not**
    auto-written (it isn't in `send-it`'s `config.example.json` key set, so detection
    has nothing to populate). Add it to `send-it/config.json` by hand —
@@ -313,6 +341,9 @@ so a fleet orchestrator can check any repo without changing directory. See
   sorted keys and no timestamp — so it only rewrites when a version actually changes,
   and a no-op run leaves it byte-identical. It preserves an existing lock's
   `source`/`ref` and never fabricates them.
+- **The GitHub App / token probe is read-only.** `gh secret list` returns secret
+  **names only, never values**, and the skill makes **no** GitHub writes of any kind
+  — on an absent or unverifiable secret it only ever prints a reminder.
 
 ## Prerequisites
 
@@ -321,3 +352,6 @@ so a fleet orchestrator can check any repo without changing directory. See
   detection (both degrade to sensible fallbacks when absent).
 - The Linear MCP server for the team name / workspace slug (optional — those two
   keys are flagged for manual input without it).
+- The `gh` CLI authenticated with repo-admin scope enables the GitHub App / token
+  probe (step 6); without it the skill still runs fully and falls back to a textual
+  `/install-github-app` reminder.
