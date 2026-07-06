@@ -35,6 +35,7 @@
 // Zero-dep: composes the bundle's own lib modules, so it runs under bare `node`.
 
 import { findEntryByBranch } from "./lib/changelog.mjs";
+import { isCliEntry } from "./lib/cli-entry.mjs";
 import { loadConfig } from "./lib/config.mjs";
 import { enrichFrontmatter } from "./lib/enrich.mjs";
 import { parseFrontmatter } from "./lib/frontmatter.mjs";
@@ -118,7 +119,7 @@ function selfTest() {
     'created_at: "2026-05-23T14:55:37Z"',
     'branch: "a-1-fix-a-thing"',
     "merged_at:",
-    "pr: 1",
+    "pr:",
     "commit:",
     "merge_strategy:",
     "category: fix",
@@ -138,7 +139,7 @@ function selfTest() {
     mergedAt: "2026-05-24T09:00:00Z",
     mergeSha: "abc1234def5678",
     mergeStrategy: "squash",
-    prNumber: "1",
+    prNumber: "7",
   };
 
   const out = enrichEntry(entry, input);
@@ -147,7 +148,7 @@ function selfTest() {
   assert(data.merged_at === "2026-05-24T09:00:00Z", "merged_at not filled");
   assert(data.commit === "abc1234", "commit not filled to 7 chars");
   assert(data.merge_strategy === "squash", "merge_strategy not filled");
-  assert(data.pr === 1, "pr must keep the authored value");
+  assert(data.pr === 7, "blank pr must be resolved from prNumber");
   assert(
     typeof data.stats === "object" &&
       data.stats !== null &&
@@ -231,6 +232,6 @@ function main() {
 }
 
 // Only run the filesystem pass when invoked as a CLI, not when imported by tests.
-if (argv[1] && import.meta.filename === argv[1]) {
+if (isCliEntry(import.meta.filename)) {
   main();
 }
