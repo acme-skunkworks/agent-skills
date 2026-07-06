@@ -130,23 +130,26 @@ the callout below) and re-run step 3 (reconcile) to pick up any new config keys.
 Because installs are `--copy`, an upgrade is a clean file replacement with no
 symlink drift.
 
-> **⚠️ A re-vendor deletes your per-skill `config.json` — restore it before
+> **⚠️ A re-vendor clobbers your per-skill `config.json` — restore it before
 > reconciling (A-706).** agent-skills gitignores its per-skill `config.json` and
 > ships only the neutral `config.example.json` (A-615), so the source bundle
 > carries **no** `config.json`. A `--copy` install is a clean bundle-directory
-> replacement that mirrors the source exactly, so it **deletes** every existing
-> `config.json` in the consumer — in both the `.claude/skills/` and
-> `.agents/skills/` mirrors. Your reconciled values, including the deliberate
-> no-detector edits the detector can't reproduce, go with them.
+> replacement that mirrors the source exactly, so it **overwrites** (older CLIs
+> **delete**) every existing `config.json` in the consumer — in both the
+> `.claude/skills/` and `.agents/skills/` mirrors, resetting it to the neutral
+> example. Your reconciled values, including the deliberate no-detector edits the
+> detector can't reproduce, go with them.
 >
-> **Before** running step 3, restore the deleted (tracked) configs from the trunk.
-> `git diff HEAD` catches the deletions whether or not they've been staged, and the
-> guard skips the restore cleanly on a first-ever install (nothing deleted → no
-> `git checkout … --` with an empty file list to error on):
+> **Before** running step 3, restore the clobbered (tracked) configs from the
+> trunk. `git diff HEAD` catches both an overwrite (`M`) and a delete (`D`) whether
+> or not they've been staged, and the guard skips the restore cleanly on a
+> first-ever install (nothing clobbered → no `git checkout … --` with an empty file
+> list to error on). Restore from `HEAD` — not `origin/main` — so a config edit
+> that lives only on the local branch survives:
 >
 > ```bash
-> deleted=$(git diff HEAD --name-only --diff-filter=D | grep 'config\.json$')
-> [ -n "$deleted" ] && git checkout origin/main -- $deleted
+> clobbered=$(git diff HEAD --name-only --diff-filter=DM | grep 'config\.json$')
+> [ -n "$clobbered" ] && git checkout HEAD -- $clobbered
 > ```
 >
 > Step 3 then merges any genuinely new keys in while keeping your restored values
@@ -212,3 +215,68 @@ for the full key → detection-source table.
 - [ ] On a re-vendor: restored the per-skill `config.json` the `--copy` install deleted, from the trunk, before reconciling (step 2 callout).
 - [ ] Reconciled config with `initialise-skills` `--dry-run` then `--write`, supplying `facts.issueKeys` for a renamed team (step 3).
 - [ ] Verified idempotency, safe previews, and CI (step 4).
+
+## Automating a single-repo update (`fleet-update.mjs`)
+
+Steps 1–4 above are the **human onboarding** path — the one-time wipe of bespoke
+prototypes plus the first install. The **recurring update** — rolling an
+already-onboarded repo onto newer bundles — is automated by
+[`infrastructure/scripts/fleet-update.mjs`](../infrastructure/scripts/fleet-update.mjs)
+(A-617). It runs **install → restore → reconcile → verify** for one repo (steps
+2–4; **no wipe**), driven by an install profile rather than interactive edits:
+
+```bash
+# Preview (default — mutates nothing):
+node infrastructure/scripts/fleet-update.mjs --profile ./acme.json
+# Apply the update:
+node infrastructure/scripts/fleet-update.mjs --profile ./acme.json --apply
+# Orchestrator form — profile on stdin:
+echo '{"repo":"…","agents":["claude-code"]}' \
+  | node infrastructure/scripts/fleet-update.mjs --apply
+```
+
+It vendors the bundles from the agent-skills checkout it runs inside (so the
+install is pinned to that ref — skills.sh has no `--ref`), **restores every
+`config.json` the `--copy` re-vendor clobbers** from the consumer's trunk
+(`git checkout HEAD -- …`, baking in the A-706 workaround so no-detector keys
+survive), reconciles with `initialise-skills`, and verifies with `check-updates`
+that the repo is now current (`updatesAvailable === false` — the idempotency
+gate). A re-run is a clean no-op.
+
+The script **holds no repo list.** It takes one repo's profile as input and is
+meant to run inside the private release-orchestrator's fan-out (A-713), whose
+unified manifest (A-715) supplies one profile per consumer — so private repo
+names never surface in this public repo. The driver (token minting, per-repo PR
+creation) lives in the orchestrator, not here.
+
+### Install-profile schema
+
+The profile is the documented input contract the orchestrator populates. `repo`
+is the only required field:
+
+| Field | Type | Required | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `repo` | string | ✔ | — | Path to the consumer repo (absolute, or relative to cwd). |
+| `skills` | string[] | | all canonical | Omit to install the full set; list a subset to narrow it. |
+| `agents` | string[] | | `["claude-code"]` | `--agent` targets; each maps to a vendored skills-dir mirror. |
+| `repoType` | `single` \| `mono` \| `no-changelog` | | `single` | Informational — actual behaviour is detected by `initialise-skills`. When `skills` is omitted, `no-changelog` subtracts `changelog` from the set (A-452). |
+| `facts.linearTeamName` | string | | — | Forwarded to `initialise-skills` (it can't derive this). |
+| `facts.linearWorkspaceSlug` | string | | — | Forwarded to `initialise-skills`. |
+| `facts.issueKeys` | string[] | | detected | Overrides branch-prefix detection (e.g. `["A"]`) — see the renamed-team note above. |
+
+The lock provenance (`lockSource`, `lockRef`) is supplied by the script, not the
+profile. Worked example:
+
+```json
+{
+  "repo": "/path/to/consumer",
+  "skills": ["send-it", "commit", "preflight", "linear-sync"],
+  "agents": ["claude-code", "cursor"],
+  "repoType": "single",
+  "facts": {
+    "linearTeamName": "ACME Skunkworks",
+    "linearWorkspaceSlug": "acme-skunkworks",
+    "issueKeys": ["A"]
+  }
+}
+```
