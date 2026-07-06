@@ -23,7 +23,7 @@ compatibility: >-
   App / token check is optional — it uses `gh` when authenticated, else falls
   back to a reminder.
 metadata:
-  version: 0.10.0
+  version: 0.10.1
   author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(git:*), Bash(gh:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---
@@ -356,5 +356,9 @@ so a fleet orchestrator can check any repo without changing directory. See
 - The Linear MCP server for the team name / workspace slug (optional — those two
   keys are flagged for manual input without it).
 - The `gh` CLI authenticated with repo-admin scope enables the GitHub App / token
-  probe (step 6); without it the skill still runs fully and falls back to a textual
-  `/install-github-app` reminder.
+  probe (step 6). Without that scope (or without `gh` at all) the probe can't read
+  the secret list, so it degrades to a "couldn't verify — confirm
+  `CLAUDE_CODE_OAUTH_TOKEN` manually" note — a can't-tell, never a failure. The
+  textual `/install-github-app` reminder is the separate **absent** outcome, emitted
+  only when the probe *succeeds* and finds the secret genuinely missing. Either way
+  the skill still runs fully.
