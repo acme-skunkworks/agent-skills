@@ -17,7 +17,7 @@ compatibility: >-
   dependency; the grouping logic is model-driven and this prose is the source of
   truth.
 metadata:
-  version: 0.1.1
+  version: 0.1.2
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*)
 ---
@@ -68,8 +68,7 @@ classification against a **different** base for that run — for instance send-i
    - Files the branch has already touched **directly**: `git diff --name-only
      <merge-base>...HEAD`.
    - **In scope** by default: an uncommitted file whose path is in that
-     branch-touched list, or — when the branch has no commits of its own yet (first
-     run on a fresh branch) — any uncommitted file.
+     branch-touched list.
    - **Out of scope** (uncertain): everything else once the branch has its own
      commits. This deliberately includes a file that merely **sits in a directory
      the branch has touched** but is not itself a path the branch changed — a shared
@@ -78,11 +77,19 @@ classification against a **different** base for that run — for instance send-i
      silently sweeping it in is exactly the out-of-scope leak this guard exists to
      prevent. Treat directory-only matches as out of scope unless the user
      explicitly confirms them.
+   - **Fresh branch (no commits of its own yet):** there is no branch-touched list
+     to diff against, so *nothing* distinguishes your own work from a stray file left
+     by another branch or worktree. Do **not** auto-promote every uncommitted file to
+     in scope — that is exactly the leak this guard exists to catch. Treat **all**
+     uncommitted files as uncertain and have the user confirm which belong before
+     staging any of them.
 4. Show the user the staging plan: in-scope files grouped by proposed commit, plus
-   an explicit list of **out-of-scope files** flagged as "uncertain — possibly from
-   another branch/worktree." Ask: "Stage in-scope files and create the commits
-   below? (yes / no / customise)". Out-of-scope files are never staged
-   automatically.
+   an explicit list of **out-of-scope / uncertain files** flagged as "uncertain —
+   possibly from another branch/worktree." Ask: "Stage in-scope files and create the
+   commits below? (yes / no / customise)". Uncertain files are never staged
+   automatically. On a **fresh branch** the uncertain list is *every* uncommitted
+   file (step 3): ask the user to confirm which belong, and treat only the confirmed
+   files as in scope.
 5. Group in-scope files into **logical atomic commits**:
    - One commit per coherent unit (a feature, a bug fix, a refactor, a docs change,
      a tooling tweak). Don't bundle unrelated edits.
