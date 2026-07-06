@@ -5,7 +5,9 @@
 // results verbatim.
 import {
   buildReport,
+  buildReviewReport,
   formatHuman,
+  formatReview,
 } from "../../../skills/initialise-skills/scripts/lib/report.mjs";
 import { describe, expect, it } from "vitest";
 
@@ -87,6 +89,112 @@ describe("formatHuman", () => {
       ),
     );
     expect(text).toContain("wrote inferred values");
+    expect(text).toContain("⚠ existing config.json is unparseable — skipped");
+  });
+});
+
+const REVIEW_INPUT = [
+  {
+    config: {
+      baseBranch: "develop",
+      extraKey: "kept-verbatim",
+      issueKeys: ["A"],
+    },
+    configPath: "skills/changelog/config.json",
+    malformed: false,
+    name: "changelog",
+    results: {
+      baseBranch: { detected: "main", keep: "develop", status: "drift" },
+      // In config but unknown to every template — a complete review must show it.
+      extraKey: { keep: "kept-verbatim", status: "unknown-kept" },
+      issueKeys: { status: "unchanged" },
+      // In the template but not yet in config.json — rendered as "not set".
+      linearWorkspaceSlug: { status: "needs-manual-input" },
+    },
+  },
+];
+
+const DESCRIPTIONS = new Map([
+  [
+    "baseBranch",
+    {
+      detectionSource: "`git symbolic-ref …/HEAD`",
+      fallback: "`main`",
+      usedBy: "changelog, send-it",
+    },
+  ],
+]);
+
+describe("buildReviewReport", () => {
+  it("attaches current values, isSet, and descriptions per key", () => {
+    const report = buildReviewReport(REVIEW_INPUT, DESCRIPTIONS);
+
+    expect(report.mode).toBe("review");
+    expect(report.totals).toEqual({
+      drift: 1,
+      "needs-manual-input": 1,
+      unchanged: 1,
+      "unknown-kept": 1,
+    });
+
+    const keys = Object.fromEntries(
+      report.skills[0].keys.map((entry) => [entry.key, entry]),
+    );
+
+    // A drift key carries its current value plus its description.
+    expect(keys.baseBranch).toMatchObject({
+      detectionSource: "`git symbolic-ref …/HEAD`",
+      isSet: true,
+      status: "drift",
+      usedBy: "changelog, send-it",
+      value: "develop",
+    });
+
+    // A key detection doesn't know about is kept, with a null description.
+    expect(keys.extraKey).toMatchObject({
+      detectionSource: null,
+      isSet: true,
+      status: "unknown-kept",
+      usedBy: null,
+      value: "kept-verbatim",
+    });
+
+    // A template key not yet in config.json has no value and reports isSet false.
+    expect(keys.linearWorkspaceSlug.isSet).toBe(false);
+    expect("value" in keys.linearWorkspaceSlug).toBe(false);
+  });
+});
+
+describe("formatReview", () => {
+  it("renders the read-only header, values, statuses and descriptions", () => {
+    const text = formatReview(buildReviewReport(REVIEW_INPUT, DESCRIPTIONS));
+
+    expect(text).toContain("review (read-only)");
+    expect(text).toContain("skills/changelog/config.json");
+    expect(text).toContain('"develop"');
+    expect(text).toContain("unknown-kept");
+    expect(text).toContain(
+      "used by changelog, send-it — `git symbolic-ref …/HEAD`",
+    );
+    // A not-yet-set template key is shown as such.
+    expect(text).toContain("— not set");
+  });
+
+  it("flags an unparseable config in review too", () => {
+    const text = formatReview(
+      buildReviewReport(
+        [
+          {
+            config: {},
+            configPath: "skills/broken/config.json",
+            malformed: true,
+            name: "broken",
+            results: {},
+          },
+        ],
+        new Map(),
+      ),
+    );
     expect(text).toContain("⚠ existing config.json is unparseable — skipped");
   });
 });

@@ -19,7 +19,13 @@ import { discoverSkills, isPreflightInstalled } from "./lib/discover.mjs";
 import { reconcilePreflightIgnore } from "./lib/gitignore.mjs";
 import { serialiseConfig } from "./lib/jsonio.mjs";
 import { mergeConfig } from "./lib/merge.mjs";
-import { buildReport, formatHuman } from "./lib/report.mjs";
+import { loadDetectableKeys } from "./lib/references.mjs";
+import {
+  buildReport,
+  buildReviewReport,
+  formatHuman,
+  formatReview,
+} from "./lib/report.mjs";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { relative } from "node:path";
 
@@ -41,6 +47,7 @@ export function parseArgs(argv) {
   const options = {
     json: false,
     repoRoot: process.cwd(),
+    review: false,
     skillsDir: undefined,
     write: false,
   };
@@ -50,6 +57,11 @@ export function parseArgs(argv) {
       options.write = true;
     } else if (argument === "--dry-run") {
       options.write = false;
+    } else if (argument === "--review") {
+      // Read-only: report each skill's full current config, never write. The
+      // write path is force-disabled after the loop (below), so this stays
+      // read-only regardless of flag order.
+      options.review = true;
     } else if (argument === "--json") {
       options.json = true;
     } else if (argument === "--repo-root") {
@@ -62,6 +74,14 @@ export function parseArgs(argv) {
       console.error(`initialise-skills: unknown argument "${argument}"`);
       process.exit(2);
     }
+  }
+
+  // --review is strictly read-only: force the write path off no matter the flag
+  // order, so neither `--write --review` nor `--review --write` can leave both
+  // active (which would write config.json and then render a stale pre-write
+  // snapshot).
+  if (options.review) {
+    options.write = false;
   }
 
   return options;
@@ -138,7 +158,7 @@ function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
     console.log(
-      "Usage: node scripts/initialise.mjs [--dry-run|--write] [--json] [--repo-root <p>] [--skills-dir <p>]",
+      "Usage: node scripts/initialise.mjs [--dry-run|--write|--review] [--json] [--repo-root <p>] [--skills-dir <p>]",
     );
     return;
   }
@@ -187,11 +207,26 @@ function main() {
     }
 
     skillReports.push({
+      config: skill.config.data,
       configPath: relative(options.repoRoot, skill.configPath),
       malformed: false,
       name: skill.name,
       results,
     });
+  }
+
+  // Read-only review: the merge above classified every key without writing (the
+  // write branch is gated on --write). Render the full current config per skill,
+  // skipping the .gitignore reconcile — a review mutates nothing.
+  if (options.review) {
+    const descriptions = loadDetectableKeys();
+    const reviewReport = buildReviewReport(skillReports, descriptions);
+    console.log(
+      options.json
+        ? JSON.stringify(reviewReport, null, 2)
+        : formatReview(reviewReport),
+    );
+    return;
   }
 
   // One mutation outside config.json: ensure preflight's scratch output is

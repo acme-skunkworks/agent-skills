@@ -22,7 +22,7 @@ compatibility: >-
   config.example.json for its key set, so newly-added skills are picked up with no
   change here.
 metadata:
-  version: 0.6.2
+  version: 0.7.0
   author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(git:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---
@@ -134,12 +134,44 @@ reorders or removes existing lines. The dry-run report shows the pending edit
    `{ "root": "<bundle-dir>", "manifest": "package.json", "skillFile": "SKILL.md" }`
    — to enable the per-bundle version-bump check. Single-package repos skip this.
 
+## Reviewing an existing config
+
+To inspect what a repo's skills are currently configured with — without
+reconciling or writing anything — run the read-only review:
+
+```bash
+node <skills-dir>/initialise-skills/scripts/initialise.mjs --review
+```
+
+For each installed skill it prints its full `config.json`: every key's current
+value, its classification (`inferred` / `unchanged` / `drift` / `manual-kept` /
+`needs-manual-input` / `unknown-kept` — see the table above), and a one-line
+description of what the key is and where its value comes from, drawn from
+[`references/detectable-keys.md`](references/detectable-keys.md). Keys a consumer
+set that no skill template knows about show as `unknown-kept` (kept verbatim, no
+description), and template keys not yet present in `config.json` show as
+`— not set`, so the review is the whole picture rather than just the pending
+diff a dry-run would show. The human text shows each key's `used by … —
+<detection source>` line; the key's fallback default is carried in the `--json`
+form only, to keep the human table readable. Add `--json` for the
+machine-readable form (a `skills[]` array of `{ key, value, isSet, status,
+usedBy, detectionSource, fallback }` entries, plus `totals`). It never writes to
+disk and skips the `.gitignore` step.
+
 ## Flags
 
 - `--dry-run` (default) — detect, merge and report; write nothing.
 - `--write` — apply the reconcile to each skill's `config.json`.
-- `--json` — emit the machine-readable report (parse this to drive steps 2–3);
-  human text otherwise.
+- `--review` — **read-only.** Print every installed skill's full current config:
+  each key's current value, its classification (the same six statuses), and a
+  short description sourced from
+  [`references/detectable-keys.md`](references/detectable-keys.md). Unlike the
+  dry-run it shows the current value of every key — including `unknown-kept` keys
+  no template knows about — so it is a complete picture, not just the pending
+  diff. Writes nothing and skips the `.gitignore` step. See
+  [Reviewing an existing config](#reviewing-an-existing-config).
+- `--json` — emit the machine-readable report (parse this to drive steps 2–3, or
+  to consume the `--review` snapshot); human text otherwise.
 - `--repo-root <path>` — the host repo the detectors scan (default: cwd).
 - `--skills-dir <path>` — where the sibling bundles live (default: auto-detected
   relative to this script).
