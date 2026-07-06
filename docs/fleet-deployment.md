@@ -139,10 +139,14 @@ symlink drift.
 > `.agents/skills/` mirrors. Your reconciled values, including the deliberate
 > no-detector edits the detector can't reproduce, go with them.
 >
-> **Before** running step 3, restore the deleted (tracked) configs from the trunk:
+> **Before** running step 3, restore the deleted (tracked) configs from the trunk.
+> `git diff HEAD` catches the deletions whether or not they've been staged, and the
+> guard skips the restore cleanly on a first-ever install (nothing deleted → no
+> `git checkout … --` with an empty file list to error on):
 >
 > ```bash
-> git checkout origin/main -- $(git diff --name-only --diff-filter=D | grep 'config\.json$')
+> deleted=$(git diff HEAD --name-only --diff-filter=D | grep 'config\.json$')
+> [ -n "$deleted" ] && git checkout origin/main -- $deleted
 > ```
 >
 > Step 3 then merges any genuinely new keys in while keeping your restored values

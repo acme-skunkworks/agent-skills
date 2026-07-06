@@ -37,7 +37,8 @@ The "Re-install / upgrade behaviour" section now documents the deletion and a
 restore-from-trunk step to run **before** reconciling:
 
 ```bash
-git checkout origin/main -- $(git diff --name-only --diff-filter=D | grep 'config\.json$')
+deleted=$(git diff HEAD --name-only --diff-filter=D | grep 'config\.json$')
+[ -n "$deleted" ] && git checkout origin/main -- $deleted
 ```
 
 The caveat is threaded through the intro flow, Step 1's "Preserve" note, Step 3, and
