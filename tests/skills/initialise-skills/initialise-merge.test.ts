@@ -298,5 +298,42 @@ describe("mergeConfig", () => {
       expect(results.baseBranch.status).toBe("set");
       expect(changed).toBe(false);
     });
+
+    it("omits `from` for a key detection inferred but the config never held", () => {
+      // The documented "live detector + --set" case: issueKeys is absent from the
+      // config, so detection infers ["DEF","GHI"] into `data` *before* the --set
+      // loop runs. `from`/`had` must reflect the original config (here: unset →
+      // `from` omitted), not the in-run inferred value already sitting in `data`.
+      const { changed, data, results } = mergeConfig({
+        config: {}, // issueKeys unset — detection infers ["DEF","GHI"]
+        detect: detect(),
+        example,
+        set: { issueKeys: ["ONLY"] },
+      });
+      expect(results.issueKeys).toEqual({
+        status: "set",
+        write: ["ONLY"],
+      });
+      expect("from" in results.issueKeys).toBe(false);
+      expect(data.issueKeys).toEqual(["ONLY"]);
+      expect(changed).toBe(true);
+    });
+
+    it("records the original placeholder in `from`, not the value detection was about to infer", () => {
+      // issueKeys holds the example placeholder, so classifyKey infers
+      // ["DEF","GHI"] into `data` first. A same-key --set must report the *original*
+      // placeholder as `from`, not that inferred value.
+      const { results } = mergeConfig({
+        config: { issueKeys: ["ABC", "XYZ"] }, // example placeholder
+        detect: detect(),
+        example,
+        set: { issueKeys: ["ONLY"] },
+      });
+      expect(results.issueKeys).toEqual({
+        from: ["ABC", "XYZ"],
+        status: "set",
+        write: ["ONLY"],
+      });
+    });
   });
 });
