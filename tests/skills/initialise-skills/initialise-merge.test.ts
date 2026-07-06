@@ -335,5 +335,23 @@ describe("mergeConfig", () => {
         write: ["ONLY"],
       });
     });
+
+    it("recomputes changed=false when a --set restores a detector-inferred key to its original value", () => {
+      // Regression (A-728): detection infers ["DEF","GHI"] into `data` for the
+      // placeholder issueKeys, then a --set restores the original ["ABC","XYZ"].
+      // The intermediate inferred write is undone, so the net result equals the
+      // original config and `changed` must be false — not stuck true from the
+      // inferred write. Isolated to a single key so no other example key writes.
+      const { changed, data, results } = mergeConfig({
+        config: { issueKeys: ["ABC", "XYZ"] },
+        detect: (key) =>
+          key === "issueKeys" ? { value: ["DEF", "GHI"] } : null,
+        example: { issueKeys: ["ABC", "XYZ"] },
+        set: { issueKeys: ["ABC", "XYZ"] },
+      });
+      expect(results.issueKeys.status).toBe("set");
+      expect(data.issueKeys).toEqual(["ABC", "XYZ"]);
+      expect(changed).toBe(false);
+    });
   });
 });
