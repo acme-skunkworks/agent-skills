@@ -8,6 +8,7 @@
 // check-updates) is intentionally out of scope here — the self-test and manual
 // runbook cover it.
 import {
+  SOURCE_URL,
   buildInitialiseFacts,
   buildSkillsAddArgs,
   detectClobberedConfigs,
@@ -102,7 +103,7 @@ describe("resolveSkills + buildSkillsAddArgs", () => {
     });
     expect(args[0]).toBe("add");
     // The install source is the canonical URL, never a local path (A-718).
-    expect(args[1]).toBe("https://github.com/acme-skunkworks/agent-skills");
+    expect(args[1]).toBe(SOURCE_URL);
     expect(args).not.toContain("--skill");
     expect(args.filter((a) => a === "--agent")).toHaveLength(2);
     expect(args.at(-1)).toBe("--copy");
@@ -116,7 +117,7 @@ describe("resolveSkills + buildSkillsAddArgs", () => {
     });
     expect(args).toEqual([
       "add",
-      "https://github.com/acme-skunkworks/agent-skills",
+      SOURCE_URL,
       "--skill",
       "send-it",
       "--skill",
@@ -140,9 +141,7 @@ describe("buildInitialiseFacts", () => {
       },
       { ref: "v1.2.3" },
     );
-    expect(facts.lockSource).toBe(
-      "https://github.com/acme-skunkworks/agent-skills",
-    );
+    expect(facts.lockSource).toBe(SOURCE_URL);
     expect(facts.lockRef).toBe("v1.2.3");
     expect(facts.linearTeamName).toBe("Acme");
     expect(facts.linearWorkspaceSlug).toBe("acme");
@@ -153,7 +152,7 @@ describe("buildInitialiseFacts", () => {
     const { facts } = buildInitialiseFacts({ facts: {} }, { ref: "main" });
     expect(facts).toEqual({
       lockRef: "main",
-      lockSource: "https://github.com/acme-skunkworks/agent-skills",
+      lockSource: SOURCE_URL,
     });
   });
 });
