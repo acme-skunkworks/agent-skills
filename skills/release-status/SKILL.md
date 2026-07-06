@@ -8,7 +8,7 @@ description: >-
   required-check (🔬 Build & Lint) status, detect the recurring stale
   `autorelease: pending` stall on the last merged release PR (where release-please
   aborts and releases silently stop firing), and confirm tag-vs-version parity
-  (does a v<package.json version> tag already exist, or is a publish pending — the
+  (does a v<package.json version> tag already exist, or is publishing pending — the
   release.yml version-vs-tag gate). Use when asked why a release didn't fire, what
   version would cut next, whether the release PR is green, whether the pipeline is
   stalled, or to check release health. Advisory only — it inspects post-merge main
@@ -22,7 +22,7 @@ compatibility: >-
   road-runner-bot `release-orchestrator`), with a publish-only `release.yml`
   gated on a version-vs-tag check.
 metadata:
-  version: 0.1.1
+  version: 0.1.2
   author: Rob Easthope
 allowed-tools: Read, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*)
 ---
@@ -50,7 +50,7 @@ doing. The two never call each other. This skill may reference `send-it` in pros
 | **Version preview** | What bump and version would the merged Conventional-Commit PR titles since the last tag produce? | `feat:`→minor, `fix:`/`perf:`/`revert:`→patch, `!`/`BREAKING CHANGE:`→major; `docs`/`chore`/`ci`/`refactor`/`test`/`build`/`style`→none. The strongest wins. `none` means nothing release-triggering has merged since the last tag — no release will cut. |
 | **Release PR** | Is the `release-please--branches--main` PR open, and is its required check (`🔬 Build & Lint`) green? | If open and green, the orchestrator can squash-merge it. If the check is pending/red, the merge is blocked — chase that check. If none is open, release-please hasn't opened one (often because nothing release-triggering merged, or the pipeline is stalled — see below). |
 | **Stale `autorelease: pending`** | Does the **last merged** release PR still carry the `autorelease: pending` label? | This is the recurring stall: when a merged release PR keeps that label, release-please **aborts the next release** and the pipeline silently stops firing. Remediation: remove the label from that PR, then re-run the orchestrator (or wait for its cron tick). |
-| **Tag-vs-version parity** | Does a `v<package.json version>` tag already exist? | This is the `release.yml` **version-vs-tag gate**. Tag exists → clean no-op (this version is already published). Tag missing → a publish is **pending** for that version (the gate would run the publish path on the next `main` push). |
+| **Tag-vs-version parity** | Does a `v<package.json version>` tag already exist? | This is the `release.yml` **version-vs-tag gate**. Tag exists → clean no-op (this version is already published). Tag missing → **publishing is pending** for that version (the gate would run the publish path on the next `main` push). |
 
 ## Configuration
 
@@ -102,7 +102,7 @@ node scripts/release-status.mjs --self-test
 
 ### Step 1 — Confirm prerequisites
 
-`gh auth status` must pass and you must be inside (or pass `--repo` for) the target
+`gh auth status` must pass, and you must be inside (or pass `--repo` for) the target
 repository. The helper reads the root `package.json` version, the local tags, and
 queries `gh` for the release PR and merged PRs.
 
@@ -127,7 +127,7 @@ Map the signals to a diagnosis. The common shapes:
   is open-but-its-check-is-red (blocked at the gate).
 - **"What version cuts next?"** Read the version-preview block: the bump and the
   resulting `next` version. `none` means no release.
-- **"Is a publish pending?"** Read the parity block: a missing `v<version>` tag
+- **"Is publishing pending?"** Read the parity block: a missing `v<version>` tag
   means the next `main` push runs the publish path; a present tag means a clean
   no-op.
 
