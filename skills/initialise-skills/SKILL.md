@@ -151,9 +151,12 @@ description of what the key is and where its value comes from, drawn from
 set that no skill template knows about show as `unknown-kept` (kept verbatim, no
 description), and template keys not yet present in `config.json` show as
 `— not set`, so the review is the whole picture rather than just the pending
-diff a dry-run would show. Add `--json` for the machine-readable form (a `skills[]`
-array of `{ key, value, isSet, status, usedBy, detectionSource, fallback }`
-entries, plus `totals`). It never writes to disk and skips the `.gitignore` step.
+diff a dry-run would show. The human text shows each key's `used by … —
+<detection source>` line; the key's fallback default is carried in the `--json`
+form only, to keep the human table readable. Add `--json` for the
+machine-readable form (a `skills[]` array of `{ key, value, isSet, status,
+usedBy, detectionSource, fallback }` entries, plus `totals`). It never writes to
+disk and skips the `.gitignore` step.
 
 ## Flags
 

@@ -201,9 +201,11 @@ export function formatHuman(report) {
  *   name: string,
  *   configPath: string,
  *   malformed: boolean,
- *   config: Record<string, unknown>,
+ *   config?: Record<string, unknown>,
  *   results: Record<string, import('./merge.mjs').KeyResult>,
  * }} SkillReview
+ * `config` is absent on the malformed stub (it has no parseable config.json);
+ * `buildReviewReport` defaults it to `{}`.
  */
 
 /**
