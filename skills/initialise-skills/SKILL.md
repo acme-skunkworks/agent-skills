@@ -15,16 +15,13 @@ description: >-
   leaves files byte-identical.
 license: MIT
 compatibility: >-
-  Requires the `git` CLI (for base-branch and issue-key detection) and Node.js
-  ≥22 for the bundled scripts (no npm dependencies — Node built-ins only, no build
-  step). The Linear team name and workspace slug are fetched via the Linear MCP
-  server when available; without it, those two values are flagged for manual
-  input and everything else is still detected. Reads each installed skill's
-  config.example.json for its key set, so newly-added skills are picked up with no
-  change here. The GitHub App / `CLAUDE_CODE_OAUTH_TOKEN` check is optional and
-  best-effort: it uses the `gh` CLI when it is authenticated with repo-admin scope,
-  and degrades to a plain textual reminder when `gh` is absent or lacks permission —
-  it is never a hard requirement.
+  Requires the `git` CLI (base-branch and issue-key detection) and Node.js ≥22
+  for the bundled scripts (Node built-ins only — no npm deps, no build step). The
+  Linear team name and workspace slug come from the Linear MCP server when
+  available, else are flagged for manual input; everything else is still
+  detected. Reads each skill's config.example.json for its key set. The GitHub
+  App / token check is optional — it uses `gh` when authenticated, else falls
+  back to a reminder.
 metadata:
   version: 0.10.0
   author: Rob Easthope
