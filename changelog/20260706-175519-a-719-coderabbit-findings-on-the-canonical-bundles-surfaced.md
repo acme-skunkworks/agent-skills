@@ -23,14 +23,14 @@ stats:
 
 CodeRabbit's review of the [A-681](https://linear.app/acme-skunkworks/issue/A-681) Wave B re-vendor flagged defects in the canonical
 bundle *source* (sibling of [A-710](https://linear.app/acme-skunkworks/issue/A-710), which covered Wave A). Per the
-[A-573](https://linear.app/acme-skunkworks/issue/A-573) disposition these are fixed upstream here and propagate to consumers on the
+[A-573](https://linear.app/acme-skunkworks/issue/A-573) disposition, these are fixed upstream here and propagate to consumers on the
 next sync.
 
 **`commit` (0.1.1 → 0.1.2) — fresh-branch out-of-scope guard.** [A-710](https://linear.app/acme-skunkworks/issue/A-710) tightened the
 directory-only leak but kept the fresh-branch escape hatch: on a branch with no
 commits of its own, *every* uncommitted file was treated as in-scope. That reopened
 the exact leak the guard exists to close — a stray file left by another branch or
-worktree would be swept in silently. With no branch history there is nothing to
+worktree would be swept in silently. With no branch history, there is nothing to
 distinguish the user's own work from a stray file, so all uncommitted files now land
 in the uncertain bucket and require confirmation before staging.
 
