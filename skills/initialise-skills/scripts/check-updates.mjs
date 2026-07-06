@@ -328,6 +328,17 @@ function main() {
     }
   }
 
+  // Working-tree mode (no --ref) diffs against <source>/skills. If that directory
+  // is missing — a mistyped --source, or a checkout without the bundles — the target
+  // set comes back empty, every locked skill is misreported as "removed", yet the
+  // summary still claims "up to date" (updatesAvailable keys off updates.length,
+  // not removed). Fail loudly instead of silently reporting a false clean bill.
+  if (!options.ref && !existsSync(join(options.source, "skills"))) {
+    fail(
+      `no skills/ directory in ${options.source} — is --source a full agent-skills checkout?`,
+    );
+  }
+
   const lockPathResolved =
     options.lock ?? join(process.cwd(), ".claude", "skills.lock");
   if (!existsSync(lockPathResolved)) {

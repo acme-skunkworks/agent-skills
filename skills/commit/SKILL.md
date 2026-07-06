@@ -17,7 +17,7 @@ compatibility: >-
   dependency; the grouping logic is model-driven and this prose is the source of
   truth.
 metadata:
-  version: 0.1.0
+  version: 0.1.1
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*)
 ---
@@ -65,12 +65,19 @@ classification against a **different** base for that run — for instance send-i
    diff` and `git diff --cached` for the hunks.
 3. **Filter for branch relevance.** Decide which uncommitted files are in scope:
    - Compute the merge base: `git merge-base HEAD origin/<base>`.
-   - Files the branch already touches: `git diff --name-only <merge-base>...HEAD`.
-   - **In scope** by default: any uncommitted file already touched on the branch,
-     or sitting in a directory the branch already touches, or any uncommitted file
-     when the branch has no commits yet (first run on a fresh branch).
-   - **Out of scope** (suspicious): uncommitted files in directories the branch
-     hasn't touched, when the branch already has its own commits.
+   - Files the branch has already touched **directly**: `git diff --name-only
+     <merge-base>...HEAD`.
+   - **In scope** by default: an uncommitted file whose path is in that
+     branch-touched list, or — when the branch has no commits of its own yet (first
+     run on a fresh branch) — any uncommitted file.
+   - **Out of scope** (uncertain): everything else once the branch has its own
+     commits. This deliberately includes a file that merely **sits in a directory
+     the branch has touched** but is not itself a path the branch changed — a shared
+     directory is not enough to claim a file. A stray file from another branch or
+     worktree can easily land in a directory this branch happens to have edited, and
+     silently sweeping it in is exactly the out-of-scope leak this guard exists to
+     prevent. Treat directory-only matches as out of scope unless the user
+     explicitly confirms them.
 4. Show the user the staging plan: in-scope files grouped by proposed commit, plus
    an explicit list of **out-of-scope files** flagged as "uncertain — possibly from
    another branch/worktree." Ask: "Stage in-scope files and create the commits

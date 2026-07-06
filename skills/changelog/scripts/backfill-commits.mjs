@@ -28,16 +28,12 @@
 // Zero-dep: composes the bundle's own lib modules and the vendored frontmatter
 // parser, so it runs under bare `node`.
 
+import { isCliEntry } from "./lib/cli-entry.mjs";
 import { nonMergeCommitCount } from "./lib/commit-count.mjs";
 import { loadConfig } from "./lib/config.mjs";
 import { parseFrontmatter } from "./lib/frontmatter.mjs";
 import { execFileSync } from "node:child_process";
-import {
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  writeFileSync,
-} from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { argv } from "node:process";
 
@@ -271,20 +267,7 @@ function main() {
 }
 
 // Only run the filesystem pass when invoked as a CLI, not when imported by
-// tests. realpathSync on both sides so a symlinked entrypoint (macOS
-// /var→/private/var, pnpm's store) isn't a false negative that skips main().
-function isCliEntry() {
-  if (!argv[1]) {
-    return false;
-  }
-
-  try {
-    return realpathSync(import.meta.filename) === realpathSync(argv[1]);
-  } catch {
-    return false;
-  }
-}
-
-if (isCliEntry()) {
+// tests.
+if (isCliEntry(import.meta.filename)) {
   main();
 }
