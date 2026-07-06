@@ -93,6 +93,51 @@ describe("formatHuman", () => {
   });
 });
 
+const SET_REPORTS = [
+  {
+    configPath: "skills/changelog/config.json",
+    malformed: false,
+    name: "changelog",
+    results: {
+      baseBranch: { from: "main", status: "set", write: "develop" },
+      // A --set on a previously-unset key: no `from`.
+      changelogDir: { status: "set", write: "docs/changes" },
+    },
+  },
+];
+
+describe("--set in the report", () => {
+  it("collects set keys into totals and a setKeys bucket", () => {
+    const report = buildReport(SET_REPORTS, false);
+    expect(report.totals.set).toBe(2);
+    expect(report.setKeys).toEqual([
+      {
+        configPath: "skills/changelog/config.json",
+        key: "baseBranch",
+        skill: "changelog",
+        value: "develop",
+      },
+      {
+        configPath: "skills/changelog/config.json",
+        key: "changelogDir",
+        skill: "changelog",
+        value: "docs/changes",
+      },
+    ]);
+  });
+
+  it("renders the set line with the replaced value and a dry-run hint", () => {
+    const text = formatHuman(buildReport(SET_REPORTS, false));
+    expect(text).toContain('set to "develop" (was "main")');
+    expect(text).toContain('set to "docs/changes"');
+    // The previously-unset key shows no "(was …)" clause.
+    expect(text).not.toContain('set to "docs/changes" (was');
+    expect(text).toContain(
+      "2 key(s) will be set via --set: changelog.baseBranch, changelog.changelogDir. Re-run with --write to apply.",
+    );
+  });
+});
+
 const REVIEW_INPUT = [
   {
     config: {

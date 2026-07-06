@@ -67,6 +67,31 @@ describe("parseArgs", () => {
       write: false,
     });
   });
+
+  it("defaults --set to an empty list", () => {
+    expect(parseArgs([]).set).toEqual([]);
+  });
+
+  it("collects a --set assignment as a raw string", () => {
+    expect(parseArgs(["--set", "changelog.baseBranch=develop"]).set).toEqual([
+      "changelog.baseBranch=develop",
+    ]);
+  });
+
+  it("accumulates repeated --set flags in order", () => {
+    const options = parseArgs([
+      "--set",
+      "changelog.baseBranch=develop",
+      "--write",
+      "--set",
+      "cleanup-repo.mainBranch=trunk",
+    ]);
+    expect(options.set).toEqual([
+      "changelog.baseBranch=develop",
+      "cleanup-repo.mainBranch=trunk",
+    ]);
+    expect(options.write).toBe(true);
+  });
 });
 
 describe("asKeyList", () => {
