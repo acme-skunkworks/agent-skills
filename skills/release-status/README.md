@@ -19,9 +19,12 @@ npx skills add https://github.com/acme-skunkworks/agent-skills --skill release-s
 
 ## Configure
 
-This skill ships only [`config.example.json`](config.example.json), a template —
-the per-skill `config.json` is generated on install, not vendored. Run the
-`initialise-skills` skill to generate `config.json`, or copy the example to
+In the **source** repo this skill ships only
+[`config.example.json`](config.example.json), a template — the per-skill
+`config.json` is generated on install, never vendored from source. In a **consumer**
+repo the resolved `config.json` **is** committed alongside the vendored bundle (it
+holds that repo's real values and SKILL.md reads it as required runtime config).
+Generate it by running the `initialise-skills` skill, or copy the example to
 `config.json`, then edit it in your installed copy:
 
 | Key | Meaning | Default |

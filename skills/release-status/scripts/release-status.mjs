@@ -304,10 +304,19 @@ function readTags() {
     .filter(Boolean);
 }
 
+// Upper bound for the merged-PR window. This tool diagnoses a *stalled* pipeline —
+// exactly when a large backlog may have merged since the last tag — so the old
+// `--limit 100` could truncate the window, under-report `mergedPrCount`, and (since
+// `gh pr list --search` isn't guaranteed merge-date sorted) drop the strongest-bump
+// title and mis-classify the release. gh auto-paginates up to `--limit`, so a high
+// bound simply pages until exhausted for any realistic backlog.
+const MERGED_PR_LIMIT = 1000;
+
 /**
  * List merged PRs since the last tag, newest first, as `{ title, body, mergedAt,
  * number }`. The window is anchored on the last tag's commit date so only
- * post-release titles count toward the next bump.
+ * post-release titles count toward the next bump, and scoped to PRs merged into the
+ * trunk (`--base <mainBranch>`) so a non-`main` trunk is honoured.
  *
  * `gh`'s `merged:>=<date>` filter only honours **day** precision, so it is used as
  * a coarse lower bound (the tag's UTC calendar day) and the results are re-filtered
@@ -315,7 +324,7 @@ function readTags() {
  * same calendar day as the tag slips past the day-only bound and is counted twice:
  * once in the release it already shipped in, and again toward the next bump.
  */
-function fetchMergedPrsSinceLastTag(repo) {
+function fetchMergedPrsSinceLastTag(repo, mainBranch) {
   let sinceDate = null; // day-granularity lower bound for gh's `merged:` search
   let sinceTimestamp = null; // full ISO tag time for the precise post-filter
   try {
@@ -347,10 +356,12 @@ function fetchMergedPrsSinceLastTag(repo) {
     "list",
     "--repo",
     repo,
+    "--base",
+    mainBranch,
     "--state",
     "merged",
     "--limit",
-    "100",
+    String(MERGED_PR_LIMIT),
     "--json",
     "title,body,mergedAt,number",
   ];
@@ -359,6 +370,15 @@ function fetchMergedPrsSinceLastTag(repo) {
   }
 
   const prs = JSON.parse(run("gh", args));
+
+  // If the window filled the cap, the diagnosis may be built on a truncated set —
+  // warn (to stderr, so `--json` stdout stays clean) rather than silently under-report.
+  if (prs.length >= MERGED_PR_LIMIT) {
+    console.error(
+      `release-status: merged-PR window hit the ${MERGED_PR_LIMIT}-PR cap — the bump ` +
+        "preview may be based on a truncated set.",
+    );
+  }
 
   // gh's day-granularity `merged:>=` includes PRs merged earlier on the tag's own
   // day; drop everything merged at or before the precise tag timestamp so only
@@ -377,13 +397,15 @@ function fetchMergedPrsSinceLastTag(repo) {
  * Find the open release PR on the release branch (or null). Includes its
  * required-check rollup so the caller can read the gate state in one call.
  */
-function fetchOpenReleasePr(repo, releaseBranch) {
+function fetchOpenReleasePr(repo, releaseBranch, mainBranch) {
   const list = JSON.parse(
     run("gh", [
       "pr",
       "list",
       "--repo",
       repo,
+      "--base",
+      mainBranch,
       "--state",
       "open",
       "--head",
@@ -401,13 +423,15 @@ function fetchOpenReleasePr(repo, releaseBranch) {
  * Find the most recently merged release PR on the release branch (or null), with
  * its labels — the input to the stale-pending detector.
  */
-function fetchLastMergedReleasePr(repo, releaseBranch) {
+function fetchLastMergedReleasePr(repo, releaseBranch, mainBranch) {
   const list = JSON.parse(
     run("gh", [
       "pr",
       "list",
       "--repo",
       repo,
+      "--base",
+      mainBranch,
       "--state",
       "merged",
       "--head",
@@ -431,11 +455,15 @@ function gather(options, config) {
   const tags = readTags();
   const parity = tagParity(version, tags);
 
-  const mergedPrs = fetchMergedPrsSinceLastTag(repo);
+  const mergedPrs = fetchMergedPrsSinceLastTag(repo, config.mainBranch);
   const bump = previewBump(mergedPrs);
   const nextVersion = applyBump(version, bump);
 
-  const openReleasePr = fetchOpenReleasePr(repo, config.releaseBranch);
+  const openReleasePr = fetchOpenReleasePr(
+    repo,
+    config.releaseBranch,
+    config.mainBranch,
+  );
   const requiredCheck = openReleasePr
     ? requiredCheckState(openReleasePr.statusCheckRollup, config.requiredCheck)
     : { conclusion: null, found: false, state: null };
@@ -443,6 +471,7 @@ function gather(options, config) {
   const lastMergedReleasePr = fetchLastMergedReleasePr(
     repo,
     config.releaseBranch,
+    config.mainBranch,
   );
   const stalePending = detectStalePending(
     lastMergedReleasePr,
