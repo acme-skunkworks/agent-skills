@@ -9,7 +9,7 @@
 // separate, human-run `fleet-wipe.mjs` path.
 //
 // Per profile it runs, against the target consumer repo:
-//   1. skills add <source> --skill … --agent … --copy   (vendor the bundles)
+//   1. skills add <github-url> --skill … --agent … --copy  (vendor the bundles)
 //   2. restore the per-skill config.json that --copy clobbers (A-706 — the real
 //      fix never shipped; agent-skills gitignores its own config.json (A-615), so
 //      a --copy re-vendor deletes or overwrites the consumer's tracked configs),
@@ -45,11 +45,15 @@ import { join, relative, resolve } from "node:path";
 
 // The GitHub URL the vendored bundles are attributed to (skills.lock `source`).
 // Provenance only — the install itself uses the local checkout (see SOURCE_DEFAULT).
+// The canonical install source: `skills add` vendors from this URL and records it
+// (as `sourceType: remote`) in the consumer's skills-lock.json. Installing from a
+// local path instead would leak an absolute machine path into every consumer
+// (A-718). Also the skills.lock `lockSource`.
 const SOURCE_URL = "https://github.com/acme-skunkworks/agent-skills";
 
-// The local agent-skills checkout this script lives in. It doubles as the install
-// source (a local-path `skills add` pins the install to this checkout's ref —
-// skills.sh has no --ref flag, ADR-0001 Decision 4) and as `check-updates --source`.
+// The local agent-skills checkout this script lives in — used ONLY as the
+// `check-updates --source` (a local checkout to read target versions from); the
+// install itself comes from SOURCE_URL. Overridable via --source.
 const SOURCE_DEFAULT = join(import.meta.dirname, "..", "..");
 
 // The shared skill set (mirrors docs/fleet-deployment.md). Only used to subtract
@@ -92,7 +96,7 @@ Usage:
 
 Options:
   --profile <file>   Install-profile JSON (see docs/fleet-deployment.md). Omit to read stdin.
-  --source <path>    agent-skills checkout to install from (default: this script's repo).
+  --source <path>    agent-skills checkout check-updates verifies against (default: this script's repo). The install itself vendors from the GitHub URL.
   --ref <ref>        Target ref recorded in skills.lock and diffed by verify (default: main).
   --apply            Actually mutate the target repo (default: preview only).
   --dry-run          Explicit preview (the default).`;
@@ -187,19 +191,23 @@ export function resolveSkills(profile) {
 
 /**
  * Build the `npx` argv (excluding the leading "skills") for the --copy install:
- * `add <source> [--skill X]… [--agent Y]… --copy`. A null skill list omits
- * --skill entirely (install all). Pure — constructs argv, spawns nothing.
+ * `add <SOURCE_URL> [--skill X]… [--agent Y]… --copy`. The install source is the
+ * canonical GitHub URL, NOT the local checkout: skills.sh writes the source it was
+ * given into the consumer's `skills-lock.json`, so a local path would commit an
+ * absolute machine path + `sourceType: local` into every consumer (A-718). A URL
+ * install resolves the default branch — right for the recurring roll-onto-latest
+ * fan-out. A null skill list omits --skill entirely (install all). Pure —
+ * constructs argv, spawns nothing.
  * @param {{ skills: string[] | undefined, agents: string[], repoType: string }} profile
- * @param {string} source
  * @returns {string[]}
  */
-export function buildSkillsAddArgs(profile, source) {
+export function buildSkillsAddArgs(profile) {
   const skills = resolveSkills(profile);
   const skillFlags = skills
     ? skills.flatMap((skill) => ["--skill", skill])
     : [];
   const agentFlags = profile.agents.flatMap((agent) => ["--agent", agent]);
-  return ["add", source, ...skillFlags, ...agentFlags, "--copy"];
+  return ["add", SOURCE_URL, ...skillFlags, ...agentFlags, "--copy"];
 }
 
 /**
@@ -590,7 +598,7 @@ function main(argv) {
   const facts = buildInitialiseFacts(profile, { ref });
 
   if (options.apply) {
-    runSkillsAdd(consumer, buildSkillsAddArgs(profile, source));
+    runSkillsAdd(consumer, buildSkillsAddArgs(profile));
     restoreClobberedConfigs(consumer);
     const installedDirectories = findConsumerSkillsDirectories(consumer);
     if (installedDirectories.length === 0) {
@@ -609,7 +617,7 @@ function main(argv) {
   // Preview: skills.sh has no dry-run and the restore mutates, so both are
   // described only; initialise/check-updates are read-only and run for real
   // against whatever bundles the consumer already has.
-  const addArgs = buildSkillsAddArgs(profile, source);
+  const addArgs = buildSkillsAddArgs(profile);
   console.log(`fleet-update: would run — skills ${addArgs.join(" ")}`);
   console.log(
     "fleet-update: would restore any config.json --copy clobbers (A-706).",
@@ -683,31 +691,25 @@ function selfTest() {
     });
 
     // buildSkillsAddArgs.
-    const allArgs = buildSkillsAddArgs(
-      {
-        agents: ["claude-code", "cursor"],
-        repoType: "single",
-        skills: undefined,
-      },
-      "/src",
-    );
+    const allArgs = buildSkillsAddArgs({
+      agents: ["claude-code", "cursor"],
+      repoType: "single",
+      skills: undefined,
+    });
     cases.push({
-      name: "buildSkillsAddArgs omits --skill for all, fans out agents, ends --copy",
+      name: "buildSkillsAddArgs installs from the URL, omits --skill, fans out agents, ends --copy",
       ok:
         allArgs[0] === "add" &&
-        allArgs[1] === "/src" &&
+        allArgs[1] === SOURCE_URL &&
         !allArgs.includes("--skill") &&
         allArgs.filter((a) => a === "--agent").length === 2 &&
         allArgs.at(-1) === "--copy",
     });
-    const subsetArgs = buildSkillsAddArgs(
-      {
-        agents: ["claude-code"],
-        repoType: "single",
-        skills: ["send-it", "commit"],
-      },
-      "/src",
-    );
+    const subsetArgs = buildSkillsAddArgs({
+      agents: ["claude-code"],
+      repoType: "single",
+      skills: ["send-it", "commit"],
+    });
     cases.push({
       name: "buildSkillsAddArgs emits explicit --skill pairs for a subset",
       ok:

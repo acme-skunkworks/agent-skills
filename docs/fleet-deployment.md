@@ -235,13 +235,15 @@ echo '{"repo":"…","agents":["claude-code"]}' \
   | node infrastructure/scripts/fleet-update.mjs --apply
 ```
 
-It vendors the bundles from the agent-skills checkout it runs inside (so the
-install is pinned to that ref — skills.sh has no `--ref`), **restores every
-`config.json` the `--copy` re-vendor clobbers** from the consumer's trunk
-(`git checkout HEAD -- …`, baking in the A-706 workaround so no-detector keys
-survive), reconciles with `initialise-skills`, and verifies with `check-updates`
-that the repo is now current (`updatesAvailable === false` — the idempotency
-gate). A re-run is a clean no-op.
+It vendors the bundles from the canonical GitHub URL — **not** the local checkout,
+so the consumer's `skills-lock.json` records a clean remote source rather than an
+absolute machine path (A-718); a URL install resolves the default branch, which is
+what the roll-onto-latest fan-out wants. It **restores every `config.json` the
+`--copy` re-vendor clobbers** from the consumer's trunk (`git checkout HEAD -- …`,
+baking in the A-706 workaround so no-detector keys survive), reconciles with
+`initialise-skills`, and verifies with `check-updates` (pointed at the local
+checkout via `--source`) that the repo is now current (`updatesAvailable === false`
+— the idempotency gate). A re-run is a clean no-op.
 
 The script **holds no repo list.** It takes one repo's profile as input and is
 meant to run inside the private release-orchestrator's fan-out (A-713), whose

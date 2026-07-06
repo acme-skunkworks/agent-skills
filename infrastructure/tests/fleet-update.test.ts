@@ -94,34 +94,29 @@ describe("resolveSkills + buildSkillsAddArgs", () => {
     ]);
   });
 
-  it("omits --skill, fans out agents, and ends with --copy for install-all", () => {
-    const args = buildSkillsAddArgs(
-      {
-        agents: ["claude-code", "cursor"],
-        repoType: "single",
-        skills: undefined,
-      },
-      "/src",
-    );
+  it("installs from the GitHub URL, omits --skill, fans out agents, ends --copy", () => {
+    const args = buildSkillsAddArgs({
+      agents: ["claude-code", "cursor"],
+      repoType: "single",
+      skills: undefined,
+    });
     expect(args[0]).toBe("add");
-    expect(args[1]).toBe("/src");
+    // The install source is the canonical URL, never a local path (A-718).
+    expect(args[1]).toBe("https://github.com/acme-skunkworks/agent-skills");
     expect(args).not.toContain("--skill");
     expect(args.filter((a) => a === "--agent")).toHaveLength(2);
     expect(args.at(-1)).toBe("--copy");
   });
 
   it("emits explicit --skill pairs for a subset", () => {
-    const args = buildSkillsAddArgs(
-      {
-        agents: ["claude-code"],
-        repoType: "single",
-        skills: ["send-it", "commit"],
-      },
-      "/src",
-    );
+    const args = buildSkillsAddArgs({
+      agents: ["claude-code"],
+      repoType: "single",
+      skills: ["send-it", "commit"],
+    });
     expect(args).toEqual([
       "add",
-      "/src",
+      "https://github.com/acme-skunkworks/agent-skills",
       "--skill",
       "send-it",
       "--skill",
