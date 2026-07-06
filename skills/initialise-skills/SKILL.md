@@ -168,19 +168,25 @@ This is the foundation for detecting which repos are behind — see
    **`CLAUDE_CODE_OAUTH_TOKEN`, not `ANTHROPIC_API_KEY`**.
 
    Probe for the secret (best-effort — skip silently if `gh` is unavailable or
-   unauthenticated; a repo that runs no Claude workflows needs neither):
+   unauthenticated; a repo that runs no Claude workflows needs neither). Run the
+   listing and the name-check as **two separate steps** and read each result — do
+   **not** collapse them into one `gh … | grep` pipe, which would report the same
+   failure for a `gh` error and a genuine absence, hiding the can't-verify case:
 
    ```bash
-   gh secret list --repo <owner>/<repo> --app actions | grep -q CLAUDE_CODE_OAUTH_TOKEN
+   # step 1 — list the repo's Actions secrets; a non-zero exit here is "can't verify"
+   gh secret list --repo <owner>/<repo> --app actions
+   # step 2 — only when step 1 succeeded, check whether the name is in that output
    ```
 
-   - **present** (exit 0) → report OK; nothing to do.
-   - **absent** (grep finds nothing) → **warn** and remind the operator to run
-     **`/install-github-app`**, which installs the App and adds the secret.
-   - **can't verify** (the `gh` call itself errors — e.g. a `403` without repo-admin
-     scope, or `gh` not installed) → surface it as "couldn't verify the token —
-     please confirm `CLAUDE_CODE_OAUTH_TOKEN` is set manually", **never block or fail
-     the run**. A can't-tell is not an absence.
+   - **present** (step 1 succeeds and lists the name) → report OK; nothing to do.
+   - **absent** (step 1 succeeds but the name is missing) → **warn** and remind the
+     operator to run **`/install-github-app`**, which installs the App and adds the
+     secret.
+   - **can't verify** (step 1 itself errors — e.g. a `403` without repo-admin scope,
+     or `gh` not installed) → surface it as "couldn't verify the token — please
+     confirm `CLAUDE_CODE_OAUTH_TOKEN` is set manually", **never block or fail the
+     run**. A can't-tell is not an absence.
 
    The App install itself can't be reliably introspected without the App's own token,
    so the secret's presence is the reliable proxy; the `/install-github-app` reminder
