@@ -185,6 +185,13 @@ function fail(message) {
  * Read a path at a git ref from the source checkout, or null when it's absent at
  * that ref (a new/removed bundle). `git -C <dir> show <ref>:<path>` — the ref
  * never reaches a shell (execFileSync), so it's injection-safe.
+ *
+ * A genuinely-absent path is the expected null — git exits non-zero and says so on
+ * stderr ("does not exist" / "exists on disk, but not in"). Any *other* failure
+ * (`git` off PATH → ENOENT, a corrupt object, permissions) would otherwise be
+ * misread as "absent" — silently degrading the version diff — so it is warned about
+ * (still returning null) rather than swallowed. stderr is piped (not inherited) so
+ * git's own fatal line doesn't leak to the terminal on the expected-absent path.
  */
 function gitShow(sourceDirectory, ref, path) {
   try {
@@ -194,9 +201,20 @@ function gitShow(sourceDirectory, ref, path) {
       {
         encoding: "utf8",
         maxBuffer: 10 * 1024 * 1024,
+        stdio: ["ignore", "pipe", "pipe"],
       },
     );
-  } catch {
+  } catch (error) {
+    const stderr = typeof error?.stderr === "string" ? error.stderr : "";
+    const isAbsent = /does not exist|exists on disk, but not in/.test(stderr);
+    if (!isAbsent) {
+      console.warn(
+        `check-updates: could not read ${path} at ${ref} — ${
+          error?.message ?? error
+        }${stderr ? `\n${stderr.trim()}` : ""}`,
+      );
+    }
+
     return null;
   }
 }

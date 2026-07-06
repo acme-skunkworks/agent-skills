@@ -227,23 +227,30 @@ export function mergeConfig({
   // has already validated each key against config.example.json and coerced the
   // value, so we apply it verbatim and authoritatively — `data[key]` always ends
   // up exactly what was asked for, so the persisted value matches the reported
-  // `write`. `changed` flips on an EXACT (`deepEqual`) difference, not the
-  // set-aware `valuesEqual`: for a set-semantic key (`issueKeys`) a reordering
-  // `--set` is a genuine change the user asked for, and reusing `valuesEqual`
-  // would report `set` while silently keeping the old order. An identical value
-  // still leaves `changed` false, so a repeated `--set` stays a no-op; `from`
-  // records the value replaced so the report can show "was …".
+  // `write`. `had`/`from` and the `changed` comparison read the ORIGINAL `config`,
+  // not `data`: when a key has both a live detector and a `--set` (the documented
+  // "detection still runs and your values are layered on top" case) an earlier
+  // `inferred` write has already mutated `data[key]`, so reading `data` would report
+  // the in-run inferred value — not the real previous `config.json` value — and mark
+  // `had` true for a never-previously-set key. `changed` flips on an EXACT
+  // (`deepEqual`) difference from the original config, not the set-aware
+  // `valuesEqual`: for a set-semantic key (`issueKeys`) a reordering `--set` is a
+  // genuine change the user asked for, and reusing `valuesEqual` would report `set`
+  // while silently keeping the old order. An identical value still leaves `changed`
+  // false, so a repeated `--set` stays a no-op; `from` records the replaced config
+  // value so the report can show "was …".
+  const original = config ?? {};
   for (const [key, value] of Object.entries(set)) {
-    const had = Object.prototype.hasOwnProperty.call(data, key);
+    const had = Object.prototype.hasOwnProperty.call(original, key);
     /** @type {KeyResult} */
     const result = { status: "set", write: value };
     if (had) {
-      result.from = data[key];
+      result.from = original[key];
     }
 
     results[key] = result;
 
-    if (!had || !deepEqual(data[key], value)) {
+    if (!had || !deepEqual(original[key], value)) {
       changed = true;
     }
 
