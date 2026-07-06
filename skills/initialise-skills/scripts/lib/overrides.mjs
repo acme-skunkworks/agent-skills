@@ -82,6 +82,16 @@ export function jsonType(value) {
 }
 
 /**
+ * A JSON type tag with the grammatically-correct indefinite article, so the
+ * type-mismatch error reads "an array" / "an object" rather than "a array".
+ * @param {ReturnType<typeof jsonType>} type
+ * @returns {string}
+ */
+function withArticle(type) {
+  return `${/^[aeiou]/.test(type) ? "an" : "a"} ${type}`;
+}
+
+/**
  * Validate a list of raw `--set` arguments against the installed skills and
  * resolve them into a per-skill override map. Each argument must parse, name an
  * installed skill, name a key in that skill's config.example.json, and coerce to
@@ -139,7 +149,7 @@ export function resolveOverrides(rawSetArgs, skills) {
     const gotType = jsonType(value);
     if (wantType !== gotType) {
       errors.push(
-        `--set "${skillName}.${key}": expected a ${wantType} value but got ${gotType} (${JSON.stringify(value)})`,
+        `--set "${skillName}.${key}": expected ${withArticle(wantType)} value but got ${withArticle(gotType)} (${JSON.stringify(value)})`,
       );
       continue;
     }

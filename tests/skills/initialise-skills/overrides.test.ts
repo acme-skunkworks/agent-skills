@@ -157,13 +157,13 @@ describe("resolveOverrides", () => {
       skills,
     );
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toMatch(/expected a boolean value but got string/);
+    expect(errors[0]).toMatch(/expected a boolean value but got a string/);
   });
 
   it("rejects a scalar into an array field (bare A is not a JSON array)", () => {
     const { errors } = resolveOverrides(["changelog.issueKeys=A"], skills);
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toMatch(/expected a array value but got string/);
+    expect(errors[0]).toMatch(/expected an array value but got a string/);
   });
 
   it("collects a malformed assignment as an error without throwing", () => {
