@@ -43,6 +43,16 @@ describe("parseArgs", () => {
   it("sets help and ignores the rest", () => {
     expect(parseArgs(["--help"]).help).toBe(true);
   });
+
+  it("reads --review as a read-only mode that leaves write off", () => {
+    const options = parseArgs(["--review"]);
+    expect(options.review).toBe(true);
+    expect(options.write).toBe(false);
+  });
+
+  it("defaults review to false", () => {
+    expect(parseArgs([]).review).toBe(false);
+  });
 });
 
 describe("asKeyList", () => {
