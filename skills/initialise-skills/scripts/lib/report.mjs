@@ -23,11 +23,13 @@ const STATUS_LABEL = {
   inferred: "inferred",
   "manual-kept": "manual-kept",
   "needs-manual-input": "needs-manual-input",
+  set: "set",
   unchanged: "unchanged",
   "unknown-kept": "unknown-kept",
 };
 
 const STATUS_ORDER = [
+  "set",
   "inferred",
   "drift",
   "needs-manual-input",
@@ -76,6 +78,7 @@ export function buildReport(skillReports, wrote, gitignore = null) {
   const totals = {};
   const driftKeys = [];
   const manualKeys = [];
+  const setKeys = [];
 
   const skills = skillReports.map((skillReport) => {
     const keys = Object.entries(skillReport.results).map(([key, result]) => {
@@ -87,6 +90,15 @@ export function buildReport(skillReports, wrote, gitignore = null) {
           kept: result.keep,
           key,
           skill: skillReport.name,
+        });
+      }
+
+      if (result.status === "set") {
+        setKeys.push({
+          configPath: skillReport.configPath,
+          key,
+          skill: skillReport.name,
+          value: result.write,
         });
       }
 
@@ -113,6 +125,7 @@ export function buildReport(skillReports, wrote, gitignore = null) {
     gitignore,
     manualKeys,
     mode: wrote ? "write" : "dry-run",
+    setKeys,
     skills,
     totals,
   };
@@ -146,7 +159,12 @@ export function formatHuman(report) {
       const label = STATUS_LABEL[keyResult.status].padEnd(20);
       const name = keyResult.key.padEnd(22);
       let detail = "";
-      if (keyResult.status === "inferred") {
+      if (keyResult.status === "set") {
+        detail = `set to ${fmt(keyResult.write)}`;
+        if ("from" in keyResult) {
+          detail += ` (was ${fmt(keyResult.from)})`;
+        }
+      } else if (keyResult.status === "inferred") {
         detail = fmt(keyResult.write);
       } else if (keyResult.status === "drift") {
         detail = `keeps ${fmt(keyResult.keep)} vs detected ${fmt(keyResult.detected)}`;
@@ -178,6 +196,14 @@ export function formatHuman(report) {
   }
 
   if (report.mode === "dry-run") {
+    if (report.setKeys?.length) {
+      lines.push(
+        `${report.setKeys.length} key(s) will be set via --set: ${report.setKeys
+          .map((setKey) => `${setKey.skill}.${setKey.key}`)
+          .join(", ")}. Re-run with --write to apply.`,
+      );
+    }
+
     if (report.driftKeys.length) {
       lines.push(
         `${report.driftKeys.length} drifted key(s) kept. To accept a detected value, re-run --write with that key in acceptDrift.`,

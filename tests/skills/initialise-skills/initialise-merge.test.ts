@@ -218,4 +218,69 @@ describe("mergeConfig", () => {
       );
     }
   });
+
+  describe("--set overrides", () => {
+    it("applies a set override and records the replaced value in `from`", () => {
+      const config = { baseBranch: "trunk" };
+      const { changed, data, results } = mergeConfig({
+        config,
+        detect: detect(),
+        example,
+        set: { baseBranch: "release/2.0" },
+      });
+      expect(results.baseBranch).toEqual({
+        from: "trunk",
+        status: "set",
+        write: "release/2.0",
+      });
+      expect(data.baseBranch).toBe("release/2.0");
+      expect(changed).toBe(true);
+    });
+
+    it("wins over a detection-inferred value for the same key", () => {
+      // issueKeys would otherwise be inferred to the detected ["DEF","GHI"].
+      const config = { issueKeys: ["ABC", "XYZ"] };
+      const { data, results } = mergeConfig({
+        config,
+        detect: detect(),
+        example,
+        set: { issueKeys: ["ONLY"] },
+      });
+      expect(results.issueKeys.status).toBe("set");
+      expect(data.issueKeys).toEqual(["ONLY"]);
+    });
+
+    it("omits `from` when the key was previously unset", () => {
+      const { data, results } = mergeConfig({
+        config: {},
+        detect: detect(),
+        example,
+        set: { linearTeamName: "ACME Skunkworks" },
+      });
+      expect(results.linearTeamName).toEqual({
+        status: "set",
+        write: "ACME Skunkworks",
+      });
+      expect(data.linearTeamName).toBe("ACME Skunkworks");
+    });
+
+    it("stays a no-op when the set value already matches (idempotent)", () => {
+      // A config detection would leave untouched (baseBranch + issueKeys already
+      // equal the detected values, linearTeamName is a manual-kept edit), so the
+      // only candidate write is the --set — which repeats the existing value and
+      // must therefore leave `changed` false.
+      const { changed, results } = mergeConfig({
+        config: {
+          baseBranch: "main",
+          issueKeys: ["DEF", "GHI"],
+          linearTeamName: "ACME Skunkworks",
+        },
+        detect: detect(),
+        example,
+        set: { baseBranch: "main" },
+      });
+      expect(results.baseBranch.status).toBe("set");
+      expect(changed).toBe(false);
+    });
+  });
 });
