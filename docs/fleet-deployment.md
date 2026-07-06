@@ -8,7 +8,10 @@ this mechanism — this is the single place it is defined, so those issues just
 link here.
 
 The flow is **wipe → install → reconcile → verify**. It is idempotent: re-running
-it upgrades an existing install rather than duplicating it.
+it upgrades an existing install rather than duplicating it. One caveat on a
+**re-vendor** of a repo that already has reconciled configs: a `--copy` install
+deletes your per-skill `config.json`, so restore it from the trunk between install
+and reconcile — see [Re-install / upgrade behaviour](#re-install--upgrade-behaviour).
 
 > **Scope.** This runbook lives in `agent-skills` and covers the repeatable
 > mechanism plus the helper(s) this repo ships to support it. Migrating a
@@ -57,9 +60,10 @@ slate and no duplicate or competing definitions. Preview first.
 **Preserve:**
 
 - The repo's own `preflight.config.json` (a deliberate root-level override).
-- Any already-reconciled per-skill `config.json` you intend to keep (a fresh
-  install + `initialise-skills` will rewrite these anyway, but never delete a
-  config you mean to carry forward).
+- Any already-reconciled per-skill `config.json` you intend to keep. Note the
+  step 2 `--copy` install **deletes** these (the source bundle ships no
+  `config.json` — see the re-vendor callout in step 2); restore them from the
+  trunk before reconciling so your values survive.
 - Anything genuinely repo-specific and not part of the shared set.
 
 Use the bundled helper to preview and apply the command-shim removals:
@@ -121,20 +125,33 @@ officially supported by the CLI — prefer the local-clone path.)
 
 `npx skills add … --copy` over an existing copy **overwrites** the vendored
 bundle files in place — it is the upgrade path, not a duplicator. To move a repo
-to a newer bundle, re-run the same `add` command; then re-run step 3 (reconcile)
-to pick up any new config keys. Because agent-skills no longer ships a
-`config.json` (only the neutral `config.example.json` travels — A-615), an upgrade
-re-copies the example but **never touches your own `config.json`**, so your
-reconciled values — including deliberate no-detector edits — survive untouched.
+to a newer bundle, re-run the same `add` command, then restore your configs (see
+the callout below) and re-run step 3 (reconcile) to pick up any new config keys.
 Because installs are `--copy`, an upgrade is a clean file replacement with no
 symlink drift.
 
-> **No config reset needed (A-615).** Earlier revisions of this runbook had a
-> "reset each `config.json` from its example" step here, because `skills add`
-> used to vendor agent-skills' *own* config values into the consumer (A-554), and
-> upgrades re-vendored them (regressing no-detector edits — A-612). agent-skills
-> now gitignores its per-skill `config.json` and ships only `config.example.json`,
-> so there is nothing to scrub: go straight from install to reconcile.
+> **⚠️ A re-vendor deletes your per-skill `config.json` — restore it before
+> reconciling (A-706).** agent-skills gitignores its per-skill `config.json` and
+> ships only the neutral `config.example.json` (A-615), so the source bundle
+> carries **no** `config.json`. A `--copy` install is a clean bundle-directory
+> replacement that mirrors the source exactly, so it **deletes** every existing
+> `config.json` in the consumer — in both the `.claude/skills/` and
+> `.agents/skills/` mirrors. Your reconciled values, including the deliberate
+> no-detector edits the detector can't reproduce, go with them.
+>
+> **Before** running step 3, restore the deleted (tracked) configs from the trunk:
+>
+> ```bash
+> git checkout origin/main -- $(git diff --name-only --diff-filter=D | grep 'config\.json$')
+> ```
+>
+> Step 3 then merges any genuinely new keys in while keeping your restored values
+> `unchanged`/`manual-kept`. **Skip the restore and step 3 recreates each
+> `config.json` from scratch**, silently regressing every no-detector key
+> (`linearTeamName`, `linearWorkspaceSlug`, `changelog.packageRoots`,
+> `triage-pr.promoteOnGreen`, `release-status.releaseBranch`, …) — the exact
+> regression class of A-612. A first-ever install has no tracked `config.json` to
+> lose, so this applies only to re-vendors.
 
 ## Step 3 — Reconcile config
 
@@ -144,6 +161,11 @@ consumer has only `config.example.json` (agent-skills ships no `config.json` —
 A-615), so `initialise-skills` **creates** each `config.json` from the example's
 key set plus the detected/supplied facts. Dry-run first; it is idempotent and
 never clobbers a deliberate edit (drift is reported, not overwritten).
+
+> **On a re-vendor, restore your configs first.** The step 2 `--copy` install
+> deleted the consumer's existing `config.json` files. If you reach this step
+> without restoring them from the trunk (see the step 2 callout), this recreation
+> path silently regresses every no-detector key. Restore, then reconcile.
 
 ```bash
 # Preview:
@@ -183,5 +205,6 @@ for the full key → detection-source table.
 
 - [ ] Previewed and wiped bespoke command shims / prototype skills (step 1).
 - [ ] Installed the repo-type-appropriate set via `skills add … --copy` (step 2).
+- [ ] On a re-vendor: restored the per-skill `config.json` the `--copy` install deleted, from the trunk, before reconciling (step 2 callout).
 - [ ] Reconciled config with `initialise-skills` `--dry-run` then `--write`, supplying `facts.issueKeys` for a renamed team (step 3).
 - [ ] Verified idempotency, safe previews, and CI (step 4).
