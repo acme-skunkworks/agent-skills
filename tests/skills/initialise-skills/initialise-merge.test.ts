@@ -264,6 +264,22 @@ describe("mergeConfig", () => {
       expect(data.linearTeamName).toBe("ACME Skunkworks");
     });
 
+    it("writes a reordered set-key override exactly, not order-insensitively", () => {
+      // issueKeys is a SET_KEY (order-insensitive for drift detection), but an
+      // explicit --set is authoritative: a reorder is a real, requested change,
+      // so it must persist the exact order given — not silently keep the old one
+      // while the report claims the new value.
+      const { changed, data, results } = mergeConfig({
+        config: { issueKeys: ["ABC", "XYZ"] },
+        detect: detect(),
+        example,
+        set: { issueKeys: ["XYZ", "ABC"] },
+      });
+      expect(results.issueKeys.status).toBe("set");
+      expect(data.issueKeys).toEqual(["XYZ", "ABC"]);
+      expect(changed).toBe(true);
+    });
+
     it("stays a no-op when the set value already matches (idempotent)", () => {
       // A config detection would leave untouched (baseBranch + issueKeys already
       // equal the detected values, linearTeamName is a manual-kept edit), so the

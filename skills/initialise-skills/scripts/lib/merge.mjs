@@ -225,8 +225,13 @@ export function mergeConfig({
 
   // Explicit `--set` overrides win over whatever detection classified: the caller
   // has already validated each key against config.example.json and coerced the
-  // value, so we apply it verbatim. `changed` only flips on a real difference, so
-  // a `--set` to the value already present stays a no-op (idempotency); `from`
+  // value, so we apply it verbatim and authoritatively — `data[key]` always ends
+  // up exactly what was asked for, so the persisted value matches the reported
+  // `write`. `changed` flips on an EXACT (`deepEqual`) difference, not the
+  // set-aware `valuesEqual`: for a set-semantic key (`issueKeys`) a reordering
+  // `--set` is a genuine change the user asked for, and reusing `valuesEqual`
+  // would report `set` while silently keeping the old order. An identical value
+  // still leaves `changed` false, so a repeated `--set` stays a no-op; `from`
   // records the value replaced so the report can show "was …".
   for (const [key, value] of Object.entries(set)) {
     const had = Object.prototype.hasOwnProperty.call(data, key);
@@ -238,10 +243,11 @@ export function mergeConfig({
 
     results[key] = result;
 
-    if (!had || !valuesEqual(key, data[key], value)) {
-      data[key] = value;
+    if (!had || !deepEqual(data[key], value)) {
       changed = true;
     }
+
+    data[key] = value;
   }
 
   return { changed, data, results };

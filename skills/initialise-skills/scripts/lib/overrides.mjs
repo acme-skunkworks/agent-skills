@@ -116,6 +116,17 @@ export function resolveOverrides(rawSetArgs, skills) {
       continue;
     }
 
+    // A skill whose config.json is unparseable is skipped by the reconcile loop
+    // (never written, to avoid clobbering it), so an override targeting it would
+    // be silently dropped at exit 0. Refuse it up front instead — fail fast,
+    // consistent with the rest of --set's validation.
+    if (skill.malformed) {
+      errors.push(
+        `--set "${skillName}.${key}": ${skillName}'s config.json is malformed and cannot be updated`,
+      );
+      continue;
+    }
+
     if (!Object.prototype.hasOwnProperty.call(skill.example, key)) {
       errors.push(
         `--set "${skillName}.${key}": "${key}" is not a known config key for ${skillName} (not in config.example.json)`,

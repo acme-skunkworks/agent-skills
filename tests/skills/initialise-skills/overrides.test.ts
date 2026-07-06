@@ -128,6 +128,23 @@ describe("resolveOverrides", () => {
     expect(errors[0]).toMatch(/"nope" is not an installed skill/);
   });
 
+  it("rejects a skill whose config.json is malformed", () => {
+    // discoverSkills returns a malformed skill with a usable `example`, but the
+    // reconcile loop skips it — so an override must be refused up front rather
+    // than silently dropped.
+    const withMalformed = [
+      ...skills,
+      { example: { baseBranch: "main" }, malformed: true, name: "broken" },
+    ];
+    const { errors, overrides } = resolveOverrides(
+      ["broken.baseBranch=develop"],
+      withMalformed,
+    );
+    expect(overrides.has("broken")).toBe(false);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/config\.json is malformed/);
+  });
+
   it("errors on a key not in config.example.json", () => {
     const { errors } = resolveOverrides(["changelog.nope=1"], skills);
     expect(errors).toHaveLength(1);
