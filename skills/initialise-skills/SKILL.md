@@ -23,7 +23,7 @@ compatibility: >-
   config.example.json for its key set, so newly-added skills are picked up with no
   change here.
 metadata:
-  version: 0.9.0
+  version: 0.9.1
   author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(git:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---
@@ -191,6 +191,27 @@ form only, to keep the human table readable. Add `--json` for the
 machine-readable form (a `skills[]` array of `{ key, value, isSet, status,
 usedBy, detectionSource, fallback }` entries, plus `totals`). It never writes to
 disk and skips the `.gitignore` step.
+
+## Changing a setting later
+
+Once a consumer's `config.json` exists, **hand-editing it is a supported way to
+change a setting** — you don't have to route every change through this skill. Open
+`skills/<name>/config.json` (or wherever the bundle is vendored), change the value,
+and save. It is a real file the consumer owns; the shared skills read it at runtime.
+
+A manual edit like that **survives future `initialise-skills` re-runs**. On the next
+run the reconcile classifies your value as `drift` — a real value that differs from
+what detection would produce — and **keeps it**, reporting both the kept value and
+the detected one (see the [status table](#how-it-decides-what-to-write) above). It is
+never silently overwritten: drift is only replaced if you explicitly opt in for that
+key (the per-key `acceptDrift` gate in step 3). So a deliberate manual edit and a
+detected fact coexist — the tool reconciles the facts it can detect without clobbering
+the ones you set by hand.
+
+Prefer [`--set <skill>.<key>=<value>`](#setting-an-arbitrary-value) below when you
+want the same change made through the tool — it validates the key against the
+skill's `config.example.json` and preserves key order and formatting — but a direct
+hand-edit is equally valid and equally safe.
 
 ## Setting an arbitrary value
 
