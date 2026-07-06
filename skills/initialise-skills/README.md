@@ -26,6 +26,13 @@ This skill needs **no config of its own** — it has no per-repo knobs. Everythi
 it writes is detected from the host repo or supplied at run time (the Linear team
 name / workspace slug via the Linear MCP, or by hand).
 
+**Changing a setting later is safe by hand.** A *consumer's* per-skill
+`config.json` is a real file you own: edit it directly to change a setting, and the
+change **survives future re-runs** — the reconcile classifies a manual value as
+`drift` and keeps it (never clobbering a deliberate edit), replacing it only if you
+opt in per key. Use `--set <skill>.<key>=<value>` if you'd rather make the same
+change through the tool; a direct hand-edit is equally supported.
+
 ## Use
 
 Run it through your agent (it drives the dry-run → confirm → write flow), or
