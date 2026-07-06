@@ -57,7 +57,11 @@ function byStatusThenKey(a, b) {
  *   configPath: string,
  *   malformed: boolean,
  *   results: Record<string, import('./merge.mjs').KeyResult>,
+ *   config?: Record<string, unknown>,
  * }} SkillReport
+ * `config` is the parsed config.json data. `main()` attaches it to every entry
+ * so the same shape feeds both `buildReport` (which ignores it) and
+ * `buildReviewReport` (which needs it); optional for the malformed stub.
  */
 
 /**
