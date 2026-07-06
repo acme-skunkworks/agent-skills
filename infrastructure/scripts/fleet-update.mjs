@@ -43,12 +43,10 @@ import {
 } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
-// The GitHub URL the vendored bundles are attributed to (skills.lock `source`).
-// Provenance only — the install itself uses the local checkout (see SOURCE_DEFAULT).
 // The canonical install source: `skills add` vendors from this URL and records it
-// (as `sourceType: remote`) in the consumer's skills-lock.json. Installing from a
+// (as `sourceType: github`) in the consumer's skills-lock.json. Installing from a
 // local path instead would leak an absolute machine path into every consumer
-// (A-718). Also the skills.lock `lockSource`.
+// (A-718). Also used as the skills.lock `lockSource`.
 const SOURCE_URL = "https://github.com/acme-skunkworks/agent-skills";
 
 // The local agent-skills checkout this script lives in — used ONLY as the
@@ -96,7 +94,9 @@ Usage:
 
 Options:
   --profile <file>   Install-profile JSON (see docs/fleet-deployment.md). Omit to read stdin.
-  --source <path>    agent-skills checkout check-updates verifies against (default: this script's repo). The install itself vendors from the GitHub URL.
+  --source <path>    agent-skills checkout check-updates verifies against
+                     (default: this script's repo). The install itself always
+                     vendors from the GitHub URL, never this path.
   --ref <ref>        Target ref recorded in skills.lock and diffed by verify (default: main).
   --apply            Actually mutate the target repo (default: preview only).
   --dry-run          Explicit preview (the default).`;
