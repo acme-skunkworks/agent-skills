@@ -16,6 +16,15 @@ const GITIGNORE_LABEL = {
 };
 
 /**
+ * Human-friendly one-liners for the skills.lock write action (A-616).
+ */
+const LOCK_LABEL = {
+  unchanged: "skills.lock already up to date",
+  "would-write": "will write skills.lock",
+  written: "wrote skills.lock",
+};
+
+/**
  * Human-friendly labels + ordering for the per-key statuses.
  */
 const STATUS_LABEL = {
@@ -72,9 +81,16 @@ function byStatusThenKey(a, b) {
  * @param {boolean} wrote whether this was a --write run
  * @param {{ path: string, status: string } | null} [gitignore] the .gitignore
  *   reconcile result (A-569), or null when preflight is not installed
+ * @param {{ path: string, status: string, needsFacts: boolean } | null} [lock] the
+ *   skills.lock write result (A-616), or null when no bundles are installed
  * @returns {object}
  */
-export function buildReport(skillReports, wrote, gitignore = null) {
+export function buildReport(
+  skillReports,
+  wrote,
+  gitignore = null,
+  lock = null,
+) {
   const totals = {};
   const driftKeys = [];
   const manualKeys = [];
@@ -123,6 +139,7 @@ export function buildReport(skillReports, wrote, gitignore = null) {
   return {
     driftKeys,
     gitignore,
+    lock,
     manualKeys,
     mode: wrote ? "write" : "dry-run",
     setKeys,
@@ -193,6 +210,14 @@ export function formatHuman(report) {
     const detail =
       GITIGNORE_LABEL[report.gitignore.status] ?? report.gitignore.status;
     lines.push(`${report.gitignore.path}: ${detail}`, "");
+  }
+
+  if (report.lock) {
+    const detail = LOCK_LABEL[report.lock.status] ?? report.lock.status;
+    const note = report.lock.needsFacts
+      ? " (source/ref not supplied — pass lockSource/lockRef)"
+      : "";
+    lines.push(`${report.lock.path}: ${detail}${note}`, "");
   }
 
   if (report.mode === "dry-run") {

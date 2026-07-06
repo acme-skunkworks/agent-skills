@@ -71,6 +71,19 @@ to apply, and it overrides detection for that key.
 reads an optional root-level `preflight.config.json`, so there is nothing in-bundle
 to populate.
 
+It also emits a committed **`.claude/skills.lock`** — a machine-readable inventory
+of every installed skill's version plus the `source`/`ref` they came from
+(supplied as `facts.lockSource` / `facts.lockRef`). Consumers commit it, and
+`check-updates.mjs` uses it to report which skills are behind a target ref of the
+source repo:
+
+```bash
+node skills/initialise-skills/scripts/check-updates.mjs --source <agent-skills-checkout> [--ref <tag-or-sha>]
+```
+
+See [`references/skills-lock.md`](references/skills-lock.md) for the lock schema and
+the update-detection flow.
+
 ## Requirements
 
 - `git` CLI (base-branch and issue-key detection; degrades to fallbacks if absent).

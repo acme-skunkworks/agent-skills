@@ -58,6 +58,17 @@ describe("buildReport", () => {
   it("marks a --write run with mode 'write'", () => {
     expect(buildReport(SKILL_REPORTS, true).mode).toBe("write");
   });
+
+  it("threads the skills.lock result through, defaulting to null", () => {
+    expect(buildReport(SKILL_REPORTS, false).lock).toBeNull();
+
+    const lock = {
+      needsFacts: false,
+      path: ".claude/skills.lock",
+      status: "would-write",
+    };
+    expect(buildReport(SKILL_REPORTS, false, null, lock).lock).toEqual(lock);
+  });
 });
 
 describe("formatHuman", () => {
@@ -71,6 +82,29 @@ describe("formatHuman", () => {
     expect(text).toContain("1 drifted key(s) kept");
     expect(text).toContain(
       "1 key(s) need manual input: changelog.linearWorkspaceSlug.",
+    );
+  });
+
+  it("renders the skills.lock line, with a needsFacts note when provenance is missing", () => {
+    const written = formatHuman(
+      buildReport(SKILL_REPORTS, true, null, {
+        needsFacts: false,
+        path: ".claude/skills.lock",
+        status: "written",
+      }),
+    );
+    expect(written).toContain(".claude/skills.lock: wrote skills.lock");
+    expect(written).not.toContain("source/ref not supplied");
+
+    const needsFacts = formatHuman(
+      buildReport(SKILL_REPORTS, false, null, {
+        needsFacts: true,
+        path: ".claude/skills.lock",
+        status: "would-write",
+      }),
+    );
+    expect(needsFacts).toContain(
+      ".claude/skills.lock: will write skills.lock (source/ref not supplied — pass lockSource/lockRef)",
     );
   });
 

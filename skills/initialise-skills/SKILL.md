@@ -6,8 +6,9 @@ description: >-
   package roots, changelog directory, Linear issue-key prefixes, review bots,
   protected branches — plus the Linear team name and workspace slug fetched via
   the Linear MCP. Use when first installing these skills into a repo, or to
-  refresh the configs after the skill set or repo layout changes. Also ensures the
-  preflight skill's `.preflight-summary.json` scratch output is gitignored.
+  refresh the configs after the skill set or repo layout changes. Also emits a
+  committed `.claude/skills.lock` inventory of installed skill versions, and ensures
+  the preflight skill's `.preflight-summary.json` scratch output is gitignored.
   Idempotent and safe to re-run: it reconciles drift rather than clobbering
   deliberate manual edits, presents a dry-run diff first, and only writes after
   confirmation — preserving each config's key order and formatting so a no-op run
@@ -22,7 +23,7 @@ compatibility: >-
   config.example.json for its key set, so newly-added skills are picked up with no
   change here.
 metadata:
-  version: 0.8.0
+  version: 0.9.0
   author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(git:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---
@@ -79,6 +80,32 @@ entry only when absent (creating `.gitignore` if there is none), and never
 reorders or removes existing lines. The dry-run report shows the pending edit
 (`will add …`); a re-run after writing reports `already ignored`.
 
+## The `skills.lock` step
+
+Alongside the config reconcile, this skill emits a committed **`.claude/skills.lock`**
+at the repo root — a machine-readable inventory of which skill versions are installed
+and where they came from:
+
+```json
+{ "source": "https://github.com/acme-skunkworks/agent-skills", "ref": "main",
+  "skills": { "changelog": "1.2.0", "send-it": "2.1.3", "…": "…" } }
+```
+
+- **`skills`** — a full inventory of every installed bundle (including `preflight`
+  and this skill), read from each `SKILL.md` `metadata.version`. Keys are sorted, so
+  a re-run with no version changes is a **byte-stable no-op** (the file only rewrites
+  when a version actually moves). The lock lives at the fixed `.claude/skills.lock`
+  path regardless of where the bundles were vendored (`skills/`, `.claude/skills/`,
+  `.agents/skills/`), and consumers **commit** it.
+- **`source` / `ref`** — provenance the script cannot derive (skills.sh records
+  nowhere where a consumer installed from). Supply them as `facts.lockSource` /
+  `facts.lockRef` in the write step's stdin (see step 2); an existing lock's values
+  are preserved when omitted. When neither is available the field is written as
+  `null` and the report flags it (`source/ref not supplied`) — never fabricated.
+
+This is the foundation for detecting which repos are behind — see
+[Checking for updates](#checking-for-updates) below.
+
 ## Process
 
 1. **Dry run.** From the host repo root, run the bundled script for a machine-readable preview:
@@ -93,11 +120,15 @@ reorders or removes existing lines. The dry-run report shows the pending edit
    root. Parse the JSON: `skills[]` with per-key `status`, plus `driftKeys`,
    `manualKeys`, and `totals`.
 
-2. **Fill the Linear facts.** For each `needs-manual-input` Linear key
+2. **Fill the facts.** For each `needs-manual-input` Linear key
    (`linearTeamName`, `linearWorkspaceSlug`), fetch the value via the Linear MCP
    when it is available — `mcp__linear-server__list_teams` for the team name, and
    the workspace slug from the team/organisation — otherwise ask the user. Collect
-   these into a `facts` object.
+   these into a `facts` object. Also add the **lock provenance** here:
+   `lockSource` (the source repo the skills were installed from — the
+   agent-skills repo URL) and `lockRef` (the ref installed from; **default `main`**,
+   the fleet convention, unless a tag/SHA was pinned). Skip either when an existing
+   `.claude/skills.lock` already records it — its value is preserved.
 
 3. **Present the diff and confirm.** Show the human report (re-run without
    `--json`, or render the parsed JSON). Call out the `inferred` keys that will be
@@ -111,21 +142,24 @@ reorders or removes existing lines. The dry-run report shows the pending edit
    as stdin JSON:
 
    ```bash
-   echo '{"facts":{"linearTeamName":"…","linearWorkspaceSlug":"…"},"acceptDrift":{"changelog":["issueKeys"]}}' \
+   echo '{"facts":{"linearTeamName":"…","linearWorkspaceSlug":"…","lockSource":"https://github.com/acme-skunkworks/agent-skills","lockRef":"main"},"acceptDrift":{"changelog":["issueKeys"]}}' \
      | node <skills-dir>/initialise-skills/scripts/initialise.mjs --write --json
    ```
 
    Report what was written from the returned `totals`, plus the `gitignore` field
    (its `status` — `added`, `created`, `present`, or `negated`; the field is absent
-   entirely when `preflight` isn't installed, as the `.gitignore` step is skipped).
+   entirely when `preflight` isn't installed, as the `.gitignore` step is skipped)
+   and the `lock` field (its `status` — `written`, `unchanged`, or `would-write`;
+   `needsFacts: true` means `lockSource`/`lockRef` still need supplying).
 
 5. **Confirm idempotency.** Run the dry run once more; every key should now be
    `unchanged` (apart from drifts you chose to keep and any still-missing manual
    values). When `preflight` is installed, `gitignore.status` should be `present`
    (or `negated`, if the repo deliberately un-ignores the file — also a stable
    no-op); when it isn't, the `.gitignore` step is skipped and there's no
-   `gitignore` field to check. This proves the configs and the `.gitignore` are
-   stable and a future re-run is a no-op.
+   `gitignore` field to check. `lock.status` should be `unchanged`. This proves the
+   configs, the `.gitignore`, and the `skills.lock` are stable and a future re-run
+   is a no-op.
 
 6. **Multi-bundle repos — one manual step.** If this repo itself ships several
    independently-versioned skill bundles, `send-it`'s `bundleVersioning` is **not**
@@ -219,7 +253,27 @@ key shows as `set to <value> (was <old>)`.
 - **stdin JSON** — `{ "facts": { … }, "acceptDrift": { "<skill>": ["<key>"] } }`,
   read when stdin is piped (not a TTY). Each `acceptDrift` key may be a **skill
   name** (`"changelog"`) or the **repo-relative config path**
-  (`"skills/changelog/config.json"`); its value is an array of key names.
+  (`"skills/changelog/config.json"`); its value is an array of key names. `facts`
+  also carries the lock provenance `lockSource` / `lockRef` (see step 2).
+
+## Checking for updates
+
+To see which installed skills are behind the source repo, run the bundled
+`check-updates.mjs` against a checkout of the source (the consumer holds only its
+old vendored copies, so the target versions come from the source):
+
+```bash
+node <skills-dir>/initialise-skills/scripts/check-updates.mjs \
+  --source <path-to-agent-skills-checkout> [--ref <tag-or-sha>] [--json]
+```
+
+It diffs the consumer's `.claude/skills.lock` against the source's bundle versions —
+at `--ref` (via `git show`) when given, else the source working tree — and prints
+the per-skill bump list: `updates` (behind — the actionable list), plus `added`
+(new upstream skills), `removed`, `downgrades` (consumer ahead), and `upToDate`.
+`--lock <path>` targets a specific consumer's lock (default `<cwd>/.claude/skills.lock`),
+so a fleet orchestrator can check any repo without changing directory. See
+[`references/skills-lock.md`](references/skills-lock.md) for the lock schema.
 
 ## Safety
 
@@ -229,10 +283,15 @@ key shows as `set to <value> (was <old>)`.
 - **No deletes, no reordering.** Existing keys keep their order; only changed keys
   are touched; consumer-added keys are left alone. A malformed existing
   `config.json` is skipped (reported, never overwritten).
-- **The `.gitignore` edit is append-only.** The only file touched outside a
+- **The `.gitignore` edit is append-only.** One file touched outside a
   skill's `config.json` is the repo's root `.gitignore`, and only to append the
   `.preflight-summary.json` entry when it is missing — never reordering or removing
   existing lines, and a no-op once present.
+- **The `skills.lock` write is deterministic and byte-stable.** The other file
+  touched outside a `config.json` is `.claude/skills.lock`, fully regenerated with
+  sorted keys and no timestamp — so it only rewrites when a version actually changes,
+  and a no-op run leaves it byte-identical. It preserves an existing lock's
+  `source`/`ref` and never fabricates them.
 
 ## Prerequisites
 
