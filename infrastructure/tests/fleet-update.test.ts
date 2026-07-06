@@ -8,13 +8,13 @@
 // check-updates) is intentionally out of scope here — the self-test and manual
 // runbook cover it.
 import {
-  SOURCE_URL,
   buildInitialiseFacts,
   buildSkillsAddArgs,
   detectClobberedConfigs,
   interpretCheckUpdates,
   parseProfile,
   resolveSkills,
+  SOURCE_URL,
 } from "../scripts/fleet-update.mjs";
 import { describe, expect, it } from "vitest";
 
