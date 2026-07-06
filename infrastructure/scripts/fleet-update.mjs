@@ -1,0 +1,817 @@
+#!/usr/bin/env node
+// Fleet single-repo update pipeline (A-617).
+//
+// The recurring push-update path a driver (A-713) calls once per consumer repo
+// to roll it onto the current shared skill bundles. Parameterised by ONE repo's
+// install profile (a JSON contract A-715's private manifest supplies) — this
+// script holds NO repo list, so private repo names never surface in this public
+// repo's CI. It is NOT the onboarding wipe: bespoke-prototype removal stays the
+// separate, human-run `fleet-wipe.mjs` path.
+//
+// Per profile it runs, against the target consumer repo:
+//   1. skills add <source> --skill … --agent … --copy   (vendor the bundles)
+//   2. restore the per-skill config.json that --copy clobbers (A-706 — the real
+//      fix never shipped; agent-skills gitignores its own config.json (A-615), so
+//      a --copy re-vendor deletes or overwrites the consumer's tracked configs),
+//      by `git checkout HEAD -- <config.json>` — else every no-detector key
+//      regresses on the next reconcile.
+//   3. initialise.mjs --write            (reconcile config + refresh skills.lock)
+//   4. check-updates.mjs verify          (assert the repo is now up to date —
+//      updatesAvailable === false; the idempotency primitive)
+//
+// Preview by default (matches fleet-wipe.mjs / vendor-sync.mjs); --apply mutates.
+// A preview skips the install + restore (skills.sh has no dry-run) and runs
+// initialise/check-updates read-only. `run-self-tests.mjs` only scans
+// skills/<name>/scripts, so --self-test here is a dev affordance; CI gates the
+// pure core via the vitest companion (infrastructure/tests/fleet-update.test.ts).
+//
+//   node infrastructure/scripts/fleet-update.mjs --profile ./acme.json           # preview (default)
+//   node infrastructure/scripts/fleet-update.mjs --profile ./acme.json --apply    # run the pipeline
+//   echo '{"repo":"…"}' | node infrastructure/scripts/fleet-update.mjs --apply    # profile on stdin
+//   node infrastructure/scripts/fleet-update.mjs --self-test                       # offline self-check
+//
+// Exit codes: 0 success; 1 real failure (a pipeline step or the self-test
+//   failed); 2 usage error (bad args / profile / paths).
+
+import { spawnSync } from "node:child_process";
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join, relative, resolve } from "node:path";
+
+// The GitHub URL the vendored bundles are attributed to (skills.lock `source`).
+// Provenance only — the install itself uses the local checkout (see SOURCE_DEFAULT).
+const SOURCE_URL = "https://github.com/acme-skunkworks/agent-skills";
+
+// The local agent-skills checkout this script lives in. It doubles as the install
+// source (a local-path `skills add` pins the install to this checkout's ref —
+// skills.sh has no --ref flag, ADR-0001 Decision 4) and as `check-updates --source`.
+const SOURCE_DEFAULT = join(import.meta.dirname, "..", "..");
+
+// The shared skill set (mirrors docs/fleet-deployment.md). Only used to subtract
+// `changelog` when a `no-changelog` repo installs the default (unlisted) set.
+const CANONICAL_SKILLS = [
+  "send-it",
+  "commit",
+  "preflight",
+  "changelog",
+  "linear-sync",
+  "cleanup-repo",
+  "initialise-skills",
+  "triage-pr",
+  "release-status",
+];
+
+const REPO_TYPES = ["single", "mono", "no-changelog"];
+
+// Standard locations `skills add` vendors bundles into (mirrors fleet-wipe.mjs).
+// A consumer with multiple --agent targets gets several of these mirrors, each
+// with its own config.json to reconcile.
+const CONSUMER_SKILL_DIRS = [
+  ".claude/skills",
+  ".agents/skills",
+  ".cursor/skills",
+];
+
+// Preview unless --apply, mirroring fleet-wipe.mjs. Flip this one constant to make
+// the pipeline execute by default.
+const APPLY_BY_DEFAULT = false;
+
+const USAGE = `fleet-update — roll one consumer repo onto the current shared skill bundles
+
+Usage:
+  node fleet-update.mjs --profile <file>           Preview the pipeline (mutates nothing)
+  node fleet-update.mjs --profile <file> --apply   Run install → restore → reconcile → verify
+  node fleet-update.mjs --apply                    Read the profile from stdin JSON
+  node fleet-update.mjs --self-test                Run the offline self-check
+  node fleet-update.mjs --help                     Show this message (alias: -h)
+
+Options:
+  --profile <file>   Install-profile JSON (see docs/fleet-deployment.md). Omit to read stdin.
+  --source <path>    agent-skills checkout to install from (default: this script's repo).
+  --ref <ref>        Target ref recorded in skills.lock and diffed by verify (default: main).
+  --apply            Actually mutate the target repo (default: preview only).
+  --dry-run          Explicit preview (the default).`;
+
+/**
+ * Parse and validate one install profile. Accepts a JSON string or an
+ * already-parsed object; throws an Error (message ready for a `fleet-update:`
+ * prefix) on any violation. Applies defaults so the rest of the pipeline can
+ * treat every field as present.
+ * @param {string | object} json
+ * @returns {{ repo: string, skills: string[] | undefined, agents: string[], repoType: string, facts: object }}
+ */
+export function parseProfile(json) {
+  let profile = json;
+  if (typeof json === "string") {
+    try {
+      profile = JSON.parse(json);
+    } catch (error) {
+      throw new Error(`could not parse profile JSON: ${error.message}`);
+    }
+  }
+
+  if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+    throw new Error("profile must be a JSON object");
+  }
+
+  if (typeof profile.repo !== "string" || !profile.repo.trim()) {
+    throw new Error(
+      "profile 'repo' is required and must be a non-empty string",
+    );
+  }
+
+  if (profile.skills !== undefined && !isStringArray(profile.skills)) {
+    throw new Error("profile 'skills' must be an array of strings");
+  }
+
+  if (profile.agents !== undefined && !isStringArray(profile.agents)) {
+    throw new Error("profile 'agents' must be an array of strings");
+  }
+
+  if (
+    profile.repoType !== undefined &&
+    !REPO_TYPES.includes(profile.repoType)
+  ) {
+    throw new Error(
+      `profile 'repoType' must be one of ${REPO_TYPES.join(", ")}`,
+    );
+  }
+
+  if (
+    profile.facts !== undefined &&
+    (typeof profile.facts !== "object" ||
+      profile.facts === null ||
+      Array.isArray(profile.facts))
+  ) {
+    throw new Error("profile 'facts' must be an object");
+  }
+
+  const facts = profile.facts ?? {};
+  if (facts.issueKeys !== undefined && !isStringArray(facts.issueKeys)) {
+    throw new Error("profile 'facts.issueKeys' must be an array of strings");
+  }
+
+  return {
+    agents: profile.agents ?? ["claude-code"],
+    facts,
+    repo: profile.repo.trim(),
+    repoType: profile.repoType ?? "single",
+    skills: profile.skills,
+  };
+}
+
+/**
+ * The effective skill list for the install, or `null` meaning "omit --skill so
+ * skills.sh installs the full set". An explicit `skills` list wins; otherwise a
+ * `no-changelog` repo gets the canonical set minus `changelog`, and every other
+ * repo type installs all (null).
+ * @param {{ skills: string[] | undefined, repoType: string }} profile
+ * @returns {string[] | null}
+ */
+export function resolveSkills(profile) {
+  if (Array.isArray(profile.skills)) {
+    return profile.skills;
+  }
+
+  if (profile.repoType === "no-changelog") {
+    return CANONICAL_SKILLS.filter((skill) => skill !== "changelog");
+  }
+
+  return null;
+}
+
+/**
+ * Build the `npx` argv (excluding the leading "skills") for the --copy install:
+ * `add <source> [--skill X]… [--agent Y]… --copy`. A null skill list omits
+ * --skill entirely (install all). Pure — constructs argv, spawns nothing.
+ * @param {{ skills: string[] | undefined, agents: string[], repoType: string }} profile
+ * @param {string} source
+ * @returns {string[]}
+ */
+export function buildSkillsAddArgs(profile, source) {
+  const skills = resolveSkills(profile);
+  const skillFlags = skills
+    ? skills.flatMap((skill) => ["--skill", skill])
+    : [];
+  const agentFlags = profile.agents.flatMap((agent) => ["--agent", agent]);
+  return ["add", source, ...skillFlags, ...agentFlags, "--copy"];
+}
+
+/**
+ * Assemble the stdin payload for initialise.mjs: the script-supplied lock
+ * provenance (lockSource/lockRef) plus the non-derivable Linear facts from the
+ * profile. Absent facts are omitted so the detector's no-fact path is preserved.
+ * @param {{ facts: object }} profile
+ * @param {{ ref: string }} opts
+ * @returns {{ facts: object }}
+ */
+export function buildInitialiseFacts(profile, { ref }) {
+  const facts = { lockRef: ref, lockSource: SOURCE_URL };
+  const { issueKeys, linearTeamName, linearWorkspaceSlug } = profile.facts;
+  if (typeof linearTeamName === "string") {
+    facts.linearTeamName = linearTeamName;
+  }
+
+  if (typeof linearWorkspaceSlug === "string") {
+    facts.linearWorkspaceSlug = linearWorkspaceSlug;
+  }
+
+  if (Array.isArray(issueKeys)) {
+    facts.issueKeys = issueKeys;
+  }
+
+  return { facts };
+}
+
+/**
+ * From `git diff HEAD --name-only` stdout (run with --diff-filter=DM), the
+ * tracked config.json paths a --copy re-vendor clobbered — deleted OR overwritten
+ * with the example default — across every mirror (.claude/skills, .agents/skills,
+ * …). Empty ⇒ nothing to restore (a first-ever install has no tracked config to
+ * lose). Pure — parses text, touches no filesystem.
+ * @param {string} gitDiffOutput
+ * @returns {string[]}
+ */
+export function detectClobberedConfigs(gitDiffOutput) {
+  return gitDiffOutput
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /config\.json$/.test(line))
+    .toSorted();
+}
+
+/**
+ * Interpret a parsed check-updates report into the verify verdict. `ok` is true
+ * only when the report explicitly reports no available updates; a report missing
+ * `updatesAvailable` is treated as NOT ok (verify can't confirm success).
+ * @param {object} report
+ * @returns {{ ok: boolean, bumps: object[], reason?: string }}
+ */
+export function interpretCheckUpdates(report) {
+  if (!report || typeof report.updatesAvailable !== "boolean") {
+    return { bumps: [], ok: false, reason: "malformed check-updates report" };
+  }
+
+  return { bumps: report.updates ?? [], ok: report.updatesAvailable === false };
+}
+
+function isStringArray(value) {
+  return (
+    Array.isArray(value) && value.every((item) => typeof item === "string")
+  );
+}
+
+// ---- CLI / IO ------------------------------------------------------------
+
+function parseArgs(argv) {
+  const options = {
+    apply: APPLY_BY_DEFAULT,
+    profile: undefined,
+    ref: undefined,
+    source: undefined,
+  };
+  for (let index = 0; index < argv.length; index++) {
+    const argument = argv[index];
+    if (argument === "--apply") {
+      options.apply = true;
+    } else if (argument === "--dry-run") {
+      options.apply = false;
+    } else if (argument === "--profile") {
+      options.profile = takeValue(argv, ++index, "--profile");
+    } else if (argument === "--source") {
+      options.source = takeValue(argv, ++index, "--source");
+    } else if (argument === "--ref") {
+      options.ref = takeValue(argv, ++index, "--ref");
+    } else {
+      fail(`unknown argument "${argument}"`, 2);
+    }
+  }
+
+  return options;
+}
+
+function takeValue(argv, index, flag) {
+  const value = argv[index];
+  if (!value || value.startsWith("--")) {
+    fail(`${flag} requires a value`, 2);
+  }
+
+  return value;
+}
+
+function fail(message, code) {
+  console.error(`fleet-update: ${message}`);
+  process.exit(code);
+}
+
+/**
+ * Read the profile: the --profile file if given, else stdin JSON (when piped).
+ * @param {string | undefined} profilePath
+ * @returns {string}
+ */
+function readProfileSource(profilePath) {
+  if (profilePath) {
+    if (!existsSync(profilePath)) {
+      fail(`profile not found: ${profilePath}`, 2);
+    }
+
+    return readFileSync(profilePath, "utf8");
+  }
+
+  if (process.stdin.isTTY) {
+    fail("no profile — pass --profile <file> or pipe profile JSON on stdin", 2);
+  }
+
+  const stdin = readFileSync(0, "utf8");
+  if (!stdin.trim()) {
+    fail("empty profile on stdin", 2);
+  }
+
+  return stdin;
+}
+
+/**
+ * Run a subprocess and return the raw result (status/stdout/stderr) without
+ * exiting — callers decide whether a non-zero status is fatal.
+ */
+function spawnCapture(command, args, cwd, input) {
+  const result = spawnSync(command, args, {
+    cwd,
+    encoding: "utf8",
+    input,
+  });
+  if (result.error) {
+    fail(`${command} failed to start: ${result.error.message}`, 1);
+  }
+
+  return result;
+}
+
+/**
+ * Run a subprocess, streaming nothing; surface stdout/stderr and exit 1 on a
+ * non-zero status. Returns the captured stdout for the caller to parse.
+ */
+function run(command, args, cwd, input) {
+  const result = spawnCapture(command, args, cwd, input);
+  if (result.status !== 0) {
+    if (result.stdout?.trim()) {
+      console.error(result.stdout.trimEnd());
+    }
+
+    if (result.stderr?.trim()) {
+      console.error(result.stderr.trimEnd());
+    }
+
+    fail(`${command} ${args[0]} exited ${result.status}`, 1);
+  }
+
+  return result.stdout ?? "";
+}
+
+function runSkillsAdd(consumer, args) {
+  console.log(`fleet-update: skills ${args.join(" ")}`);
+  run("npx", ["skills", ...args], consumer);
+}
+
+function restoreClobberedConfigs(consumer) {
+  // --diff-filter=DM catches both --copy behaviours: an older CLI DELETES the
+  // consumer's config.json; the current CLI OVERWRITES it (M) with the neutral
+  // example. Either way `git checkout HEAD -- <path>` restores the tracked
+  // content so the reconcile that follows merges onto the consumer's real values.
+  const diff = run(
+    "git",
+    ["diff", "HEAD", "--name-only", "--diff-filter=DM"],
+    consumer,
+  );
+  const clobbered = detectClobberedConfigs(diff);
+  if (clobbered.length === 0) {
+    console.log(
+      "fleet-update: no config.json clobbered by --copy (nothing to restore).",
+    );
+    return;
+  }
+
+  run("git", ["checkout", "HEAD", "--", ...clobbered], consumer);
+  console.log(
+    `fleet-update: restored ${clobbered.length} config.json from HEAD (A-706):`,
+  );
+  for (const path of clobbered) {
+    console.log(`  ${path}`);
+  }
+}
+
+/**
+ * The vendored skill-bundle dirs present in the consumer (one per --agent
+ * mirror). A dir counts only when it holds at least one real bundle (a subdir
+ * with a SKILL.md), so an empty leftover directory isn't treated as an install.
+ * @param {string} consumer
+ * @returns {string[]} absolute skills-dir paths
+ */
+function findConsumerSkillsDirectories(consumer) {
+  const directories = [];
+  for (const relativePath of CONSUMER_SKILL_DIRS) {
+    const absolute = join(consumer, relativePath);
+    if (!existsSync(absolute)) {
+      continue;
+    }
+
+    let entries;
+    try {
+      entries = readdirSync(absolute, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    const hasBundle = entries.some(
+      (entry) =>
+        entry.isDirectory() &&
+        existsSync(join(absolute, entry.name, "SKILL.md")),
+    );
+    if (hasBundle) {
+      directories.push(absolute);
+    }
+  }
+
+  return directories;
+}
+
+// Run initialise against one vendored skills-dir. We pass --skills-dir
+// explicitly because this pipeline runs the SOURCE checkout's initialise.mjs,
+// whose default skills-dir resolves relative to the script (the source's own
+// skills/), not the consumer being updated.
+function runInitialise(source, consumer, facts, apply, skillsDirectory) {
+  const script = join(
+    source,
+    "skills/initialise-skills/scripts/initialise.mjs",
+  );
+  run(
+    process.execPath,
+    [
+      script,
+      apply ? "--write" : "--dry-run",
+      "--json",
+      "--repo-root",
+      consumer,
+      "--skills-dir",
+      skillsDirectory,
+    ],
+    consumer,
+    JSON.stringify(facts),
+  );
+  console.log(
+    `fleet-update: reconciled ${relative(consumer, skillsDirectory)} (initialise ${apply ? "--write" : "--dry-run"}).`,
+  );
+}
+
+/**
+ * Verify with check-updates. In apply mode (`assert`) a repo still behind — or a
+ * missing/unparseable report — is a hard failure (exit 1). In preview mode the
+ * verify is informational: a fresh repo has no lock yet, so a non-zero
+ * check-updates (or pending bumps) is reported, never fatal.
+ */
+function runVerify(source, consumer, ref, { assert }) {
+  const script = join(
+    source,
+    "skills/initialise-skills/scripts/check-updates.mjs",
+  );
+  const lock = join(consumer, ".claude", "skills.lock");
+  const result = spawnCapture(
+    process.execPath,
+    [
+      script,
+      "--source",
+      source,
+      ...(ref ? ["--ref", ref] : []),
+      "--lock",
+      lock,
+      "--json",
+    ],
+    consumer,
+  );
+  if (result.status !== 0) {
+    const detail =
+      result.stderr?.trim() || `check-updates exited ${result.status}`;
+    if (assert) {
+      console.error(`fleet-update: verify failed — ${detail}`);
+      process.exit(1);
+    }
+
+    console.log(`fleet-update: verify skipped — ${detail}`);
+    return;
+  }
+
+  let report;
+  try {
+    report = JSON.parse(result.stdout);
+  } catch (error) {
+    if (assert) {
+      fail(`could not parse check-updates report: ${error.message}`, 1);
+    }
+
+    console.log(
+      "fleet-update: verify skipped — unparseable check-updates report.",
+    );
+    return;
+  }
+
+  const verdict = interpretCheckUpdates(report);
+  if (verdict.ok) {
+    console.log(
+      "fleet-update: verify OK — repo is up to date (updatesAvailable=false).",
+    );
+    return;
+  }
+
+  const summary = verdict.reason ?? `${verdict.bumps.length} skill(s) behind`;
+  const bumpLines = verdict.bumps.map(
+    (bump) => `  ${bump.name}  ${bump.from} → ${bump.to}  (${bump.bump})`,
+  );
+  if (assert) {
+    console.error(`fleet-update: verify failed — ${summary}`);
+    for (const line of bumpLines) {
+      console.error(line);
+    }
+
+    process.exit(1);
+  }
+
+  console.log(`fleet-update: would update — ${summary}`);
+  for (const line of bumpLines) {
+    console.log(line);
+  }
+}
+
+function main(argv) {
+  if (argv.includes("--help") || argv.includes("-h")) {
+    console.log(USAGE);
+    return;
+  }
+
+  if (argv.includes("--self-test")) {
+    selfTest();
+    return;
+  }
+
+  const options = parseArgs(argv);
+
+  let profile;
+  try {
+    profile = parseProfile(readProfileSource(options.profile));
+  } catch (error) {
+    fail(error.message, 2);
+  }
+
+  const source = resolve(options.source ?? SOURCE_DEFAULT);
+  if (!existsSync(join(source, "skills"))) {
+    fail(`--source is not an agent-skills checkout (no skills/): ${source}`, 2);
+  }
+
+  const consumer = resolve(profile.repo);
+  if (!existsSync(consumer) || !statSync(consumer).isDirectory()) {
+    fail(`profile 'repo' must be an existing directory: ${consumer}`, 2);
+  }
+
+  const ref = options.ref ?? "main";
+
+  console.log(
+    `fleet-update: ${options.apply ? "applying" : "previewing"} update for ${consumer}`,
+  );
+
+  const facts = buildInitialiseFacts(profile, { ref });
+
+  if (options.apply) {
+    runSkillsAdd(consumer, buildSkillsAddArgs(profile, source));
+    restoreClobberedConfigs(consumer);
+    const installedDirectories = findConsumerSkillsDirectories(consumer);
+    if (installedDirectories.length === 0) {
+      fail("no vendored skill bundles found after install", 1);
+    }
+
+    for (const directory of installedDirectories) {
+      runInitialise(source, consumer, facts, true, directory);
+    }
+
+    runVerify(source, consumer, options.ref, { assert: true });
+    console.log("fleet-update: done.");
+    return;
+  }
+
+  // Preview: skills.sh has no dry-run and the restore mutates, so both are
+  // described only; initialise/check-updates are read-only and run for real
+  // against whatever bundles the consumer already has.
+  const addArgs = buildSkillsAddArgs(profile, source);
+  console.log(`fleet-update: would run — skills ${addArgs.join(" ")}`);
+  console.log(
+    "fleet-update: would restore any config.json --copy clobbers (A-706).",
+  );
+  const installed = findConsumerSkillsDirectories(consumer);
+  if (installed.length === 0) {
+    console.log(
+      "fleet-update: no bundles vendored yet — would reconcile after install.",
+    );
+  } else {
+    for (const directory of installed) {
+      runInitialise(source, consumer, facts, false, directory);
+    }
+  }
+
+  runVerify(source, consumer, options.ref, { assert: false });
+  console.log(
+    "fleet-update: preview complete (re-run with --apply to execute).",
+  );
+}
+
+// ---- self-test -----------------------------------------------------------
+
+function selfTest() {
+  const root = mkdtempSync(join(tmpdir(), "fleet-update-"));
+  const cases = [];
+  try {
+    // parseProfile: defaults + validation.
+    const minimal = parseProfile({ repo: "/tmp/x" });
+    cases.push({
+      name: "parseProfile applies defaults (agents/repoType/facts)",
+      ok:
+        minimal.agents.length === 1 &&
+        minimal.agents[0] === "claude-code" &&
+        minimal.repoType === "single" &&
+        typeof minimal.facts === "object" &&
+        minimal.skills === undefined,
+    });
+    cases.push({
+      name: "parseProfile rejects a profile with no repo",
+      ok: throws(() => parseProfile({})),
+    });
+    cases.push({
+      name: "parseProfile rejects non-array skills",
+      ok: throws(() => parseProfile({ repo: "/tmp/x", skills: "send-it" })),
+    });
+    cases.push({
+      name: "parseProfile rejects a bad repoType",
+      ok: throws(() => parseProfile({ repo: "/tmp/x", repoType: "weird" })),
+    });
+    cases.push({
+      name: "parseProfile parses a JSON string",
+      ok: parseProfile('{"repo":"/tmp/x"}').repo === "/tmp/x",
+    });
+
+    // resolveSkills.
+    cases.push({
+      name: "resolveSkills returns null (install all) for an unlisted single repo",
+      ok: resolveSkills({ repoType: "single", skills: undefined }) === null,
+    });
+    const noChangelog = resolveSkills({
+      repoType: "no-changelog",
+      skills: undefined,
+    });
+    cases.push({
+      name: "resolveSkills drops changelog for an unlisted no-changelog repo",
+      ok:
+        Array.isArray(noChangelog) &&
+        !noChangelog.includes("changelog") &&
+        noChangelog.includes("send-it"),
+    });
+
+    // buildSkillsAddArgs.
+    const allArgs = buildSkillsAddArgs(
+      {
+        agents: ["claude-code", "cursor"],
+        repoType: "single",
+        skills: undefined,
+      },
+      "/src",
+    );
+    cases.push({
+      name: "buildSkillsAddArgs omits --skill for all, fans out agents, ends --copy",
+      ok:
+        allArgs[0] === "add" &&
+        allArgs[1] === "/src" &&
+        !allArgs.includes("--skill") &&
+        allArgs.filter((a) => a === "--agent").length === 2 &&
+        allArgs.at(-1) === "--copy",
+    });
+    const subsetArgs = buildSkillsAddArgs(
+      {
+        agents: ["claude-code"],
+        repoType: "single",
+        skills: ["send-it", "commit"],
+      },
+      "/src",
+    );
+    cases.push({
+      name: "buildSkillsAddArgs emits explicit --skill pairs for a subset",
+      ok:
+        subsetArgs.includes("--skill") &&
+        subsetArgs[subsetArgs.indexOf("--skill") + 1] === "send-it",
+    });
+
+    // buildInitialiseFacts.
+    const built = buildInitialiseFacts(
+      { facts: { issueKeys: ["A"], linearTeamName: "Acme" } },
+      { ref: "v1.2.3" },
+    );
+    cases.push({
+      name: "buildInitialiseFacts sets lockSource/lockRef and forwards facts",
+      ok:
+        built.facts.lockSource === SOURCE_URL &&
+        built.facts.lockRef === "v1.2.3" &&
+        built.facts.linearTeamName === "Acme" &&
+        built.facts.issueKeys[0] === "A",
+    });
+    cases.push({
+      name: "buildInitialiseFacts omits absent Linear facts",
+      ok: !("linearWorkspaceSlug" in built.facts),
+    });
+
+    // detectClobberedConfigs.
+    const clobbered = detectClobberedConfigs(
+      [
+        ".claude/skills/send-it/config.json",
+        ".agents/skills/send-it/config.json",
+        "README.md",
+        "",
+      ].join("\n"),
+    );
+    cases.push({
+      name: "detectClobberedConfigs keeps both mirrors and drops non-config paths",
+      ok:
+        clobbered.length === 2 &&
+        clobbered.includes(".claude/skills/send-it/config.json") &&
+        clobbered.includes(".agents/skills/send-it/config.json"),
+    });
+    cases.push({
+      name: "detectClobberedConfigs returns [] for empty input (first-ever install)",
+      ok: detectClobberedConfigs("").length === 0,
+    });
+
+    // interpretCheckUpdates.
+    cases.push({
+      name: "interpretCheckUpdates ok when updatesAvailable is false",
+      ok:
+        interpretCheckUpdates({ updates: [], updatesAvailable: false }).ok ===
+        true,
+    });
+    const behind = interpretCheckUpdates({
+      updates: [{ bump: "minor", from: "0.1.0", name: "send-it", to: "0.2.0" }],
+      updatesAvailable: true,
+    });
+    cases.push({
+      name: "interpretCheckUpdates not ok + bumps when updates available",
+      ok: behind.ok === false && behind.bumps.length === 1,
+    });
+    cases.push({
+      name: "interpretCheckUpdates not ok + reason for a malformed report",
+      ok:
+        interpretCheckUpdates({}).ok === false &&
+        Boolean(interpretCheckUpdates({}).reason),
+    });
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
+
+  let failed = 0;
+  for (const { name, ok } of cases) {
+    console.log(`  ${ok ? "ok  " : "FAIL"}  ${name}`);
+    if (!ok) {
+      failed += 1;
+    }
+  }
+
+  console.log(`\n${cases.length - failed}/${cases.length} passed`);
+  process.exit(failed === 0 ? 0 : 1);
+}
+
+function throws(function_) {
+  try {
+    function_();
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+// Only run when invoked directly as a CLI, not when imported. Compare realpath'd
+// paths so symlinks (macOS /var→/private/var) don't cause a false negative.
+function isCliEntry() {
+  if (!process.argv[1]) {
+    return false;
+  }
+
+  try {
+    return realpathSync(import.meta.filename) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+}
+
+if (isCliEntry()) {
+  main(process.argv.slice(2));
+}
