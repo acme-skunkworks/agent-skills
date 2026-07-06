@@ -36,14 +36,11 @@
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
-  mkdtempSync,
   readdirSync,
   readFileSync,
   realpathSync,
-  rmSync,
   statSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 
 // The GitHub URL the vendored bundles are attributed to (skills.lock `source`).
@@ -427,6 +424,8 @@ function findConsumerSkillsDirectories(consumer) {
     try {
       entries = readdirSync(absolute, { withFileTypes: true });
     } catch {
+      // Unreadable mirror (e.g. a permissions error) → treat as no bundles and
+      // move on; the reconcile that skips it will surface as a verify failure.
       continue;
     }
 
@@ -579,6 +578,9 @@ function main(argv) {
     fail(`profile 'repo' must be an existing directory: ${consumer}`, 2);
   }
 
+  // The one ref used consistently: recorded as skills.lock `lockRef` and diffed
+  // by verify. Defaults to "main" (the fleet convention) when --ref is omitted;
+  // the orchestrator pins it to the tag/SHA the source checkout is at.
   const ref = options.ref ?? "main";
 
   console.log(
@@ -599,7 +601,7 @@ function main(argv) {
       runInitialise(source, consumer, facts, true, directory);
     }
 
-    runVerify(source, consumer, options.ref, { assert: true });
+    runVerify(source, consumer, ref, { assert: true });
     console.log("fleet-update: done.");
     return;
   }
@@ -623,7 +625,7 @@ function main(argv) {
     }
   }
 
-  runVerify(source, consumer, options.ref, { assert: false });
+  runVerify(source, consumer, ref, { assert: false });
   console.log(
     "fleet-update: preview complete (re-run with --apply to execute).",
   );
@@ -632,9 +634,9 @@ function main(argv) {
 // ---- self-test -----------------------------------------------------------
 
 function selfTest() {
-  const root = mkdtempSync(join(tmpdir(), "fleet-update-"));
+  // Pure-function checks only — no filesystem, so no temp dir to build or clean.
   const cases = [];
-  try {
+  {
     // parseProfile: defaults + validation.
     const minimal = parseProfile({ repo: "/tmp/x" });
     cases.push({
@@ -773,8 +775,6 @@ function selfTest() {
         interpretCheckUpdates({}).ok === false &&
         Boolean(interpretCheckUpdates({}).reason),
     });
-  } finally {
-    rmSync(root, { force: true, recursive: true });
   }
 
   let failed = 0;
