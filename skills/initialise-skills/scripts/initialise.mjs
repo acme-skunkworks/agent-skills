@@ -58,8 +58,9 @@ export function parseArgs(argv) {
     } else if (argument === "--dry-run") {
       options.write = false;
     } else if (argument === "--review") {
-      // Read-only: report each skill's full current config, never write. Leaves
-      // options.write false so the reconcile write path stays dormant.
+      // Read-only: report each skill's full current config, never write. The
+      // write path is force-disabled after the loop (below), so this stays
+      // read-only regardless of flag order.
       options.review = true;
     } else if (argument === "--json") {
       options.json = true;
@@ -73,6 +74,14 @@ export function parseArgs(argv) {
       console.error(`initialise-skills: unknown argument "${argument}"`);
       process.exit(2);
     }
+  }
+
+  // --review is strictly read-only: force the write path off no matter the flag
+  // order, so neither `--write --review` nor `--review --write` can leave both
+  // active (which would write config.json and then render a stale pre-write
+  // snapshot).
+  if (options.review) {
+    options.write = false;
   }
 
   return options;

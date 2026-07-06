@@ -53,6 +53,20 @@ describe("parseArgs", () => {
   it("defaults review to false", () => {
     expect(parseArgs([]).review).toBe(false);
   });
+
+  it("keeps --review read-only regardless of flag order", () => {
+    // --review must force write off even when --write is also passed, in either
+    // order — otherwise a config write would run and the review would then show
+    // a stale pre-write snapshot.
+    expect(parseArgs(["--write", "--review"])).toMatchObject({
+      review: true,
+      write: false,
+    });
+    expect(parseArgs(["--review", "--write"])).toMatchObject({
+      review: true,
+      write: false,
+    });
+  });
 });
 
 describe("asKeyList", () => {
