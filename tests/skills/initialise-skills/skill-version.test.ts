@@ -51,6 +51,17 @@ describe("parseSkillVersion", () => {
     ).toBeNull();
   });
 
+  it("reads metadata.version, not a nested version under a metadata sub-key", () => {
+    // A `version:` nested under a deeper metadata child (here `build:`) must be
+    // ignored; only the direct-child `metadata.version` counts, even when the
+    // nested one appears first.
+    expect(
+      parseSkillVersion(
+        "---\nmetadata:\n  build:\n    version: bad\n  version: good\n---\n",
+      ),
+    ).toBe("good");
+  });
+
   it("stops at the closing fence", () => {
     expect(
       parseSkillVersion("---\nname: demo\n---\nmetadata:\n  version: 1.0.0\n"),

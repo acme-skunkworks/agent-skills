@@ -34,6 +34,11 @@ export function parseSkillVersion(skillMdText) {
   }
 
   let inMetadata = false;
+  // The indent of `metadata:`'s DIRECT children, set by the first non-blank child.
+  // We only accept `version:` at exactly that depth so a nested mapping's own
+  // `version:` (e.g. a `build:`/`engines:` sub-block) can't be mistaken for
+  // `metadata.version` and feed a wrong value into skills.lock.
+  let childIndent = null;
   for (let index = 1; index < lines.length; index++) {
     const line = lines[index];
     const trimmed = line.trim();
@@ -57,6 +62,19 @@ export function parseSkillVersion(skillMdText) {
     // top-level key — the block is over.
     if (!indented && trimmed !== "") {
       return null;
+    }
+
+    // A blank line neither ends the block nor establishes the child indent.
+    if (trimmed === "") {
+      continue;
+    }
+
+    const indent = line.length - line.trimStart().length;
+    if (childIndent === null) {
+      childIndent = indent;
+    } else if (indent !== childIndent) {
+      // A deeper (nested) or shallower line is not a direct child of metadata.
+      continue;
     }
 
     // Anchor the capture on a non-space (`\S`) so `\s*` and the capture can't
