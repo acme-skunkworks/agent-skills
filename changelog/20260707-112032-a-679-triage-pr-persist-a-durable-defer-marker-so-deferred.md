@@ -1,12 +1,12 @@
 ---
 title: Persist a durable defer marker in triage-pr so deferred threads aren't reprocessed
-release_note: "triage-pr now marks a deferred review thread durably the moment it's set aside for follow-up, so it is no longer re-triaged as a fresh finding on every subsequent review pass and a fresh invocation can still finish minting its ticket."
-created_at: "2026-07-07T11:20:32Z"
-merged_at:
+release_note: triage-pr now marks a deferred review thread durably the moment it's set aside for follow-up, so it is no longer re-triaged as a fresh finding on every subsequent review pass and a fresh invocation can still finish minting its ticket.
+created_at: '2026-07-07T11:20:32Z'
+merged_at: '2026-07-07T11:48:18Z'
 branch: a-679-triage-pr-persist-a-durable-defer-marker-so-deferred-threads
-pr:
-commit:
-merge_strategy:
+pr: 112
+commit: 93924ce
+merge_strategy: squash
 author: hello@robeasthope.com
 co_authors: []
 category: fix
@@ -14,7 +14,11 @@ breaking: false
 issues:
   - A-679
 stats:
-version:
+  loc_added: 428
+  loc_removed: 45
+  files_changed: 7
+  commits: 4
+version: 1.2.1
 ---
 
 ## Fixed
