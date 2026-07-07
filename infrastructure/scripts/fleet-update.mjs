@@ -256,10 +256,10 @@ export function resolveWipeTargets(mirrors, skills) {
  * empty bundles. It "worked" by hand only because Claude Code sets CLAUDECODE.
  * (`!process.stdin.isTTY` alone does NOT skip the scope prompt — only agent
  * detection does.) Pure — returns a new object, mutates nothing.
- * @param {NodeJS.ProcessEnv} [baseEnv]
- * @returns {NodeJS.ProcessEnv}
+ * @param {Record<string, string | undefined>} [baseEnvironment]
+ * @returns {Record<string, string | undefined>}
  */
-export function skillsAddEnv(baseEnvironment = process.env) {
+export function skillsAddEnvironment(baseEnvironment = process.env) {
   return { ...baseEnvironment, CLAUDECODE: "1" };
 }
 
@@ -441,7 +441,7 @@ function run(command, args, cwd, input, environment) {
 
 function runSkillsAdd(consumer, args) {
   console.log(`fleet-update: skills ${args.join(" ")}`);
-  run("npx", ["skills", ...args], consumer, undefined, skillsAddEnv());
+  run("npx", ["skills", ...args], consumer, undefined, skillsAddEnvironment());
 }
 
 /**
@@ -857,22 +857,6 @@ function selfTest() {
     cases.push({
       name: "resolveWipeTargets is empty when no skills resolve",
       ok: resolveWipeTargets([".claude/skills"], []).length === 0,
-    });
-
-    // skillsAddEnv.
-    const addEnvironment = skillsAddEnv({ PATH: "/usr/bin" });
-    cases.push({
-      name: "skillsAddEnv sets CLAUDECODE=1 for the non-interactive install (A-745) and preserves the base env",
-      ok:
-        addEnvironment.CLAUDECODE === "1" && addEnvironment.PATH === "/usr/bin",
-    });
-    cases.push({
-      name: "skillsAddEnv does not mutate the base env",
-      ok: (() => {
-        const base = { PATH: "/usr/bin" };
-        skillsAddEnv(base);
-        return !("CLAUDECODE" in base);
-      })(),
     });
 
     // buildInitialiseFacts.

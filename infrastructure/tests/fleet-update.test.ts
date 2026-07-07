@@ -15,7 +15,7 @@ import {
   parseProfile,
   resolveSkills,
   resolveWipeTargets,
-  skillsAddEnv as skillsAddEnvironment,
+  skillsAddEnvironment,
   SOURCE_URL,
 } from "../scripts/fleet-update.mjs";
 import { describe, expect, it } from "vitest";
