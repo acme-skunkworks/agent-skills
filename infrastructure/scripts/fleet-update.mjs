@@ -115,7 +115,7 @@ Options:
   --apply            Actually mutate the target repo (default: preview only).
   --dry-run          Explicit preview (the default).
   --print-skills     Emit the resolved install set (comma-separated) and exit — the
-                     scope the fan-out pre-flight passes to check-updates --skills.`;
+                     scope that the fan-out pre-flight passes to check-updates --skills.`;
 
 /**
  * Parse and validate one install profile. Accepts a JSON string or an
