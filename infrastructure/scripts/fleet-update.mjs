@@ -249,6 +249,21 @@ export function resolveWipeTargets(mirrors, skills) {
 }
 
 /**
+ * The child environment for `skills add` — the base env plus `CLAUDECODE=1`, which
+ * forces skills.sh's non-interactive install path (A-745). Without an agent env,
+ * `skills add` shows an interactive "Installation scope" prompt and, with no TTY to
+ * answer it, vendors NOTHING — so an unattended roll (CI/cron) silently produces
+ * empty bundles. It "worked" by hand only because Claude Code sets CLAUDECODE.
+ * (`!process.stdin.isTTY` alone does NOT skip the scope prompt — only agent
+ * detection does.) Pure — returns a new object, mutates nothing.
+ * @param {NodeJS.ProcessEnv} [baseEnv]
+ * @returns {NodeJS.ProcessEnv}
+ */
+export function skillsAddEnv(baseEnvironment = process.env) {
+  return { ...baseEnvironment, CLAUDECODE: "1" };
+}
+
+/**
  * Assemble the stdin payload for initialise.mjs: the script-supplied lock
  * provenance (lockSource/lockRef) plus the non-derivable Linear facts from the
  * profile. Absent facts are omitted so the detector's no-fact path is preserved.
@@ -388,10 +403,11 @@ function readProfileSource(profilePath) {
  * Run a subprocess and return the raw result (status/stdout/stderr) without
  * exiting — callers decide whether a non-zero status is fatal.
  */
-function spawnCapture(command, args, cwd, input) {
+function spawnCapture(command, args, cwd, input, environment) {
   const result = spawnSync(command, args, {
     cwd,
     encoding: "utf8",
+    env: environment,
     input,
   });
   if (result.error) {
@@ -403,10 +419,11 @@ function spawnCapture(command, args, cwd, input) {
 
 /**
  * Run a subprocess, streaming nothing; surface stdout/stderr and exit 1 on a
- * non-zero status. Returns the captured stdout for the caller to parse.
+ * non-zero status. Returns the captured stdout for the caller to parse. `env`
+ * (when given) REPLACES the child environment, so callers pass a merged copy.
  */
-function run(command, args, cwd, input) {
-  const result = spawnCapture(command, args, cwd, input);
+function run(command, args, cwd, input, environment) {
+  const result = spawnCapture(command, args, cwd, input, environment);
   if (result.status !== 0) {
     if (result.stdout?.trim()) {
       console.error(result.stdout.trimEnd());
@@ -424,7 +441,7 @@ function run(command, args, cwd, input) {
 
 function runSkillsAdd(consumer, args) {
   console.log(`fleet-update: skills ${args.join(" ")}`);
-  run("npx", ["skills", ...args], consumer);
+  run("npx", ["skills", ...args], consumer, undefined, skillsAddEnv());
 }
 
 /**
@@ -840,6 +857,22 @@ function selfTest() {
     cases.push({
       name: "resolveWipeTargets is empty when no skills resolve",
       ok: resolveWipeTargets([".claude/skills"], []).length === 0,
+    });
+
+    // skillsAddEnv.
+    const addEnvironment = skillsAddEnv({ PATH: "/usr/bin" });
+    cases.push({
+      name: "skillsAddEnv sets CLAUDECODE=1 for the non-interactive install (A-745) and preserves the base env",
+      ok:
+        addEnvironment.CLAUDECODE === "1" && addEnvironment.PATH === "/usr/bin",
+    });
+    cases.push({
+      name: "skillsAddEnv does not mutate the base env",
+      ok: (() => {
+        const base = { PATH: "/usr/bin" };
+        skillsAddEnv(base);
+        return !("CLAUDECODE" in base);
+      })(),
     });
 
     // buildInitialiseFacts.

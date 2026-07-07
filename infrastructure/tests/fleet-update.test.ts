@@ -15,6 +15,7 @@ import {
   parseProfile,
   resolveSkills,
   resolveWipeTargets,
+  skillsAddEnv as skillsAddEnvironment,
   SOURCE_URL,
 } from "../scripts/fleet-update.mjs";
 import { describe, expect, it } from "vitest";
@@ -142,6 +143,14 @@ describe("resolveSkills + buildSkillsAddArgs", () => {
 
   it("resolveWipeTargets is empty when no skills resolve", () => {
     expect(resolveWipeTargets([".claude/skills"], [])).toEqual([]);
+  });
+
+  it("skillsAddEnv sets CLAUDECODE=1 (non-interactive install, A-745) without mutating the base env", () => {
+    const base = { PATH: "/usr/bin" };
+    const environment = skillsAddEnvironment(base);
+    expect(environment.CLAUDECODE).toBe("1");
+    expect(environment.PATH).toBe("/usr/bin");
+    expect("CLAUDECODE" in base).toBe(false);
   });
 
   it("emits explicit --skill pairs for a subset", () => {
