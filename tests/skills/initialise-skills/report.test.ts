@@ -276,4 +276,42 @@ describe("formatReview", () => {
     );
     expect(text).toContain("⚠ existing config.json is unparseable — skipped");
   });
+
+  it("surfaces the fallback for an unset key but not for a set one", () => {
+    const text = formatReview(
+      buildReviewReport(
+        [
+          {
+            config: { baseBranch: "develop" },
+            configPath: "skills/x/config.json",
+            malformed: false,
+            name: "x",
+            results: {
+              baseBranch: { status: "drift" },
+              linearWorkspaceSlug: { status: "needs-manual-input" },
+            },
+          },
+        ],
+        new Map([
+          [
+            "baseBranch",
+            { detectionSource: "d", fallback: "`main`", usedBy: "changelog" },
+          ],
+          [
+            "linearWorkspaceSlug",
+            {
+              detectionSource: "d2",
+              fallback: "needs-manual-input",
+              usedBy: "changelog",
+            },
+          ],
+        ]),
+      ),
+    );
+
+    // An unset key surfaces its fallback default...
+    expect(text).toContain("fallback: needs-manual-input");
+    // ...while a set key's live value stands in for it (no fallback line).
+    expect(text).not.toContain("fallback: `main`");
+  });
 });

@@ -315,10 +315,10 @@ function main() {
   const skillsDirectory = options.skillsDir ?? defaultSkillsDirectory();
   const installedVersions = readInstalledVersions(skillsDirectory);
   if (Object.keys(installedVersions).length > 0) {
-    const existingLock = readLock(options.repoRoot);
-    const source = resolveSource(existingLock, facts);
-    const ref = resolveRef(existingLock, facts);
     try {
+      const existingLock = readLock(options.repoRoot);
+      const source = resolveSource(existingLock, facts);
+      const ref = resolveRef(existingLock, facts);
       const result = writeLock(
         options.repoRoot,
         buildLock({ installedVersions, ref, source }),
@@ -331,7 +331,7 @@ function main() {
       };
     } catch (error) {
       console.error(
-        `initialise-skills: could not write skills.lock: ${error.message}`,
+        `initialise-skills: could not reconcile skills.lock: ${error.message}`,
       );
       process.exit(2);
     }

@@ -179,4 +179,23 @@ describe("resolveOverrides", () => {
     );
     expect(overrides.get("changelog")).toEqual({ baseBranch: "two" });
   });
+
+  it("rejects prototype-polluting keys before the bracket-notation write", () => {
+    const { errors, overrides } = resolveOverrides(
+      [
+        "changelog.__proto__=oops",
+        "changelog.constructor=oops",
+        "changelog.prototype=oops",
+      ],
+      skills,
+    );
+    expect(errors).toHaveLength(3);
+    for (const message of errors) {
+      expect(message).toMatch(/is not an assignable config key/);
+    }
+
+    expect(overrides.size).toBe(0);
+    // Object.prototype is untouched by the rejected keys.
+    expect(({} as Record<string, unknown>).oops).toBeUndefined();
+  });
 });

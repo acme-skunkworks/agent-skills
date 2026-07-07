@@ -159,4 +159,11 @@ describe("readLock / writeLock", () => {
     writeFileSync(lockPath(root), "{ not json");
     expect(readLock(root)).toBeNull();
   });
+
+  it("throws on a genuine IO error rather than masking it as 'no lock'", () => {
+    // A directory at the lock path exists but can't be read as a file (EISDIR):
+    // a real IO error must surface, not collapse to null like a malformed lock.
+    mkdirSync(lockPath(root), { recursive: true });
+    expect(() => readLock(root)).toThrow(/could not read/);
+  });
 });

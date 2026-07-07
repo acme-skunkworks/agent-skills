@@ -5,8 +5,36 @@
 import {
   compareVersions,
   diffLock,
+  formatHuman,
+  hasUpdates,
 } from "../../../skills/initialise-skills/scripts/check-updates.mjs";
 import { describe, expect, it } from "vitest";
+
+// Build a report object of the shape formatHuman/updatesAvailable consume, with
+// every partition empty by default so a test overrides only what it exercises.
+function report(
+  overrides: Partial<{
+    added: Array<{ name: string; version: string }>;
+    downgrades: Array<{ from: string; name: string; to: string }>;
+    removed: string[];
+    unknown: Array<{ from: string; name: string; to: string }>;
+    updates: Array<{ bump: string; from: string; name: string; to: string }>;
+  }> = {},
+) {
+  return {
+    added: [],
+    downgrades: [],
+    lock: "/repo/.claude/skills.lock",
+    lockRef: null,
+    ref: null,
+    removed: [],
+    source: "/src",
+    unknown: [],
+    updates: [],
+    upToDate: [],
+    ...overrides,
+  };
+}
 
 describe("compareVersions", () => {
   it("classifies forward bumps by the first differing component", () => {
@@ -95,5 +123,68 @@ describe("diffLock", () => {
     expect(diff.updates.map((update: { name: string }) => update.name)).toEqual(
       ["abe", "zed"],
     );
+  });
+});
+
+describe("hasUpdates", () => {
+  it("is true when a locked skill has a newer target", () => {
+    const diff = diffLock({ stale: "1.0.0" }, { stale: "1.1.0" });
+    expect(hasUpdates(diff)).toBe(true);
+  });
+
+  it("is true when only a new upstream skill is missing (added, no updates)", () => {
+    // The regression: a repo behind on a brand-new bundle must not read as clean.
+    const diff = diffLock(
+      { current: "1.0.0" },
+      { current: "1.0.0", fresh: "0.1.0" },
+    );
+    expect(diff.updates).toEqual([]);
+    expect(diff.added).toEqual([{ name: "fresh", version: "0.1.0" }]);
+    expect(hasUpdates(diff)).toBe(true);
+  });
+
+  it("is false when everything matches", () => {
+    const same = { a: "1.0.0" };
+    expect(hasUpdates(diffLock(same, same))).toBe(false);
+  });
+});
+
+describe("formatHuman", () => {
+  const ALL_CLEAR = "All installed skills are up to date.";
+
+  it("prints the all-clear only when nothing is off-target", () => {
+    expect(formatHuman(report({ upToDate: ["a"] }))).toContain(ALL_CLEAR);
+  });
+
+  it("omits the all-clear when a new upstream skill is not installed", () => {
+    const out = formatHuman(
+      report({ added: [{ name: "fresh", version: "0.1.0" }] }),
+    );
+    expect(out).not.toContain(ALL_CLEAR);
+    expect(out).toContain("new upstream skill(s) not installed");
+    expect(out).toContain("fresh@0.1.0");
+  });
+
+  it("omits the all-clear when downgrades or unknowns exist without updates", () => {
+    const out = formatHuman(
+      report({
+        downgrades: [{ from: "2.0.0", name: "ahead", to: "1.0.0" }],
+        unknown: [{ from: "1.0.0", name: "weird", to: "x" }],
+      }),
+    );
+    expect(out).not.toContain(ALL_CLEAR);
+    expect(out).toContain("downgrade");
+    expect(out).toContain("uncomparable version");
+  });
+
+  it("lists the update block when updates exist", () => {
+    const out = formatHuman(
+      report({
+        updates: [{ bump: "minor", from: "1.0.0", name: "stale", to: "1.4.0" }],
+      }),
+    );
+    expect(out).toContain("1 update(s) available:");
+    expect(out).toContain("stale");
+    expect(out).not.toContain(ALL_CLEAR);
   });
 });
