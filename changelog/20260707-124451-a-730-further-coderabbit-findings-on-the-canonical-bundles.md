@@ -1,12 +1,12 @@
 ---
 title: Resolve further CodeRabbit findings across the initialise-skills, changelog and release-status bundles
-release_note: "initialise-skills now reports a repo that is behind on a brand-new upstream skill as having updates available (rather than \"up to date\"), never claims \"up to date\" alongside downgrades or uncomparable versions, surfaces each unset key's fallback default in its review output, distinguishes a genuine lock read error from a missing lock, and rejects prototype-polluting --set keys; release-status now reports a diagnosed error (naming what failed) when a gh call returns non-JSON, and its docs point at the tracked config template and list the --repo/--help flags."
-created_at: "2026-07-07T12:44:51Z"
-merged_at:
+release_note: initialise-skills now reports a repo that is behind on a brand-new upstream skill as having updates available (rather than "up to date"), never claims "up to date" alongside downgrades or uncomparable versions, surfaces each unset key's fallback default in its review output, distinguishes a genuine lock read error from a missing lock, and rejects prototype-polluting --set keys; release-status now reports a diagnosed error (naming what failed) when a gh call returns non-JSON, and its docs point at the tracked config template and list the --repo/--help flags.
+created_at: '2026-07-07T12:44:51Z'
+merged_at: '2026-07-07T13:38:09Z'
 branch: a-730-further-coderabbit-findings-on-the-canonical-bundles-a-681
-pr:
-commit:
-merge_strategy:
+pr: 113
+commit: 94d3b77
+merge_strategy: squash
 author: hello@robeasthope.com
 co_authors: []
 category: fix
@@ -14,7 +14,11 @@ breaking: false
 issues:
   - A-730
 stats:
-version:
+  loc_added: 367
+  loc_removed: 32
+  files_changed: 22
+  commits: 5
+version: 1.2.1
 ---
 
 ## Fixed
