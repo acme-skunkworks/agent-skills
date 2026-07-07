@@ -9,6 +9,7 @@ import {
   classifyTitle,
   detectStalePending,
   parseArgs,
+  parseJson,
   previewBump,
   requiredCheckState,
   tagParity,
@@ -205,5 +206,20 @@ describe("parseArgs", () => {
   it("throws on a malformed --repo", () => {
     expect(() => parseArgs(["--repo", "acme/widgets/extra"])).toThrow(/owner/);
     expect(() => parseArgs(["--repo"])).toThrow(/owner/);
+  });
+});
+
+describe("parseJson — diagnosed parse failures", () => {
+  it("parses valid JSON transparently", () => {
+    expect(parseJson('[{"id":1}]', "x")).toEqual([{ id: 1 }]);
+  });
+
+  it("names the context when gh returns non-JSON (warning line, empty output)", () => {
+    expect(() =>
+      parseJson("gh: could not authenticate", "merged-PR list"),
+    ).toThrow(/could not parse merged-PR list/);
+    expect(() => parseJson("", "open release PR")).toThrow(
+      /could not parse open release PR/,
+    );
   });
 });

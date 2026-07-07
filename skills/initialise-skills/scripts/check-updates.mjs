@@ -83,6 +83,18 @@ function byName(a, b) {
 }
 
 /**
+ * Whether a diff means the consumer is behind: a locked skill has a newer target
+ * (`updates`) *or* a brand-new upstream bundle it hasn't vendored appeared
+ * (`added`). Both are actionable, so a repo missing a whole new skill is correctly
+ * "not up to date" rather than falsely clean.
+ * @param {ReturnType<typeof diffLock>} diff
+ * @returns {boolean}
+ */
+export function hasUpdates(diff) {
+  return diff.updates.length > 0 || diff.added.length > 0;
+}
+
+/**
  * Diff a lock's installed versions against a target's versions.
  *   updates   : [{name, from, to, bump}] where the target is strictly newer
  *               (bump ∈ major|minor|patch) — the actionable upgrade list.
@@ -200,6 +212,11 @@ function gitShow(sourceDirectory, ref, path) {
       ["-C", sourceDirectory, "show", `${ref}:${path}`],
       {
         encoding: "utf8",
+        // Force a stable locale: the absent-path check below matches git's fatal
+        // stderr text, which is localised under LANG/LC_ALL. Without this, a genuine
+        // missing path in a non-English locale misses the regex and falls through to
+        // a noisy warning.
+        env: { ...process.env, LC_ALL: "C" },
         maxBuffer: 10 * 1024 * 1024,
         stdio: ["ignore", "pipe", "pipe"],
       },
@@ -386,7 +403,7 @@ function main() {
     ref: options.ref ?? null,
     source: options.source,
     ...diff,
-    updatesAvailable: diff.updates.length > 0,
+    updatesAvailable: hasUpdates(diff),
   };
 
   if (options.json) {
@@ -396,13 +413,23 @@ function main() {
   }
 }
 
-function formatHuman(report) {
+export function formatHuman(report) {
   const lines = [];
   const target = report.ref ? `ref ${report.ref}` : "working tree";
   lines.push(
     `check-updates — ${report.lock} vs ${report.source} (${target})`,
     "",
   );
+
+  // The all-clear line may only appear when there is genuinely nothing to report;
+  // otherwise "up to date" reads as contradictory printed above added/removed
+  // /downgrade/unknown lines (a repo can have no updates yet still be off-target).
+  const nothingToReport =
+    !report.updates.length &&
+    !report.added.length &&
+    !report.removed.length &&
+    !report.downgrades.length &&
+    !report.unknown.length;
 
   if (report.updates.length) {
     lines.push(`${report.updates.length} update(s) available:`);
@@ -413,7 +440,7 @@ function formatHuman(report) {
     }
 
     lines.push("");
-  } else {
+  } else if (nothingToReport) {
     lines.push("All installed skills are up to date.", "");
   }
 
