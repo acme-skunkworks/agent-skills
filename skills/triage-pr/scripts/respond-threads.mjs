@@ -80,7 +80,10 @@ export function isReviewBotAuthor(login, bots = DEFAULT_BOTS) {
 }
 
 /**
- * True when a comment/reply body carries one of our acknowledgement markers.
+ * True when a comment body carries a marker. With no `marker` argument, checks
+ * only the resolving acknowledgement markers (`THREAD_MARKER` or `SUMMARY_MARKER`)
+ * — NOT the non-resolving `DEFER_PENDING_MARKER`, since a defer-pending reply does
+ * not mean the thread is handled. Pass `marker` explicitly to check for that one.
  */
 export function hasMarker(body, marker) {
   const text = String(body ?? "");
