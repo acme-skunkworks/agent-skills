@@ -26,6 +26,7 @@ import {
   discoverSkills,
   isPreflightInstalled,
 } from "./lib/discover.mjs";
+import { restoreClobberedConfigs } from "./lib/git.mjs";
 import { reconcilePreflightIgnore } from "./lib/gitignore.mjs";
 import { serialiseConfig } from "./lib/jsonio.mjs";
 import { mergeConfig } from "./lib/merge.mjs";
@@ -198,7 +199,39 @@ function main() {
   }
 
   const { acceptDrift, facts } = readStdinPayload();
-  const skills = discoverSkills(options.skillsDir);
+  let skills = discoverSkills(options.skillsDir);
+
+  // A-706: a `skills add --copy` re-vendor clobbers each tracked config.json
+  // (agent-skills ships none — A-615), so restore them from HEAD *before*
+  // reconciling — otherwise the merge runs against the wiped/example values and
+  // silently regresses every no-detector key. --write restores; a dry-run/review
+  // only warns. Re-discover after a restore so the reconcile reads the recovered
+  // values. (fleet-update does this too for its own pipeline; this protects a
+  // human running `skills add --copy` + initialise directly.)
+  const configPaths = skills
+    .filter((skill) => !skill.malformed)
+    .map((skill) => relative(options.repoRoot, skill.configPath));
+  const { clobbered, restored } = restoreClobberedConfigs(
+    options.repoRoot,
+    configPaths,
+    { write: options.write },
+  );
+  if (clobbered.length > 0) {
+    console.error(
+      `initialise-skills: ${clobbered.length} config.json clobbered by a --copy re-vendor${
+        options.write
+          ? " — restored from HEAD before reconciling (A-706):"
+          : " — re-run with --write to restore from HEAD before values regress (A-706):"
+      }`,
+    );
+    for (const path of clobbered) {
+      console.error(`  ${path}`);
+    }
+
+    if (restored.length > 0) {
+      skills = discoverSkills(options.skillsDir);
+    }
+  }
 
   // Resolve + validate --set overrides up front, before any write, so an unknown
   // skill/key or a type mismatch fails fast and touches nothing.
