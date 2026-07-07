@@ -6,6 +6,7 @@
 import {
   buildConsolidatedComment,
   buildReplyBody,
+  DEFER_PENDING_MARKER,
   findExistingAckComment,
   hasMarker,
   isReviewBotAuthor,
@@ -51,6 +52,54 @@ describe("planThreadResponses — symmetric accept/decline", () => {
     expect(action.body).toContain("A-601");
     expect(action.body).toContain("for follow-up");
     expect(action.body).toContain(THREAD_MARKER);
+  });
+});
+
+describe("planThreadResponses — defer-pending (non-resolving marker)", () => {
+  it("→ reply-only carrying the non-resolving marker, not the thread-ack", () => {
+    const [action] = planThreadResponses([
+      { decision: "defer-pending", threadId: "T_dp" },
+    ]);
+    expect(action.kind).toBe("reply-only");
+    expect(action.body).toContain(DEFER_PENDING_MARKER);
+    expect(action.body).not.toContain(THREAD_MARKER);
+  });
+
+  it("is idempotent — a thread already pending is skipped, not re-replied", () => {
+    const [action] = planThreadResponses([
+      {
+        comments: [{ author: "me", body: `Noted.\n\n${DEFER_PENDING_MARKER}` }],
+        decision: "defer-pending",
+        threadId: "T_dp_again",
+      },
+    ]);
+    expect(action).toEqual({
+      kind: "skip",
+      threadId: "T_dp_again",
+      why: "already-pending",
+    });
+  });
+
+  it("skips a fully-handled thread (thread-ack) even for defer-pending", () => {
+    const [action] = planThreadResponses([
+      {
+        comments: [{ author: "me", body: `Addressed.\n\n${THREAD_MARKER}` }],
+        decision: "defer-pending",
+        threadId: "T_dp_handled",
+      },
+    ]);
+    expect(action).toEqual({
+      kind: "skip",
+      threadId: "T_dp_handled",
+      why: "already-handled",
+    });
+  });
+
+  it("never auto-actions a human thread with a defer-pending decision", () => {
+    const [action] = planThreadResponses([
+      { decision: "defer-pending", isHuman: true, threadId: "H_dp" },
+    ]);
+    expect(action).toEqual({ kind: "skip", threadId: "H_dp", why: "human" });
   });
 });
 
@@ -153,6 +202,13 @@ describe("buildReplyBody — validation + no sycophancy", () => {
     const body = buildReplyBody({ decision: "accept", sha: "abc1234" });
     expect(body).toMatch(/^Addressed in abc1234\./);
     expect(body).not.toMatch(/great|absolutely right|excellent/i);
+  });
+
+  it("builds a defer-pending body with no reference and the pending marker", () => {
+    const body = buildReplyBody({ decision: "defer-pending" });
+    expect(body).toContain("follow-up issue will be filed");
+    expect(body).toContain(DEFER_PENDING_MARKER);
+    expect(body).not.toContain(THREAD_MARKER);
   });
 });
 
