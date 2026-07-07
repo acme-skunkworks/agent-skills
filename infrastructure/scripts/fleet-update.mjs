@@ -9,15 +9,24 @@
 // separate, human-run `fleet-wipe.mjs` path.
 //
 // Per profile it runs, against the target consumer repo:
-//   1. skills add <github-url> --skill … --agent … --copy  (vendor the bundles)
-//   2. restore the per-skill config.json that --copy clobbers (A-706 — the real
+//   1. wipe the vendored bundle dirs for the install set (A-741) — so the
+//      `skills add --copy` that follows writes FRESH SKILL.md files. Some skills.sh
+//      CLI versions do an additive copy that doesn't overwrite an existing bundle,
+//      leaving the OLD version on disk; initialise then re-records that stale
+//      version and verify is behind forever. Wiping first makes the roll
+//      deterministic regardless of the CLI's copy semantics.
+//   2. skills add <github-url> --skill … --agent … --copy  (vendor the bundles)
+//   3. restore the per-skill config.json that --copy clobbers (A-706 — the real
 //      fix never shipped; agent-skills gitignores its own config.json (A-615), so
 //      a --copy re-vendor deletes or overwrites the consumer's tracked configs),
 //      by `git checkout HEAD -- <config.json>` — else every no-detector key
 //      regresses on the next reconcile.
-//   3. initialise.mjs --write            (reconcile config + refresh skills.lock)
-//   4. check-updates.mjs verify          (assert the repo is now up to date —
-//      updatesAvailable === false; the idempotency primitive)
+//   4. initialise.mjs --write            (reconcile config + refresh skills.lock)
+//   5. check-updates.mjs verify          (assert the repo is now up to date —
+//      updatesAvailable === false; the idempotency primitive). Scoped to the
+//      install set (--skills) so the repo-internal scaffold-new-skill (A-729),
+//      present in every source checkout but in no consumer, isn't a perpetual
+//      `added` update that wedges the verify (A-741).
 //
 // Preview by default (matches fleet-wipe.mjs / vendor-sync.mjs); --apply mutates.
 // A preview skips the install + restore (skills.sh has no dry-run) and runs
@@ -39,6 +48,7 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
+  rmSync,
   statSync,
 } from "node:fs";
 import { join, relative, resolve } from "node:path";
@@ -90,8 +100,9 @@ const USAGE = `fleet-update — roll one consumer repo onto the current shared s
 
 Usage:
   node fleet-update.mjs --profile <file>           Preview the pipeline (mutates nothing)
-  node fleet-update.mjs --profile <file> --apply   Run install → restore → reconcile → verify
+  node fleet-update.mjs --profile <file> --apply   Run wipe → install → restore → reconcile → verify
   node fleet-update.mjs --apply                    Read the profile from stdin JSON
+  node fleet-update.mjs --profile <file> --print-skills  Print the resolved install set (CSV) and exit
   node fleet-update.mjs --self-test                Run the offline self-check
   node fleet-update.mjs --help                     Show this message (alias: -h)
 
@@ -102,7 +113,9 @@ Options:
                      vendors from the GitHub URL, never this path.
   --ref <ref>        Target ref recorded in skills.lock and diffed by verify (default: main).
   --apply            Actually mutate the target repo (default: preview only).
-  --dry-run          Explicit preview (the default).`;
+  --dry-run          Explicit preview (the default).
+  --print-skills     Emit the resolved install set (comma-separated) and exit — the
+                     scope that the fan-out pre-flight passes to check-updates --skills.`;
 
 /**
  * Parse and validate one install profile. Accepts a JSON string or an
@@ -218,6 +231,24 @@ export function buildSkillsAddArgs(profile) {
 }
 
 /**
+ * The vendored bundle dirs a re-vendor should remove before `skills add --copy`,
+ * as `<mirror>/<skill>` relative paths (one per install skill × mirror). Removing
+ * them first forces `--copy` to write fresh SKILL.md files even when the CLI's copy
+ * is additive and would otherwise leave the OLD version on disk (A-741). Only the
+ * install set is targeted, so consumer-extra bundles outside the profile are left
+ * untouched. Pure — joins paths, touches no filesystem; the caller skips absent
+ * dirs and restores the config.json a wipe also removes (A-706, step 3).
+ * @param {string[]} mirrors  relative skills-dir mirrors (CONSUMER_SKILL_DIRS)
+ * @param {string[]} skills   the resolved install set
+ * @returns {string[]}
+ */
+export function resolveWipeTargets(mirrors, skills) {
+  return mirrors.flatMap((mirror) =>
+    skills.map((skill) => join(mirror, skill)),
+  );
+}
+
+/**
  * Assemble the stdin payload for initialise.mjs: the script-supplied lock
  * provenance (lockSource/lockRef) plus the non-derivable Linear facts from the
  * profile. Absent facts are omitted so the detector's no-fact path is preserved.
@@ -286,6 +317,7 @@ function isStringArray(value) {
 function parseArgs(argv) {
   const options = {
     apply: APPLY_BY_DEFAULT,
+    printSkills: false,
     profile: undefined,
     ref: undefined,
     source: undefined,
@@ -296,6 +328,8 @@ function parseArgs(argv) {
       options.apply = true;
     } else if (argument === "--dry-run") {
       options.apply = false;
+    } else if (argument === "--print-skills") {
+      options.printSkills = true;
     } else if (argument === "--profile") {
       options.profile = takeValue(argv, ++index, "--profile");
     } else if (argument === "--source") {
@@ -391,6 +425,37 @@ function run(command, args, cwd, input) {
 function runSkillsAdd(consumer, args) {
   console.log(`fleet-update: skills ${args.join(" ")}`);
   run("npx", ["skills", ...args], consumer);
+}
+
+/**
+ * Remove the vendored bundle dirs for the install set so the `skills add --copy`
+ * that follows writes fresh files (A-741). Skips dirs that don't exist yet (a
+ * first-ever install), and leaves consumer-extra bundles alone. The config.json a
+ * wipe removes is restored right after the re-copy by restoreClobberedConfigs.
+ */
+function wipeVendoredBundles(consumer, skills) {
+  const removed = [];
+  for (const relativePath of resolveWipeTargets(CONSUMER_SKILL_DIRS, skills)) {
+    const absolute = join(consumer, relativePath);
+    if (existsSync(absolute)) {
+      rmSync(absolute, { force: true, recursive: true });
+      removed.push(relativePath);
+    }
+  }
+
+  if (removed.length === 0) {
+    console.log(
+      "fleet-update: no vendored bundles to wipe (first-ever install).",
+    );
+    return;
+  }
+
+  console.log(
+    `fleet-update: wiped ${removed.length} vendored bundle dir(s) before re-copy (A-741):`,
+  );
+  for (const relativePath of removed.toSorted()) {
+    console.log(`  ${relativePath}`);
+  }
 }
 
 function restoreClobberedConfigs(consumer) {
@@ -491,12 +556,17 @@ function runInitialise(source, consumer, facts, apply, skillsDirectory) {
  * verify is informational: a fresh repo has no lock yet, so a non-zero
  * check-updates (or pending bumps) is reported, never fatal.
  */
-function runVerify(source, consumer, ref, { assert }) {
+function runVerify(source, consumer, ref, { assert }, skills) {
   const script = join(
     source,
     "skills/initialise-skills/scripts/check-updates.mjs",
   );
   const lock = join(consumer, ".claude", "skills.lock");
+  // Scope the diff to the install set so the repo-internal scaffold-new-skill isn't
+  // a perpetual `added` update that fails verify on an otherwise up-to-date repo
+  // (A-741). `skills` is always the resolved list (never empty) from the caller.
+  const skillsScope =
+    skills && skills.length > 0 ? ["--skills", skills.join(",")] : [];
   const result = spawnCapture(
     process.execPath,
     [
@@ -506,6 +576,7 @@ function runVerify(source, consumer, ref, { assert }) {
       ...(ref ? ["--ref", ref] : []),
       "--lock",
       lock,
+      ...skillsScope,
       "--json",
     ],
     consumer,
@@ -583,6 +654,15 @@ function main(argv) {
     fail(error.message, 2);
   }
 
+  // Emit the resolved install set (comma-separated) and exit — the fan-out
+  // pre-flight (fanout-skills.yml) reads it to scope its check-updates probe to the
+  // same skills the roll installs, so the repo-internal scaffold-new-skill doesn't
+  // read as a perpetual update (A-741). Needs only the profile, not a checkout.
+  if (options.printSkills) {
+    console.log(resolveSkills(profile).join(","));
+    return;
+  }
+
   const source = resolve(options.source ?? SOURCE_DEFAULT);
   if (!existsSync(join(source, "skills"))) {
     fail(`--source is not an agent-skills checkout (no skills/): ${source}`, 2);
@@ -603,8 +683,13 @@ function main(argv) {
   );
 
   const facts = buildInitialiseFacts(profile, { ref });
+  const installSkills = resolveSkills(profile);
 
   if (options.apply) {
+    // Wipe the install set's vendored dirs BEFORE the --copy so fresh SKILL.md
+    // files land even if the CLI's copy is additive (A-741); the restore that
+    // follows brings back the config.json the wipe removed (A-706).
+    wipeVendoredBundles(consumer, installSkills);
     runSkillsAdd(consumer, buildSkillsAddArgs(profile));
     restoreClobberedConfigs(consumer);
     const installedDirectories = findConsumerSkillsDirectories(consumer);
@@ -616,16 +701,18 @@ function main(argv) {
       runInitialise(source, consumer, facts, true, directory);
     }
 
-    runVerify(source, consumer, ref, { assert: true });
+    runVerify(source, consumer, ref, { assert: true }, installSkills);
     console.log("fleet-update: done.");
     return;
   }
 
-  // Preview: skills.sh has no dry-run and the restore mutates, so both are
+  // Preview: skills.sh has no dry-run and the wipe/restore mutate, so all three are
   // described only; initialise/check-updates are read-only and run for real
   // against whatever bundles the consumer already has.
   const addArgs = buildSkillsAddArgs(profile);
-  console.log(`fleet-update: would run — skills ${addArgs.join(" ")}`);
+  console.log(
+    `fleet-update: would wipe ${installSkills.length} bundle dir(s) per mirror, then run — skills ${addArgs.join(" ")}`,
+  );
   console.log(
     "fleet-update: would restore any config.json --copy clobbers (A-706).",
   );
@@ -640,7 +727,7 @@ function main(argv) {
     }
   }
 
-  runVerify(source, consumer, ref, { assert: false });
+  runVerify(source, consumer, ref, { assert: false }, installSkills);
   console.log(
     "fleet-update: preview complete (re-run with --apply to execute).",
   );
@@ -730,6 +817,29 @@ function selfTest() {
       ok:
         subsetArgs.includes("--skill") &&
         subsetArgs[subsetArgs.indexOf("--skill") + 1] === "send-it",
+    });
+
+    // resolveWipeTargets.
+    const wipeTargets = resolveWipeTargets(
+      [".claude/skills", ".agents/skills"],
+      ["send-it", "commit"],
+    );
+    cases.push({
+      name: "resolveWipeTargets covers every mirror × install skill",
+      ok:
+        wipeTargets.length === 4 &&
+        wipeTargets.includes(".claude/skills/send-it") &&
+        wipeTargets.includes(".agents/skills/commit"),
+    });
+    cases.push({
+      name: "resolveWipeTargets targets only the install set (no consumer-extra bundles)",
+      ok: resolveWipeTargets([".claude/skills"], ["send-it"]).every(
+        (path) => !path.includes("scaffold-new-skill"),
+      ),
+    });
+    cases.push({
+      name: "resolveWipeTargets is empty when no skills resolve",
+      ok: resolveWipeTargets([".claude/skills"], []).length === 0,
     });
 
     // buildInitialiseFacts.

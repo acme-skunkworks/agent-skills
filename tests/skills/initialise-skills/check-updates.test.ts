@@ -7,6 +7,7 @@ import {
   diffLock,
   formatHuman,
   hasUpdates,
+  restrictToAllowlist,
 } from "../../../skills/initialise-skills/scripts/check-updates.mjs";
 import { describe, expect, it } from "vitest";
 
@@ -146,6 +147,51 @@ describe("hasUpdates", () => {
   it("is false when everything matches", () => {
     const same = { a: "1.0.0" };
     expect(hasUpdates(diffLock(same, same))).toBe(false);
+  });
+});
+
+describe("restrictToAllowlist", () => {
+  it("is a no-op without an allow-list", () => {
+    const versions = { a: "1.0.0", b: "2.0.0" };
+    expect(restrictToAllowlist(versions, undefined)).toEqual(versions);
+    expect(restrictToAllowlist(versions, [])).toEqual(versions);
+  });
+
+  it("keeps only the allow-listed skills", () => {
+    expect(
+      restrictToAllowlist(
+        { "scaffold-new-skill": "0.1.1", "send-it": "1.0.0" },
+        ["send-it"],
+      ),
+    ).toEqual({ "send-it": "1.0.0" });
+  });
+
+  it("scoping both sides drops an upstream-only internal skill from `added` (A-741)", () => {
+    // scaffold-new-skill ships in every source checkout but no consumer installs it,
+    // so unscoped it is a perpetual `added` update that wedges the fan-out verify.
+    const lockSkills = { "send-it": "1.0.0" };
+    const target = { "scaffold-new-skill": "0.1.1", "send-it": "1.0.0" };
+    expect(hasUpdates(diffLock(lockSkills, target))).toBe(true);
+    const scoped = diffLock(
+      restrictToAllowlist(lockSkills, ["send-it"]),
+      restrictToAllowlist(target, ["send-it"]),
+    );
+    expect(scoped.added).toEqual([]);
+    expect(hasUpdates(scoped)).toBe(false);
+  });
+
+  it("keeps a genuinely-new CANONICAL skill as `added` so adoption still fires", () => {
+    // Scoping must not defeat legitimate new-skill adoption: a skill added to the
+    // canonical set that the consumer lacks yet is still `added` (→ a roll).
+    const scoped = diffLock(
+      restrictToAllowlist({ "send-it": "1.0.0" }, ["send-it", "new-skill"]),
+      restrictToAllowlist({ "new-skill": "0.1.0", "send-it": "1.0.0" }, [
+        "send-it",
+        "new-skill",
+      ]),
+    );
+    expect(scoped.added).toEqual([{ name: "new-skill", version: "0.1.0" }]);
+    expect(hasUpdates(scoped)).toBe(true);
   });
 });
 

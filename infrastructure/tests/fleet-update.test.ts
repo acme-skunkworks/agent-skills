@@ -14,6 +14,7 @@ import {
   interpretCheckUpdates,
   parseProfile,
   resolveSkills,
+  resolveWipeTargets,
   SOURCE_URL,
 } from "../scripts/fleet-update.mjs";
 import { describe, expect, it } from "vitest";
@@ -116,6 +117,31 @@ describe("resolveSkills + buildSkillsAddArgs", () => {
     expect(args).not.toContain("scaffold-new-skill");
     expect(args.filter((a) => a === "--agent")).toHaveLength(2);
     expect(args.at(-1)).toBe("--copy");
+  });
+
+  it("resolveWipeTargets covers every mirror × install skill", () => {
+    const targets = resolveWipeTargets(
+      [".claude/skills", ".agents/skills"],
+      ["send-it", "commit"],
+    );
+    expect(targets).toHaveLength(4);
+    expect(targets).toContain(".claude/skills/send-it");
+    expect(targets).toContain(".agents/skills/commit");
+  });
+
+  it("resolveWipeTargets targets only the install set — never a consumer-extra bundle", () => {
+    // The wipe must not remove bundles outside the profile (e.g. a skill the
+    // consumer keeps that agent-skills no longer ships).
+    const targets = resolveWipeTargets(
+      [".claude/skills"],
+      resolveSkills({ repoType: "single", skills: undefined }),
+    );
+    expect(targets).not.toContain(".claude/skills/scaffold-new-skill");
+    expect(targets).toContain(".claude/skills/send-it");
+  });
+
+  it("resolveWipeTargets is empty when no skills resolve", () => {
+    expect(resolveWipeTargets([".claude/skills"], [])).toEqual([]);
   });
 
   it("emits explicit --skill pairs for a subset", () => {
