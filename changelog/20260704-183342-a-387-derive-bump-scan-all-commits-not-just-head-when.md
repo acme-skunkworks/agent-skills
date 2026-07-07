@@ -1,22 +1,24 @@
 ---
-title: "derive-bump: derive the release type from all commits, not just HEAD"
-release_note: "Fixes /send-it under-deriving the release type on a branch whose HEAD commit is a chore/docs commit but which carries an earlier feat/fix. The bump, PR-title type, and changelog category are now taken from the strongest Conventional-Commit type across all commits — so a mixed branch ending on a non-release commit no longer silently fails to cut a release."
-created_at: "2026-07-04T18:33:42Z"
-merged_at:
-branch: "a-387-derive-bump-scan-all-commits-not-just-head-when-deriving-the"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: 'derive-bump: derive the release type from all commits, not just HEAD'
+release_note: Fixes /send-it under-deriving the release type on a branch whose HEAD commit is a chore/docs commit but which carries an earlier feat/fix. The bump, PR-title type, and changelog category are now taken from the strongest Conventional-Commit type across all commits — so a mixed branch ending on a non-release commit no longer silently fails to cut a release.
+created_at: '2026-07-04T18:33:42Z'
+merged_at: '2026-07-04T18:56:23Z'
+branch: a-387-derive-bump-scan-all-commits-not-just-head-when-deriving-the
+pr: 96
+commit: bd54f22
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: fix
 breaking: false
-issues: ["A-387"]
+issues:
+  - A-387
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 5
+  loc_added: 199
+  loc_removed: 17
+  commits: 4
+version: 1.2.0
 ---
 
 ## Fixed

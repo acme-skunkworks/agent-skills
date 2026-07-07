@@ -1,22 +1,24 @@
 ---
-title: "initialise-skills: emit skills.lock and add cross-repo update detection"
-release_note: "initialise-skills now emits a committed .claude/skills.lock — a machine-readable inventory of every installed skill's version plus the source repo and ref it was installed from — refreshed in the same reconcile pass that writes each config.json and the .gitignore entry. A new check-updates.mjs diffs a consumer's lock against a source checkout (its working tree, or a target ref via git show) and prints the per-skill bump list, so a repo can tell which skills are behind. The lock is deterministic and byte-stable: sorted keys, no timestamp, no rewrite unless a version actually moves."
-created_at: "2026-07-04T20:59:51Z"
-merged_at:
-branch: "a-616-ws2-skillslock-cross-repo-update-detection"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: 'initialise-skills: emit skills.lock and add cross-repo update detection'
+release_note: 'initialise-skills now emits a committed .claude/skills.lock — a machine-readable inventory of every installed skill''s version plus the source repo and ref it was installed from — refreshed in the same reconcile pass that writes each config.json and the .gitignore entry. A new check-updates.mjs diffs a consumer''s lock against a source checkout (its working tree, or a target ref via git show) and prints the per-skill bump list, so a repo can tell which skills are behind. The lock is deterministic and byte-stable: sorted keys, no timestamp, no rewrite unless a version actually moves.'
+created_at: '2026-07-04T20:59:51Z'
+merged_at: '2026-07-06T09:54:46Z'
+branch: a-616-ws2-skillslock-cross-repo-update-detection
+pr: 99
+commit: 2c863e5
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: feature
 breaking: false
-issues: ["A-616"]
+issues:
+  - A-616
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 15
+  loc_added: 1576
+  loc_removed: 15
+  commits: 4
+version: 1.2.0
 ---
 
 ## Added

@@ -2,11 +2,11 @@
 title: Tidy the dry-run/preview surface SK-458 surfaced
 release_note: Fixes the three minor issues the SK-458 dry-run smoke pass surfaced. initialise-skills no longer fabricates package roots — detectPackageRoots existence-filters its hard-coded fallback and reports "couldn't detect" when no workspace manifest and no candidate directory exist, so a repo without apps/packages/services dirs sees its packageRoots kept (manual-kept) instead of phantom drift, and a fresh repo is flagged needs-manual-input rather than having fabricated dirs written into config. triage-pr's read-only review-threads fetcher is now documented as having no --dry-run (the writer respond-threads is where it lives), and the send-it and cleanup-repo JSON-output helpers (derive-bump, check-skill-bumps, filesystem-hygiene) gain a --help flag.
 created_at: '2026-06-27T08:10:14Z'
-merged_at:
+merged_at: '2026-06-27T08:51:58Z'
 branch: sk-460-tidy-dry-run-surface
-pr:
-commit:
-merge_strategy:
+pr: 47
+commit: 3cfd909
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -20,10 +20,11 @@ affected_packages:
   - send-it
   - triage-pr
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 17
+  loc_added: 288
+  loc_removed: 16
   commits: 7
+version: 1.2.0
 ---
 
 ## Fixed

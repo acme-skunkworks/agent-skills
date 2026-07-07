@@ -1,13 +1,13 @@
 ---
 title: initialise-skills bundle fixes — slash-safe branch parsing, changelog-dir gating, and gitignore !-unignore
-release_note: "Five fixes to the initialise-skills bundle. Branch-name parsing now strips only the ref namespace (refs/heads/ or refs/remotes/<remote>/), so a slash-named local branch like A-123/demo keeps its issue key instead of being mangled to demo. send-it.changelog is now inferred from a real changelog/ directory rather than from the changelog skill merely being vendored, so a repo that over-installed the skill but keeps no changelog of its own is no longer wrongly flipped true. The gitignore reconcile now treats an explicit !-unignore of .preflight-summary.json as already-handled, so it never appends a positive rule over a deliberate negation, and it gains a .gitignore-specific error message on write failure. Plus a docs reword in detectable-keys.md."
-version:
+release_note: Five fixes to the initialise-skills bundle. Branch-name parsing now strips only the ref namespace (refs/heads/ or refs/remotes/<remote>/), so a slash-named local branch like A-123/demo keeps its issue key instead of being mangled to demo. send-it.changelog is now inferred from a real changelog/ directory rather than from the changelog skill merely being vendored, so a repo that over-installed the skill but keeps no changelog of its own is no longer wrongly flipped true. The gitignore reconcile now treats an explicit !-unignore of .preflight-summary.json as already-handled, so it never appends a positive rule over a deliberate negation, and it gains a .gitignore-specific error message on write failure. Plus a docs reword in detectable-keys.md.
+version: 1.2.0
 created_at: '2026-06-30T10:04:57Z'
-merged_at:
+merged_at: '2026-06-30T12:49:41Z'
 branch: a-580-initialise-skills-bundle-fixes
-pr:
-commit:
-merge_strategy:
+pr: 77
+commit: d62e12d
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -19,9 +19,10 @@ issues:
   - A-583
   - A-584
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 10
+  loc_added: 200
+  loc_removed: 70
+  commits: 7
 ---
 
 ## Fixed

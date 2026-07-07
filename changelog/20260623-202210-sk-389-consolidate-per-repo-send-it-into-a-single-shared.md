@@ -1,22 +1,23 @@
 ---
-title: "Add the shared send-it skill"
-release_note: "New send-it skill — the all-in-one ship finisher: bundles uncommitted work into atomic commits, runs the change-gated lint preflight, authors the dated changelog entry, composes a Conventional Commits PR title, pushes, opens or updates a PR, and moves linked Linear issues to In Review. A thin orchestrator delegating to the preflight, changelog, and linear-sync skills."
-version:
-created_at: "2026-06-23T20:22:10Z"
-merged_at:
-branch: "sk-389-consolidate-per-repo-send-it-into-a-single-shared-agent"
-pr:
-commit:
-merge_strategy:
-author: "rob@acmeskunkworks.io"
+title: Add the shared send-it skill
+release_note: 'New send-it skill — the all-in-one ship finisher: bundles uncommitted work into atomic commits, runs the change-gated lint preflight, authors the dated changelog entry, composes a Conventional Commits PR title, pushes, opens or updates a PR, and moves linked Linear issues to In Review. A thin orchestrator delegating to the preflight, changelog, and linear-sync skills.'
+version: 1.2.0
+created_at: '2026-06-23T20:22:10Z'
+merged_at: '2026-06-24T08:00:51Z'
+branch: sk-389-consolidate-per-repo-send-it-into-a-single-shared-agent
+pr: 28
+commit: 3196d33
+merge_strategy: squash
+author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
 breaking: false
-issues: ["SK-389"]
+issues:
+  - SK-389
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 18
+  loc_added: 737
+  loc_removed: 406
   commits: 5
 ---
 

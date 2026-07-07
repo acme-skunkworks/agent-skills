@@ -1,12 +1,12 @@
 ---
 title: Drop bundleVersioning from the send-it config example so single-package consumers reconcile clean
-release_note: "send-it's config.example.json no longer ships a bundleVersioning key. It is a multi-bundle-only, opt-in control added by hand, so carrying it in the single-package template forced every consumer to hand-strip it on reset and made initialise-skills report it needs-manual-input on every run (the dry-run never reaching 'all clean'). The skill-bundle key-parity check now exempts a config-only optional subtree (bundleVersioning) when the example omits the top-level key wholesale, so agent-skills' own config.json can keep it while the example stays neutral; a partially-present block is still flagged."
+release_note: send-it's config.example.json no longer ships a bundleVersioning key. It is a multi-bundle-only, opt-in control added by hand, so carrying it in the single-package template forced every consumer to hand-strip it on reset and made initialise-skills report it needs-manual-input on every run (the dry-run never reaching 'all clean'). The skill-bundle key-parity check now exempts a config-only optional subtree (bundleVersioning) when the example omits the top-level key wholesale, so agent-skills' own config.json can keep it while the example stays neutral; a partially-present block is still flagged.
 created_at: '2026-06-27T21:27:17Z'
-merged_at:
+merged_at: '2026-06-27T22:07:02Z'
 branch: a-555-send-it-example-bundleversioning
-pr:
-commit:
-merge_strategy:
+pr: 69
+commit: 8726fe5
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -14,10 +14,11 @@ breaking: false
 issues:
   - A-555
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 6
+  loc_added: 106
+  loc_removed: 5
   commits: 2
+version: 1.2.0
 ---
 
 ## Fixed

@@ -2,11 +2,11 @@
 title: Consolidate the changelog lifecycle into one zero-dependency bundle
 release_note: The changelog lifecycle now lives in a single authored source — the zero-dependency skills/changelog/scripts/*.mjs bundle. finalise, enrich, version-stamping, and the changelog-completeness gate are ported out of the old tsx + gray-matter infrastructure/scripts/*changelog*.ts duplicates into the bundle, so pnpm changelog:finalise and pnpm validate:changelog run under bare node (no tsx, no gray-matter on the changelog path). The bundled validate-changelog.mjs is now the single validator, exporting a pure validateEntry and covering the relaxed required set, semver, breaking-first, and monorepo affected_packages. Linear links are derived from config.json rather than hard-coded.
 created_at: '2026-06-27T10:21:46Z'
-merged_at:
+merged_at: '2026-06-27T11:07:17Z'
 branch: sk-369-consolidate-changelog-lifecycle
-pr:
-commit:
-merge_strategy:
+pr: 48
+commit: aa0b6d7
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -17,10 +17,11 @@ affected_packages:
   - changelog
   - infrastructure
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 25
+  loc_added: 488
+  loc_removed: 626
   commits: 5
+version: 1.2.0
 ---
 
 ## Added

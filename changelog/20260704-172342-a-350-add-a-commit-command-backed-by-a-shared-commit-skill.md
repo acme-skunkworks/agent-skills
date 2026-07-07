@@ -1,22 +1,24 @@
 ---
-title: "Add a /commit command backed by a shared commit-grouping skill"
-release_note: "Adds a standalone /commit command that turns the working tree into logical, atomic Conventional Commits with an out-of-scope guard — no push, PR, changelog, or Linear writeback. The commit-grouping contract is now a shared skill that /send-it delegates its commit step to."
-created_at: "2026-07-04T17:23:42Z"
-merged_at:
-branch: "a-350-add-a-commit-command-backed-by-a-shared-commit-grouping"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: Add a /commit command backed by a shared commit-grouping skill
+release_note: Adds a standalone /commit command that turns the working tree into logical, atomic Conventional Commits with an out-of-scope guard — no push, PR, changelog, or Linear writeback. The commit-grouping contract is now a shared skill that /send-it delegates its commit step to.
+created_at: '2026-07-04T17:23:42Z'
+merged_at: '2026-07-04T18:13:38Z'
+branch: a-350-add-a-commit-command-backed-by-a-shared-commit-grouping
+pr: 95
+commit: 96ae57f
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: feature
 breaking: false
-issues: ["A-350"]
+issues:
+  - A-350
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 11
+  loc_added: 328
+  loc_removed: 50
+  commits: 6
+version: 1.2.0
 ---
 
 ## Added

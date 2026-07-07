@@ -1,22 +1,24 @@
 ---
-title: "Resolve Wave B CodeRabbit findings across the commit, initialise-skills and release-status bundles"
-release_note: "Three canonical skill bundles get correctness fixes surfaced by CodeRabbit's review of the Wave B re-vendor: the commit skill no longer auto-promotes every uncommitted file to in-scope on a fresh, commit-less branch (a stray file from another branch/worktree could otherwise be swept past the out-of-scope guard); initialise-skills' check-updates no longer masks a real git failure as 'file absent', and its merge --set report now reads the replaced value from the original config rather than an in-run detector-inferred one; and release-status now honours the mainBranch config knob (filtering gh pr list by --base) and raises its merged-PR window from 100 to 1000 so a stalled pipeline with a large backlog isn't under-counted or mis-classified."
-created_at: "2026-07-06T17:55:19Z"
-merged_at:
-branch: "a-719-coderabbit-findings-on-the-canonical-bundles-surfaced-by-the"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: Resolve Wave B CodeRabbit findings across the commit, initialise-skills and release-status bundles
+release_note: 'Three canonical skill bundles get correctness fixes surfaced by CodeRabbit''s review of the Wave B re-vendor: the commit skill no longer auto-promotes every uncommitted file to in-scope on a fresh, commit-less branch (a stray file from another branch/worktree could otherwise be swept past the out-of-scope guard); initialise-skills'' check-updates no longer masks a real git failure as ''file absent'', and its merge --set report now reads the replaced value from the original config rather than an in-run detector-inferred one; and release-status now honours the mainBranch config knob (filtering gh pr list by --base) and raises its merged-PR window from 100 to 1000 so a stalled pipeline with a large backlog isn''t under-counted or mis-classified.'
+created_at: '2026-07-06T17:55:19Z'
+merged_at: '2026-07-06T19:18:01Z'
+branch: a-719-coderabbit-findings-on-the-canonical-bundles-surfaced-by-the
+pr: 109
+commit: 16e56b1
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: fix
 breaking: false
-issues: ["A-719"]
+issues:
+  - A-719
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 12
+  loc_added: 190
+  loc_removed: 32
+  commits: 5
+version: 1.2.0
 ---
 
 ## Fixed

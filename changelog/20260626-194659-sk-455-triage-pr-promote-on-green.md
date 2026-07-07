@@ -19,6 +19,7 @@ stats:
   files_changed:
   loc_added:
   loc_removed:
+version: 1.2.0
 ---
 
 ## Added

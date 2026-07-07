@@ -1,12 +1,12 @@
 ---
 title: Correct the Linear workspace slug and retire stale ASW/SK test fixtures
-release_note: 'The changelog skill now generates Linear links against the correct acme-skunkworks workspace instead of the unrelated goose-and-hobbes one, so enriched changelog entries point at real issues. Alongside this, lingering ASW/SK sample keys in the test fixtures are converted to the current A- team key and to neutral placeholders, completing the SK-to-A rename in agent-skills.'
+release_note: The changelog skill now generates Linear links against the correct acme-skunkworks workspace instead of the unrelated goose-and-hobbes one, so enriched changelog entries point at real issues. Alongside this, lingering ASW/SK sample keys in the test fixtures are converted to the current A- team key and to neutral placeholders, completing the SK-to-A rename in agent-skills.
 created_at: '2026-06-27T15:14:48Z'
-merged_at:
+merged_at: '2026-06-27T15:40:09Z'
 branch: a-521-convert-lingering-aswsk-sample-keys-in-agent-skills-test
-pr:
-commit:
-merge_strategy:
+pr: 53
+commit: cfef6c9
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -14,10 +14,11 @@ breaking: false
 issues:
   - A-521
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 14
+  loc_added: 86
+  loc_removed: 41
   commits: 6
+version: 1.2.0
 ---
 
 ## Fixed

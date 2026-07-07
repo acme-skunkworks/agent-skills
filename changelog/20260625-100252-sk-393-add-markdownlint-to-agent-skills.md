@@ -2,11 +2,11 @@
 title: Add markdownlint to the agent-skills toolchain
 release_note: agent-skills now lints its Markdown with markdownlint-cli2 against the shared @acme-skunkworks/markdownlint-config, gated in CI and via the send-it → preflight markdown gate; the linear-sync bundle ships a cosmetic table re-alignment (0.1.2).
 created_at: '2026-06-25T10:02:52Z'
-merged_at:
+merged_at: '2026-06-25T10:15:50Z'
 branch: sk-393-add-markdownlint-to-agent-skills
-pr:
-commit:
-merge_strategy:
+pr: 32
+commit: 09cecc6
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -16,10 +16,11 @@ issues:
 affected_packages:
   - infrastructure
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 9
+  loc_added: 815
+  loc_removed: 9
   commits: 4
+version: 1.2.0
 ---
 
 ## Added

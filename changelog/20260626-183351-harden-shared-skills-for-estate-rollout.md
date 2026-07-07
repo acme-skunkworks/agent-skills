@@ -2,11 +2,11 @@
 title: Harden the shared skills ahead of the estate rollout
 release_note: send-it gains an optional changelog knob that turns its changelog step off entirely for repos with no changelog flow (decoupled from the shippability gate), cleanup-repo's merge-detection trunk is now configurable via a mainBranch key instead of a hard-coded origin/main, and initialise-skills auto-populates both — setting send-it's changelog flag to false when a repo has neither a changelog skill nor a changelog/ directory, and mirroring the base branch into cleanup-repo's mainBranch. The changelog skill also notes that agent-authored prose follows the host repo's language convention.
 created_at: '2026-06-26T18:33:51Z'
-merged_at:
+merged_at: '2026-06-26T19:36:14Z'
 branch: harden-shared-skills-sk448
-pr:
-commit:
-merge_strategy:
+pr: 44
+commit: a2591a9
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -19,10 +19,11 @@ affected_packages:
   - initialise-skills
   - send-it
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 16
+  loc_added: 199
+  loc_removed: 22
   commits: 7
+version: 1.2.0
 ---
 
 ## Added

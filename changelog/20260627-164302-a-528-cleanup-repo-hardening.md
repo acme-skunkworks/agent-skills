@@ -2,11 +2,11 @@
 title: Harden cleanup-repo's destructive paths and CI-gate them
 release_note: 'The cleanup-repo skill now confirms the branch/worktree pass and the filesystem pass separately (with --branches-only / --fs-only scope flags), so you can accept one and decline the other. Squash-merge force-deletion is safer: the merged-PR lookup is scoped to the trunk base, and a branch is only force-deleted when its local tip still matches the merged PR — a branch with post-merge commits is surfaced and skipped. The bundle''s 15-case filesystem self-test is now ported to vitest so the data-deleting paths are CI-gated.'
 created_at: '2026-06-27T16:43:02Z'
-merged_at:
+merged_at: '2026-06-27T17:25:46Z'
 branch: a-528-cleanup-repo-add-vitest-coverage-and-ci-wire-the-self-test
-pr:
-commit:
-merge_strategy:
+pr: 59
+commit: ef73d1e
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -16,10 +16,11 @@ issues:
   - A-530
   - A-537
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 6
+  loc_added: 327
+  loc_removed: 25
   commits: 1
+version: 1.2.0
 ---
 
 ## Added

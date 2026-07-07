@@ -1,22 +1,25 @@
 ---
-title: "Recompute merge changed flag after --set overrides and default fleet-update to the canonical skill set"
-release_note: "initialise-skills' config reconcile no longer reports a change when a --set restores a key that detection had inferred away: mergeConfig now derives its changed flag once from the final merged config versus the original, instead of accumulating a monotonic flag the --set loop could never clear — so a --set that nets back to the original value is correctly a no-op. Separately, the fleet-update tooling that rolls a consumer repo onto the shared bundles now defaults to the explicit canonical skill set when a profile omits skills, rather than a bare install that vendored the entire published set (including the repo-internal scaffold-new-skill)."
-created_at: "2026-07-06T20:25:00Z"
-merged_at:
-branch: "a-728-recompute-changed-and-fleet-update-canonical-default"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: Recompute merge changed flag after --set overrides and default fleet-update to the canonical skill set
+release_note: 'initialise-skills'' config reconcile no longer reports a change when a --set restores a key that detection had inferred away: mergeConfig now derives its changed flag once from the final merged config versus the original, instead of accumulating a monotonic flag the --set loop could never clear — so a --set that nets back to the original value is correctly a no-op. Separately, the fleet-update tooling that rolls a consumer repo onto the shared bundles now defaults to the explicit canonical skill set when a profile omits skills, rather than a bare install that vendored the entire published set (including the repo-internal scaffold-new-skill).'
+created_at: '2026-07-06T20:25:00Z'
+merged_at: '2026-07-06T20:33:27Z'
+branch: a-728-recompute-changed-and-fleet-update-canonical-default
+pr: 110
+commit: 2cf723c
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: fix
 breaking: false
-issues: ["A-728", "A-729"]
+issues:
+  - A-728
+  - A-729
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 7
+  loc_added: 131
+  loc_removed: 42
+  commits: 1
+version: 1.2.0
 ---
 
 ## Fixed
@@ -42,7 +45,7 @@ Distinct from the [A-719](https://linear.app/acme-skunkworks/issue/A-719) `--set
 ([A-729](https://linear.app/acme-skunkworks/issue/A-729)).** The single-repo fleet-update pipeline's
 `resolveSkills` returned `null` ("omit `--skill`, install everything") when a profile omitted `skills`, so
 `skills add <url> --copy` vendored the entire published set — including `scaffold-new-skill`, the
-repo-internal scaffolding tool that must never reach consumers. It bit the A-681 pilot
+repo-internal scaffolding tool that must never reach consumers. It bit the [A-681](https://linear.app/acme-skunkworks/issue/A-681) pilot
 (release-orchestrator), which picked up `scaffold-new-skill` until the branch was re-vendored with an
 explicit list. `resolveSkills` now defaults to the explicit `CANONICAL_SKILLS` set (minus `changelog` for
 a `no-changelog` repo), so an omitted `skills` list installs exactly the documented fleet bundles and

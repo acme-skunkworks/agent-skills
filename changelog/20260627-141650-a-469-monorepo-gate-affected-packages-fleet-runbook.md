@@ -1,12 +1,12 @@
 ---
 title: Monorepo-gate changelog affected_packages, close skill-script test gaps, add the fleet deployment runbook
-release_note: 'The changelog skill now gates its affected_packages field behind a new affectedPackages config flag, defaulting off so single-package repos stop emitting the redundant field while genuine monorepos keep it (initialise-skills turns it on automatically when it detects a workspace). A documented fleet wipe->install->reconcile->verify runbook and a wipe helper land for rolling the shared skills onto a repo, alongside broader test coverage across the bundled skill scripts.'
+release_note: The changelog skill now gates its affected_packages field behind a new affectedPackages config flag, defaulting off so single-package repos stop emitting the redundant field while genuine monorepos keep it (initialise-skills turns it on automatically when it detects a workspace). A documented fleet wipe->install->reconcile->verify runbook and a wipe helper land for rolling the shared skills onto a repo, alongside broader test coverage across the bundled skill scripts.
 created_at: '2026-06-27T14:16:50Z'
-merged_at:
+merged_at: '2026-06-27T14:44:14Z'
 branch: a-469-tier-1-changelog-dependent-deployment-prep-work-run-in
-pr:
-commit:
-merge_strategy:
+pr: 52
+commit: 240ad93
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -17,10 +17,11 @@ issues:
   - A-464
   - A-465
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 34
+  loc_added: 1406
+  loc_removed: 113
   commits: 5
+version: 1.2.0
 ---
 
 ## Added

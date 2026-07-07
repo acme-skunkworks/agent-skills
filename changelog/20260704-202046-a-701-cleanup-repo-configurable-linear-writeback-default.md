@@ -1,22 +1,24 @@
 ---
-title: "cleanup-repo: make the Linear Done writeback default configurable"
-release_note: "cleanup-repo gains a linearWritebackDefault config knob that seeds the Step 10 Linear Done-writeback prompt default (\"yes\" or \"no\"). Repos not wired to Linear's GitHub integration can now flip the default to yes without editing the SKILL.md. The interactive gate always stays — the knob only moves the default, it never auto-applies — and an absent key is treated as no, preserving the existing behaviour."
-created_at: "2026-07-04T20:20:46Z"
-merged_at:
-branch: "a-701-cleanup-repo-make-the-linear-done-writeback-default"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: 'cleanup-repo: make the Linear Done writeback default configurable'
+release_note: cleanup-repo gains a linearWritebackDefault config knob that seeds the Step 10 Linear Done-writeback prompt default ("yes" or "no"). Repos not wired to Linear's GitHub integration can now flip the default to yes without editing the SKILL.md. The interactive gate always stays — the knob only moves the default, it never auto-applies — and an absent key is treated as no, preserving the existing behaviour.
+created_at: '2026-07-04T20:20:46Z'
+merged_at: '2026-07-04T20:36:59Z'
+branch: a-701-cleanup-repo-make-the-linear-done-writeback-default
+pr: 98
+commit: 55b85d9
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: feature
 breaking: false
-issues: ["A-701"]
+issues:
+  - A-701
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 6
+  loc_added: 58
+  loc_removed: 8
+  commits: 4
+version: 1.2.0
 ---
 
 ## Added

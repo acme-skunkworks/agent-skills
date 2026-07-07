@@ -2,11 +2,11 @@
 title: Add the initialise-skills skill that populates shared skill config
 release_note: A new initialise-skills bundle scans the host repo and reconciles every installed skill's config.json with detected facts — base branch, package roots, changelog dir, Linear issue keys and more — idempotently and without clobbering deliberate edits.
 created_at: '2026-06-25T15:32:13Z'
-merged_at:
+merged_at: '2026-06-25T16:12:58Z'
 branch: sk-409-add-an-initialise-skills-skill-that-populates-shared-skill
-pr:
-commit:
-merge_strategy:
+pr: 36
+commit: 81bd5c3
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -17,10 +17,11 @@ affected_packages:
   - infrastructure
   - initialise-skills
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 17
+  loc_added: 1772
+  loc_removed: 0
   commits: 6
+version: 1.2.0
 ---
 
 ## Added

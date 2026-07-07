@@ -2,11 +2,11 @@
 title: Default the triage-pr skill to promoting a green draft PR to ready-for-review
 release_note: 'The triage-pr skill now promotes a draft PR to ready-for-review by default once Phase A CI is cleanly green, flipping the promoteOnGreen config default from false to true. The existing safety gates are unchanged — promotion is still suppressed unless the green is proven, there are no unresolved human review threads, and there is no unresolved base drift. Pass --no-promote (or set promoteOnGreen: false) to opt out and leave the flip to a human.'
 created_at: '2026-06-27T15:26:44Z'
-merged_at:
+merged_at: '2026-06-27T15:42:28Z'
 branch: a-526-triage-pr-promote-default
-pr:
-commit:
-merge_strategy:
+pr: 54
+commit: 4f834db
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -14,10 +14,11 @@ breaking: false
 issues:
   - A-526
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 4
+  loc_added: 45
+  loc_removed: 11
   commits: 2
+version: 1.2.0
 ---
 
 ## Changed

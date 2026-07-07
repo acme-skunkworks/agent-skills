@@ -2,11 +2,11 @@
 title: Harden the changelog skill's frontmatter parser, link masking and affected-packages guard
 release_note: The changelog skill's bundled scripts now fail loudly on an unterminated quoted inline-array item, ignore blank lines inside block arrays (including one before the first item) instead of emitting spurious null entries or aborting, treat an all-whitespace block scalar as empty rather than silently collapsing it, mask reference-style Markdown link labels and their definition lines so re-running the linkifier stays idempotent, refuse to overwrite an entry whose frontmatter failed to parse, and name the offending file when a frontmatter parse error aborts the branch lookup.
 created_at: '2026-06-25T20:11:56Z'
-merged_at:
+merged_at: '2026-06-25T21:19:15Z'
 branch: sk-391-close-post-merge-bot-review-findings-from-pr-21-changelog
-pr:
-commit:
-merge_strategy:
+pr: 39
+commit: c1f364e
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -17,10 +17,11 @@ affected_packages:
   - changelog
   - infrastructure
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 9
+  loc_added: 475
+  loc_removed: 86
   commits: 6
+version: 1.2.0
 ---
 
 ## Fixed

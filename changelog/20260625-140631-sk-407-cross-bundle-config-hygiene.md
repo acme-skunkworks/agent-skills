@@ -2,11 +2,11 @@
 title: Cross-bundle config hygiene across the shared skills
 release_note: Fixes a cleanup-repo issueKeys gap, ships triage-pr's missing config.example.json and aligns its default review bots with config, adds the Read tool to cleanup-repo/linear-sync, and removes stale changeset references — closing out the SK-407 de-bespoking.
 created_at: '2026-06-25T14:06:31Z'
-merged_at:
+merged_at: '2026-06-25T14:26:44Z'
 branch: sk-407-cross-bundle-config-hygiene
-pr:
-commit:
-merge_strategy:
+pr: 35
+commit: '0164538'
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -20,10 +20,11 @@ affected_packages:
   - linear-sync
   - triage-pr
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 16
+  loc_added: 78
+  loc_removed: 22
   commits: 3
+version: 1.2.0
 ---
 
 ## Fixed

@@ -2,11 +2,11 @@
 title: Fix preflight swallowing markdownlint violations
 release_note: The preflight markdown gate now parses markdownlint-cli2's real output and surfaces violations instead of misreporting them as a linter that couldn't run; an absent markdownlint-cli2 now skips gracefully.
 created_at: '2026-06-24T11:01:51Z'
-merged_at:
+merged_at: '2026-06-25T09:33:36Z'
 branch: sk-406-preflight-markdownlint-format-json-fix
 pr: 31
-commit:
-merge_strategy:
+commit: 582cc27
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -16,10 +16,11 @@ issues:
 affected_packages:
   - infrastructure
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 6
+  loc_added: 251
+  loc_removed: 25
   commits: 4
+version: 1.2.0
 ---
 
 ## Fixed

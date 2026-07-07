@@ -1,22 +1,24 @@
 ---
-title: "fleet-update.mjs vendors from the GitHub URL, not a local path"
-release_note: "fleet-update.mjs installed the shared bundles from the local agent-skills checkout path, and the skills.sh CLI writes that source into the consumer's committed skills-lock.json — so a fan-out run leaked an absolute machine path and sourceType:local into every consumer. It now vendors from the canonical GitHub URL, so the lockfile records sourceType:github with no path. The local checkout stays as the check-updates --source only."
-created_at: "2026-07-06T17:20:00Z"
-merged_at:
-branch: "a-718-fleet-updatemjs-installs-from-a-local-path-leaking-an"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: fleet-update.mjs vendors from the GitHub URL, not a local path
+release_note: fleet-update.mjs installed the shared bundles from the local agent-skills checkout path, and the skills.sh CLI writes that source into the consumer's committed skills-lock.json — so a fan-out run leaked an absolute machine path and sourceType:local into every consumer. It now vendors from the canonical GitHub URL, so the lockfile records sourceType:github with no path. The local checkout stays as the check-updates --source only.
+created_at: '2026-07-06T17:20:00Z'
+merged_at: '2026-07-06T17:37:56Z'
+branch: a-718-fleet-updatemjs-installs-from-a-local-path-leaking-an
+pr: 108
+commit: fa4b72f
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: fix
 breaking: false
-issues: ["A-718"]
+issues:
+  - A-718
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 4
+  loc_added: 102
+  loc_removed: 63
+  commits: 5
+version: 1.2.0
 ---
 
 ## Fixed

@@ -1,22 +1,24 @@
 ---
-title: "Resolve CodeRabbit findings across the commit, changelog, release-status and initialise-skills bundles"
-release_note: "Four canonical skill bundles get correctness fixes surfaced by CodeRabbit's review of the Wave A re-vendor: the commit skill no longer treats a shared directory as enough to pull an uncommitted file in scope (a stray file from another branch/worktree could slip past the out-of-scope guard); the changelog scripts all use a symlink-safe CLI-entry check (enrich-changelog would otherwise skip its filesystem pass when run through a symlink); release-status no longer double-counts a PR merged earlier on the same calendar day as the last tag; and initialise-skills' check-updates now fails loudly on a --source that has no skills/ directory instead of falsely reporting everything up to date."
-created_at: "2026-07-06T14:45:21Z"
-merged_at:
-branch: "a-710-coderabbit-findings-on-the-canonical-bundles-surfaced-by-the"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: Resolve CodeRabbit findings across the commit, changelog, release-status and initialise-skills bundles
+release_note: 'Four canonical skill bundles get correctness fixes surfaced by CodeRabbit''s review of the Wave A re-vendor: the commit skill no longer treats a shared directory as enough to pull an uncommitted file in scope (a stray file from another branch/worktree could slip past the out-of-scope guard); the changelog scripts all use a symlink-safe CLI-entry check (enrich-changelog would otherwise skip its filesystem pass when run through a symlink); release-status no longer double-counts a PR merged earlier on the same calendar day as the last tag; and initialise-skills'' check-updates now fails loudly on a --source that has no skills/ directory instead of falsely reporting everything up to date.'
+created_at: '2026-07-06T14:45:21Z'
+merged_at: '2026-07-06T15:20:30Z'
+branch: a-710-coderabbit-findings-on-the-canonical-bundles-surfaced-by-the
+pr: 106
+commit: bf4328b
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: fix
 breaking: false
-issues: ["A-710"]
+issues:
+  - A-710
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 21
+  loc_added: 274
+  loc_removed: 120
+  commits: 8
+version: 1.2.0
 ---
 
 ## Fixed
