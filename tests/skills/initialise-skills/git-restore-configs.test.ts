@@ -1,6 +1,7 @@
 // A-706: a `skills add --copy` re-vendor clobbers each tracked config.json
 // (agent-skills ships none — A-615), so initialise-skills restores them from HEAD
 // before reconciling. Covers the pure parser and the real-git restore/detect path.
+import { restoreOutcomeSuffix } from "../../../skills/initialise-skills/scripts/initialise.mjs";
 import {
   parseClobberedConfigs,
   restoreClobberedConfigs,
@@ -41,6 +42,23 @@ describe("parseClobberedConfigs", () => {
 
   it("returns [] for empty input", () => {
     expect(parseClobberedConfigs("")).toEqual([]);
+  });
+});
+
+describe("restoreOutcomeSuffix", () => {
+  it("tells a dry-run to re-run with --write", () => {
+    expect(restoreOutcomeSuffix(2, 0, false)).toMatch(/re-run with --write/);
+  });
+
+  it("claims success only when every clobbered file was restored", () => {
+    expect(restoreOutcomeSuffix(2, 2, true)).toMatch(/restored from HEAD/);
+  });
+
+  it("does NOT claim success when a --write restore failed", () => {
+    // The CodeRabbit case: git checkout failed → restoredCount 0 under --write.
+    const suffix = restoreOutcomeSuffix(2, 0, true);
+    expect(suffix).toMatch(/FAILED/);
+    expect(suffix).not.toMatch(/restored from HEAD before reconciling/);
   });
 });
 

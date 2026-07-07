@@ -180,6 +180,28 @@ export function acceptedDriftFor(skill, acceptDrift, repoRoot) {
   ];
 }
 
+/**
+ * The A-706 clobber-restore message suffix, worded on what actually happened —
+ * not just the mode. A `--write` whose `git checkout` failed (permissions, disk,
+ * git error) restores nothing (`restoredCount === 0`), so it must NOT claim
+ * success: the reconcile that follows would then regress the values. Pure.
+ * @param {number} clobberedCount  config.json files git shows clobbered vs HEAD
+ * @param {number} restoredCount   how many were actually restored (0 in dry-run)
+ * @param {boolean} write          whether --write asked for a restore
+ * @returns {string}
+ */
+export function restoreOutcomeSuffix(clobberedCount, restoredCount, write) {
+  if (!write) {
+    return "— re-run with --write to restore from HEAD before values regress";
+  }
+
+  if (restoredCount === clobberedCount) {
+    return "— restored from HEAD before reconciling";
+  }
+
+  return "— but the restore from HEAD FAILED; reconcile may regress these values";
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
@@ -218,16 +240,18 @@ function main() {
   );
   if (clobbered.length > 0) {
     console.error(
-      `initialise-skills: ${clobbered.length} config.json clobbered by a --copy re-vendor${
-        options.write
-          ? " — restored from HEAD before reconciling (A-706):"
-          : " — re-run with --write to restore from HEAD before values regress (A-706):"
-      }`,
+      `initialise-skills: ${clobbered.length} config.json clobbered by a --copy re-vendor ${restoreOutcomeSuffix(
+        clobbered.length,
+        restored.length,
+        options.write,
+      )} (A-706):`,
     );
     for (const path of clobbered) {
       console.error(`  ${path}`);
     }
 
+    // Only re-read when a restore actually landed; otherwise `skills` still holds
+    // the clobbered values (and the message above says so).
     if (restored.length > 0) {
       skills = discoverSkills(options.skillsDir);
     }
