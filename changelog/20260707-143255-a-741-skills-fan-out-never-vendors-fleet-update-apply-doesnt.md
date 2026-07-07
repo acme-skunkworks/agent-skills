@@ -7,11 +7,21 @@ category: fix
 breaking: false
 issues:
   - A-741
+merged_at: '2026-07-07T14:48:34Z'
+commit: 54b9bc2
+merge_strategy: squash
+pr: 115
+stats:
+  loc_added: 334
+  loc_removed: 21
+  files_changed: 7
+  commits: 2
+version: 1.2.2
 ---
 
 ## Fixed
 
-The skills-update fan-out (A-713) **never vendored anything**: every roll's
+The skills-update fan-out ([A-713](https://linear.app/acme-skunkworks/issue/A-713)) **never vendored anything**: every roll's
 post-install verify reported the consumer as behind and the driver correctly
 aborted, so no `chore(skills)` PR ever opened. Reproduced end-to-end against a
 throwaway `markdownlint-config` — the `--copy` install and `initialise --write`
@@ -31,7 +41,7 @@ fan-out verify can never pass.
 install set on **both** sides. Scoped to the set the fan-out actually installs,
 `scaffold-new-skill` (upstream-only) drops out of `added` while a genuinely-new
 **canonical** skill the consumer lacks is still `added` — so legitimate adoption
-keeps firing and the A-730 intent is preserved. Omitting the flag (the local
+keeps firing and the [A-730](https://linear.app/acme-skunkworks/issue/A-730) intent is preserved. Omitting the flag (the local
 "am I behind?" use) is unchanged.
 
 **`fleet-update.mjs`.** The apply pipeline gains a **wipe** step before
@@ -39,6 +49,6 @@ keeps firing and the A-730 intent is preserved. Omitting the flag (the local
 so `--copy` writes fresh `SKILL.md` files even when the installed skills.sh CLI
 does an additive copy that leaves stale versions on disk (the second failure mode
 seen in the live canary). The config.json the wipe removes is restored immediately
-afterwards by the existing A-706 step, and the post-roll verify now passes the
+afterwards by the existing [A-706](https://linear.app/acme-skunkworks/issue/A-706) step, and the post-roll verify now passes the
 resolved skill set to `check-updates --skills`. A new `--print-skills` mode emits
 the resolved set so the fan-out pre-flight can scope its probe identically.

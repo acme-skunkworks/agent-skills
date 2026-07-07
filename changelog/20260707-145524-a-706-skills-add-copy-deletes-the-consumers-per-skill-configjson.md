@@ -7,6 +7,16 @@ category: fix
 breaking: false
 issues:
   - A-706
+merged_at: '2026-07-07T15:16:01Z'
+commit: c276a2a
+merge_strategy: squash
+pr: 116
+stats:
+  loc_added: 305
+  loc_removed: 3
+  files_changed: 6
+  commits: 2
+version: 1.2.2
 ---
 
 ## Fixed
