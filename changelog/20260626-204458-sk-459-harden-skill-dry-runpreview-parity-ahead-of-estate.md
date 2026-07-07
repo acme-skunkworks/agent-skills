@@ -2,11 +2,11 @@
 title: Dry-run/preview parity across the shared skills
 release_note: Closes the dry-run/preview gaps the SK-458 smoke pass surfaced so every shared skill has a consistent, truthful "preview, change nothing" path. linear-sync gains a read-only --dry-run that reports each issue's intended transition without writing; initialise-skills now infers triage-pr's promoteOnGreen/replyOnAccept defaults instead of flagging them needs-manual-input; preflight's --dry-run is now a true preview (every linter reports would-run and nothing — including .preflight-summary.json — is written); the changelog enrichment scripts (set-affected-packages, add-links) gain a --check/--dry-run no-write mode; and triage-pr's respond-threads gains --help plus documented --self-test.
 created_at: '2026-06-26T20:44:58Z'
-merged_at:
+merged_at: '2026-06-26T21:14:19Z'
 branch: sk-459-harden-skill-dry-runpreview-parity-ahead-of-estate-rollout
-pr:
-commit:
-merge_strategy:
+pr: 46
+commit: a90179d
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -21,10 +21,11 @@ affected_packages:
   - preflight
   - triage-pr
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 21
+  loc_added: 377
+  loc_removed: 53
   commits: 12
+version: 1.2.0
 ---
 
 ## Added

@@ -1,13 +1,13 @@
 ---
 title: Generate per-skill config.json instead of vendoring it into consumers
-release_note: "skills add --copy used to vendor agent-skills' own config.json for every skill into the consuming repo, so a fresh install silently inherited this repo's values (A-554) and every upgrade re-vendored them, overwriting deliberate no-detector edits (A-612). The per-skill config.json is now gitignored and excluded from the published tarball, so the only config a consumer receives is the neutral config.example.json — initialise-skills generates config.json from it on install, and upgrades never touch a consumer's own config.json. This repo's real (dogfood) values move to a tracked infrastructure/dogfood-config/ tree, materialised into the gitignored config.json by a new pnpm bootstrap:config (run once after clone; auto-run in CI and via the pre* hooks of the scripts that read a config). The config-key parity guard now validates the dogfood configs against each config.example.json."
-version:
+release_note: skills add --copy used to vendor agent-skills' own config.json for every skill into the consuming repo, so a fresh install silently inherited this repo's values (A-554) and every upgrade re-vendored them, overwriting deliberate no-detector edits (A-612). The per-skill config.json is now gitignored and excluded from the published tarball, so the only config a consumer receives is the neutral config.example.json — initialise-skills generates config.json from it on install, and upgrades never touch a consumer's own config.json. This repo's real (dogfood) values move to a tracked infrastructure/dogfood-config/ tree, materialised into the gitignored config.json by a new pnpm bootstrap:config (run once after clone; auto-run in CI and via the pre* hooks of the scripts that read a config). The config-key parity guard now validates the dogfood configs against each config.example.json.
+version: 1.2.0
 created_at: '2026-06-30T16:39:30Z'
-merged_at:
+merged_at: '2026-06-30T16:51:40Z'
 branch: a-615-stop-vendoring-agent-skills-own-configjson-into-consumers
-pr:
-commit:
-merge_strategy:
+pr: 83
+commit: c2a7fdb
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -15,9 +15,10 @@ breaking: false
 issues:
   - A-615
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 37
+  loc_added: 571
+  loc_removed: 97
+  commits: 4
 ---
 
 ## Fixed

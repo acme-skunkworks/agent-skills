@@ -2,11 +2,11 @@
 title: Cover tests/** in the ESLint lint surface so the consolidated skill tests are linted again
 release_note: Restores ESLint coverage of the consolidated skill tests under tests/**, which silently dropped out of the lint surface when the suite was moved, and dissolves a preflight false-positive that blocked any branch touching a test file. Developer-tooling only — no consumer-facing change.
 created_at: '2026-06-30T12:14:15Z'
-merged_at:
+merged_at: '2026-06-30T12:31:16Z'
 branch: a-599-cover-tests-in-eslint-lint-surface
-pr:
-commit:
-merge_strategy:
+pr: 78
+commit: 7928f82
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: chore
@@ -14,9 +14,11 @@ breaking: false
 issues:
   - A-599
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 28
+  loc_added: 447
+  loc_removed: 336
+  commits: 3
+version: 1.2.0
 ---
 
 ## Fixed

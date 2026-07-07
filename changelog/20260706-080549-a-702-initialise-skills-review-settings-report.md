@@ -1,22 +1,24 @@
 ---
-title: "initialise-skills: read-only --review settings report"
-release_note: "initialise-skills gains a read-only --review mode that prints, for every installed skill, its full current config — each key's current value, its source classification (inferred / unchanged / drift / manual-kept / needs-manual-input / unknown-kept), and a short description drawn from references/detectable-keys.md. Unlike the dry-run diff it shows every key, including ones no template knows about (unknown-kept) and template keys not yet set, so it is a complete picture of the config rather than just the pending reconcile. It writes nothing and offers a --json form alongside the human text."
-created_at: "2026-07-06T08:05:49Z"
-merged_at:
-branch: "a-702-featinitialise-skills-read-only-review-settings-report"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: 'initialise-skills: read-only --review settings report'
+release_note: initialise-skills gains a read-only --review mode that prints, for every installed skill, its full current config — each key's current value, its source classification (inferred / unchanged / drift / manual-kept / needs-manual-input / unknown-kept), and a short description drawn from references/detectable-keys.md. Unlike the dry-run diff it shows every key, including ones no template knows about (unknown-kept) and template keys not yet set, so it is a complete picture of the config rather than just the pending reconcile. It writes nothing and offers a --json form alongside the human text.
+created_at: '2026-07-06T08:05:49Z'
+merged_at: '2026-07-06T08:34:00Z'
+branch: a-702-featinitialise-skills-read-only-review-settings-report
+pr: 100
+commit: c0b44d3
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: feature
 breaking: false
-issues: ["A-702"]
+issues:
+  - A-702
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 10
+  loc_added: 539
+  loc_removed: 11
+  commits: 5
+version: 1.2.0
 ---
 
 ## Added

@@ -2,11 +2,11 @@
 title: Make triage-pr's review-reception symmetric with an issue-level acknowledgement path
 release_note: The triage-pr skill now acknowledges accepted review findings as deliberately as it declines them — an accepted thread gets a factual reply referencing the fixing commit before it is resolved (once that fix is CI-green), gated by a new replyOnAccept config knob (default true). Issue-level review comments that have no resolvable thread (Claude's whole-review comment, CodeRabbit's sticky summary) are acknowledged in one consolidated, upserted PR comment. A new bundled respond-threads.mjs script encodes the symmetry, replyOnAccept, idempotency marker and consolidated-comment logic, and re-runs converge without double-posting.
 created_at: '2026-06-26T16:50:06Z'
-merged_at:
+merged_at: '2026-06-26T17:30:38Z'
 branch: sk-410-harden-triage-pr-symmetric-reply-resolve-for-accepted
-pr:
-commit:
-merge_strategy:
+pr: 43
+commit: 8292ee8
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -16,10 +16,11 @@ issues:
 affected_packages:
   - triage-pr
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 8
+  loc_added: 1301
+  loc_removed: 23
   commits: 5
+version: 1.2.0
 ---
 
 ## Added

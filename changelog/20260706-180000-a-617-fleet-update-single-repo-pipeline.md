@@ -1,22 +1,24 @@
 ---
-title: "Add the parameterised single-repo fleet-update pipeline"
-release_note: "A new infrastructure/scripts/fleet-update.mjs rolls one already-onboarded consumer repo onto the current shared skill bundles, driven by an install profile rather than interactive edits. It runs install → restore → reconcile → verify (no wipe): vendors the bundles via skills add --copy, restores every config.json the --copy re-vendor clobbers from the consumer's trunk so no-detector keys survive, reconciles with initialise-skills, and verifies with check-updates that the repo is now current (the idempotency gate). It holds no repo list — one repo's profile comes in as input — so it can run inside the private release-orchestrator fan-out without leaking the estate."
-created_at: "2026-07-06T18:00:00Z"
-merged_at:
-branch: "a-617-ws3-agent-skills-fleet-update-script-fleet-updatemjs"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: Add the parameterised single-repo fleet-update pipeline
+release_note: 'A new infrastructure/scripts/fleet-update.mjs rolls one already-onboarded consumer repo onto the current shared skill bundles, driven by an install profile rather than interactive edits. It runs install → restore → reconcile → verify (no wipe): vendors the bundles via skills add --copy, restores every config.json the --copy re-vendor clobbers from the consumer''s trunk so no-detector keys survive, reconciles with initialise-skills, and verifies with check-updates that the repo is now current (the idempotency gate). It holds no repo list — one repo''s profile comes in as input — so it can run inside the private release-orchestrator fan-out without leaking the estate.'
+created_at: '2026-07-06T18:00:00Z'
+merged_at: '2026-07-06T17:00:13Z'
+branch: a-617-ws3-agent-skills-fleet-update-script-fleet-updatemjs
+pr: 107
+commit: 05ad186
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: feature
 breaking: false
-issues: ["A-617"]
+issues:
+  - A-617
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 4
+  loc_added: 1164
+  loc_removed: 11
+  commits: 4
+version: 1.2.0
 ---
 
 ## Added

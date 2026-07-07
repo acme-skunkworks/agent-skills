@@ -1,22 +1,25 @@
 ---
-title: "Resolve wave-3 bundle review findings and reconcile changelog pr ownership"
-release_note: "Fixes preflight early-exit config reporting, changelog stats-block synthesis, and gitignore un-ignore reporting, and reconciles the changelog `pr` field's ownership to the release/enrich step."
-created_at: "2026-07-03T18:58:04Z"
-merged_at:
-branch: "a-613-wave-3-bundle-review-findings"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: Resolve wave-3 bundle review findings and reconcile changelog pr ownership
+release_note: Fixes preflight early-exit config reporting, changelog stats-block synthesis, and gitignore un-ignore reporting, and reconciles the changelog `pr` field's ownership to the release/enrich step.
+created_at: '2026-07-03T18:58:04Z'
+merged_at: '2026-07-03T19:44:35Z'
+branch: a-613-wave-3-bundle-review-findings
+pr: 92
+commit: d182ced
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: fix
 breaking: false
-issues: ["A-613", "A-676"]
+issues:
+  - A-613
+  - A-676
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 25
+  loc_added: 290
+  loc_removed: 77
+  commits: 6
+version: 1.2.0
 ---
 
 ## Fixed

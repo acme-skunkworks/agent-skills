@@ -1,22 +1,24 @@
 ---
-title: "initialise-skills: --set <key>=<value> arbitrary override"
-release_note: "initialise-skills gains a repeatable --set <skill>.<key>=<value> flag that writes an arbitrary value — one a detector would never produce — into a named skill's config.json. It rides the normal reconcile (detection still runs; the override wins for the named key), goes through the existing merge/serialise path so key order and formatting are preserved and a re-run is a no-op, and is dry-run first with --write to apply. Values are parsed as JSON (so true / 42 / [\"A\"] type correctly, falling back to a bare string). It is validated up front: the skill must be installed, the key must exist in that skill's config.example.json (unknown keys are refused), and the value's type must match the placeholder's type. It cannot be combined with the read-only --review."
-created_at: "2026-07-06T10:08:19Z"
-merged_at:
-branch: "a-704-featinitialise-skills-set-keyvalue-arbitrary-override"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: 'initialise-skills: --set <key>=<value> arbitrary override'
+release_note: 'initialise-skills gains a repeatable --set <skill>.<key>=<value> flag that writes an arbitrary value — one a detector would never produce — into a named skill''s config.json. It rides the normal reconcile (detection still runs; the override wins for the named key), goes through the existing merge/serialise path so key order and formatting are preserved and a re-run is a no-op, and is dry-run first with --write to apply. Values are parsed as JSON (so true / 42 / ["A"] type correctly, falling back to a bare string). It is validated up front: the skill must be installed, the key must exist in that skill''s config.example.json (unknown keys are refused), and the value''s type must match the placeholder''s type. It cannot be combined with the read-only --review.'
+created_at: '2026-07-06T10:08:19Z'
+merged_at: '2026-07-06T09:40:57Z'
+branch: a-704-featinitialise-skills-set-keyvalue-arbitrary-override
+pr: 101
+commit: 323cc94
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: feature
 breaking: false
-issues: ["A-704"]
+issues:
+  - A-704
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 12
+  loc_added: 710
+  loc_removed: 9
+  commits: 4
+version: 1.2.0
 ---
 
 ## Added

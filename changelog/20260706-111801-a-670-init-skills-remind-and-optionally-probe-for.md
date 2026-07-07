@@ -1,22 +1,24 @@
 ---
-title: "initialise-skills: remind (and probe) for the Claude GitHub App token"
-release_note: "initialise-skills gains a GitHub App & token check: when spinning up a repo that will run the shared Claude workflows, it reminds the operator to run /install-github-app and set the CLAUDE_CODE_OAUTH_TOKEN repository Actions secret (not ANTHROPIC_API_KEY). As a best-effort probe it runs `gh secret list --app actions` to check whether the secret is present, warning if it is absent and degrading to a plain reminder when gh is unavailable or lacks repo-admin scope (a 403 is a can't-tell, never a failure). The probe is read-only — gh secret list returns names only, never values — and the skill makes no GitHub writes. Adds Bash(gh:*) to allowed-tools; the config-reconcile script is untouched."
-created_at: "2026-07-06T11:18:01Z"
-merged_at:
-branch: "a-670-init-skills-remind-and-optionally-probe-for"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: 'initialise-skills: remind (and probe) for the Claude GitHub App token'
+release_note: 'initialise-skills gains a GitHub App & token check: when spinning up a repo that will run the shared Claude workflows, it reminds the operator to run /install-github-app and set the CLAUDE_CODE_OAUTH_TOKEN repository Actions secret (not ANTHROPIC_API_KEY). As a best-effort probe it runs `gh secret list --app actions` to check whether the secret is present, warning if it is absent and degrading to a plain reminder when gh is unavailable or lacks repo-admin scope (a 403 is a can''t-tell, never a failure). The probe is read-only — gh secret list returns names only, never values — and the skill makes no GitHub writes. Adds Bash(gh:*) to allowed-tools; the config-reconcile script is untouched.'
+created_at: '2026-07-06T11:18:01Z'
+merged_at: '2026-07-06T11:35:13Z'
+branch: a-670-init-skills-remind-and-optionally-probe-for
+pr: 104
+commit: 2404aa9
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: feature
 breaking: false
-issues: ["A-670"]
+issues:
+  - A-670
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 3
+  loc_added: 105
+  loc_removed: 11
+  commits: 3
+version: 1.2.0
 ---
 
 ## Added

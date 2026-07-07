@@ -1,13 +1,13 @@
 ---
 title: Fix undefined `dir` reference in the A-582 gitignore tests
 release_note:
-version:
+version: 1.2.0
 created_at: '2026-06-30T13:00:36Z'
-merged_at:
+merged_at: '2026-06-30T13:02:31Z'
 branch: a-602-a-582-gitignore-test-references-undefined-dir-breaks-pnpm
-pr:
-commit:
-merge_strategy:
+pr: 79
+commit: 8ef14d9
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: chore
@@ -15,9 +15,10 @@ breaking: false
 issues:
   - A-602
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 2
+  loc_added: 36
+  loc_removed: 3
+  commits: 2
 ---
 
 ## Fixed

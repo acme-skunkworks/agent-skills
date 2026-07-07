@@ -1,13 +1,13 @@
 ---
 title: Add the deploy-target changelog enricher (enrich-changelog.mjs)
-release_note: "Adds enrich-changelog.mjs — the deploy-target post-merge enricher the release orchestrator's daily enrichment cron invokes to fill merged_at / commit / merge_strategy / pr / stats on repos (octavo, shared-workflows) that are never checked out during the release flow, closing the gap where their changelog entries stayed blank. A thin, env-driven wrapper over the tested lib/enrich.mjs, exposed as the changelog:enrich pnpm script; the changelog bundle bumps to 0.9.0."
-version:
-created_at: "2026-07-03T16:02:58Z"
-merged_at:
+release_note: Adds enrich-changelog.mjs — the deploy-target post-merge enricher the release orchestrator's daily enrichment cron invokes to fill merged_at / commit / merge_strategy / pr / stats on repos (octavo, shared-workflows) that are never checked out during the release flow, closing the gap where their changelog entries stayed blank. A thin, env-driven wrapper over the tested lib/enrich.mjs, exposed as the changelog:enrich pnpm script; the changelog bundle bumps to 0.9.0.
+version: 1.2.0
+created_at: '2026-07-03T16:02:58Z'
+merged_at: '2026-07-03T16:15:46Z'
 branch: a-675-deploy-target-changelog-enrichment-build-enrich-changelogmjs
-pr:
-commit:
-merge_strategy:
+pr: 91
+commit: b7e1aed
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -15,10 +15,10 @@ breaking: false
 issues:
   - A-675
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 8
+  loc_added: 448
+  loc_removed: 6
+  commits: 2
 ---
 
 ## Added

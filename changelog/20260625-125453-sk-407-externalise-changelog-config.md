@@ -2,11 +2,11 @@
 title: Externalise the changelog skill's repo-structure config and fail loud on identity keys
 release_note: The changelog skill (0.2.0) now reads changelogDir, packageRoots and fallbackPackage from config.json and fails loudly when issueKeys or linearWorkspaceSlug are absent, so a foreign repo can no longer silently inherit ACME's issue keys or workspace slug.
 created_at: '2026-06-25T12:54:53Z'
-merged_at:
+merged_at: '2026-06-25T13:58:00Z'
 branch: sk-407-pull-repo-specific-code-out-of-the-shared-skills-into-config
-pr:
-commit:
-merge_strategy:
+pr: 34
+commit: 24078f6
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -16,10 +16,11 @@ issues:
 affected_packages:
   - infrastructure
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 13
+  loc_added: 400
+  loc_removed: 57
   commits: 4
+version: 1.2.0
 ---
 
 ## Added

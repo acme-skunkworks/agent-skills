@@ -1,13 +1,13 @@
 ---
 title: send-it decides release-type by semantic category, and authors a changelog entry for every PR
-release_note: "send-it now decides whether a change is release-triggering by its semantic category — the Conventional-Commit type of the work it committed — rather than by which paths the diff touches. feat/fix/perf (or any breaking change) cut a release; docs/refactor/chore/ci/build/test/style do not, wherever the files live. This fixes a docs-only edit inside a published path (e.g. a SKILL.md under skills/) being mis-titled feat:/fix: and cutting a spurious release, and mis-recorded in the changelog. The derive-bump helper now emits type, breaking, category, and releaseTriggering alongside the existing bump. Separately, the changelogScope knob is removed: send-it authors a dated changelog entry for every PR (the record-everything-filter-later model), gated only by the changelog: true|false master switch; release notes filter to the version-stamped entries at release time. shippablePaths/shippableManifestKeys are demoted to an advisory publish-surface hint."
-version:
+release_note: 'send-it now decides whether a change is release-triggering by its semantic category — the Conventional-Commit type of the work it committed — rather than by which paths the diff touches. feat/fix/perf (or any breaking change) cut a release; docs/refactor/chore/ci/build/test/style do not, wherever the files live. This fixes a docs-only edit inside a published path (e.g. a SKILL.md under skills/) being mis-titled feat:/fix: and cutting a spurious release, and mis-recorded in the changelog. The derive-bump helper now emits type, breaking, category, and releaseTriggering alongside the existing bump. Separately, the changelogScope knob is removed: send-it authors a dated changelog entry for every PR (the record-everything-filter-later model), gated only by the changelog: true|false master switch; release notes filter to the version-stamped entries at release time. shippablePaths/shippableManifestKeys are demoted to an advisory publish-surface hint.'
+version: 1.2.0
 created_at: '2026-06-30T13:15:18Z'
-merged_at:
+merged_at: '2026-06-30T13:46:11Z'
 branch: a-598-a-600-send-it-category-based-release-type
-pr:
-commit:
-merge_strategy:
+pr: 81
+commit: c8df06e
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -16,9 +16,10 @@ issues:
   - A-598
   - A-600
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 9
+  loc_added: 355
+  loc_removed: 99
+  commits: 3
 ---
 
 ## Changed

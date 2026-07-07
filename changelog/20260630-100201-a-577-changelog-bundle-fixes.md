@@ -1,13 +1,13 @@
 ---
 title: changelog bundle fixes — reentrant add-links unmask, finalise stats.commits gate, and backfill indent
-release_note: "Three corrective fixes to the changelog skill bundle. add-links is now reentrant when unmasking, so inline code nested inside a Markdown link (`[`code`](url)`) no longer leaks NUL bytes and corrupts the entry into a binary blob. finalise-changelog's needsEnrich gate now treats a populated-but-commits-less stats block as enrichable, so an entry finalised in the window between stats and stats.commits existing still gets its commit count backfilled rather than being version-stamped without it forever. backfill-commits derives the stats-child indent from the block itself instead of hard-coding two spaces, so a deeper-indented stats block splices the commits line at the correct depth."
-version:
+release_note: Three corrective fixes to the changelog skill bundle. add-links is now reentrant when unmasking, so inline code nested inside a Markdown link (`[`code`](url)`) no longer leaks NUL bytes and corrupts the entry into a binary blob. finalise-changelog's needsEnrich gate now treats a populated-but-commits-less stats block as enrichable, so an entry finalised in the window between stats and stats.commits existing still gets its commit count backfilled rather than being version-stamped without it forever. backfill-commits derives the stats-child indent from the block itself instead of hard-coding two spaces, so a deeper-indented stats block splices the commits line at the correct depth.
+version: 1.2.0
 created_at: '2026-06-30T10:02:01Z'
-merged_at:
+merged_at: '2026-06-30T12:49:30Z'
 branch: a-577-changelog-bundle-fixes
-pr:
-commit:
-merge_strategy:
+pr: 76
+commit: 263a32b
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -17,9 +17,10 @@ issues:
   - A-579
   - A-581
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 9
+  loc_added: 195
+  loc_removed: 11
+  commits: 6
 ---
 
 ## Fixed

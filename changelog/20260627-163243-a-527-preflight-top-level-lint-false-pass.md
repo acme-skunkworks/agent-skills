@@ -1,12 +1,12 @@
 ---
 title: Fix preflight silently skipping top-level code in the lint gate
-release_note: 'The preflight skill no longer passes silently when a changed code file lives at the repo root (or any path) outside scripts/, a detected workspace, and the root ESLint config. Such files previously set codeChanged but matched no ESLint bucket, so preflight reported that ESLint ran while linting nothing — a false-pass in the 0/1/2 exit contract that send-it relies on. They are now routed to the root ESLint bucket and linted at the repo root.'
+release_note: The preflight skill no longer passes silently when a changed code file lives at the repo root (or any path) outside scripts/, a detected workspace, and the root ESLint config. Such files previously set codeChanged but matched no ESLint bucket, so preflight reported that ESLint ran while linting nothing — a false-pass in the 0/1/2 exit contract that send-it relies on. They are now routed to the root ESLint bucket and linted at the repo root.
 created_at: '2026-06-27T16:32:43Z'
-merged_at:
+merged_at: '2026-06-27T17:24:26Z'
 branch: a-527-preflight-top-level-code-is-silently-never-linted-false-pass
-pr:
-commit:
-merge_strategy:
+pr: 56
+commit: c69829f
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -14,10 +14,11 @@ breaking: false
 issues:
   - A-527
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 5
+  loc_added: 68
+  loc_removed: 2
   commits: 1
+version: 1.2.0
 ---
 
 ## Fixed

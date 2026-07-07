@@ -1,13 +1,13 @@
 ---
 title: changelog add-links scopes to the current branch's entry by default
-release_note: "The changelog skill's add-links.mjs, which linkifies bare Linear issue IDs in entry bodies, now scopes its default write pass to the entry(ies) whose branch: frontmatter matches the current git branch. Previously it rewrote every entry in the changelog directory on every run, so authoring a new entry could churn unrelated, already-merged entries (any historical entry with a bare ID), which the author then had to manually revert before committing. A new --all flag runs the historical full-directory sweep; --check stays whole-directory (it's a completeness gate); and when git is unavailable the default falls back to the full sweep. Also linkifies a stale bare A-369 in the A-541 entry that had been re-triggering the churn."
-version:
+release_note: 'The changelog skill''s add-links.mjs, which linkifies bare Linear issue IDs in entry bodies, now scopes its default write pass to the entry(ies) whose branch: frontmatter matches the current git branch. Previously it rewrote every entry in the changelog directory on every run, so authoring a new entry could churn unrelated, already-merged entries (any historical entry with a bare ID), which the author then had to manually revert before committing. A new --all flag runs the historical full-directory sweep; --check stays whole-directory (it''s a completeness gate); and when git is unavailable the default falls back to the full sweep. Also linkifies a stale bare A-369 in the A-541 entry that had been re-triggering the churn.'
+version: 1.2.0
 created_at: '2026-06-30T13:35:52Z'
-merged_at:
+merged_at: '2026-06-30T13:46:15Z'
 branch: a-603-changelog-add-links-scope-to-branch-entry
-pr:
-commit:
-merge_strategy:
+pr: 82
+commit: 9c004f1
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -15,9 +15,10 @@ breaking: false
 issues:
   - A-603
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 6
+  loc_added: 148
+  loc_removed: 14
+  commits: 3
 ---
 
 ## Changed

@@ -2,11 +2,11 @@
 title: Standardise skill-script CLI dispatch and harden pnpm-workspace detection
 release_note: 'Every bundled skill script now uses the same realpath-safe CLI-entry guard (isCliEntry()) and handles --help inside main(), replacing the four divergent guard styles — two of which used a plain path compare that breaks under symlinks (macOS /var→/private/var, pnpm''s store). initialise-skills also stops fabricating package roots: a present pnpm-workspace.yaml is now authoritative, so a catalogs:-only file (pnpm ≥9.5) or an empty packages: list yields no roots rather than guessing from whatever apps/packages/services directories happen to exist.'
 created_at: '2026-06-27T10:41:11Z'
-merged_at:
+merged_at: '2026-06-27T11:07:32Z'
 branch: sk-462-standardise-skill-script-cli-dispatch
-pr:
-commit:
-merge_strategy:
+pr: 49
+commit: 99d01cb
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -20,10 +20,11 @@ affected_packages:
   - preflight
   - send-it
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 17
+  loc_added: 278
+  loc_removed: 67
   commits: 5
+version: 1.2.0
 ---
 
 ## Fixed

@@ -1,13 +1,13 @@
 ---
 title: Capture out-of-scope triage-pr review suggestions as human-approved Linear issues
-release_note: "triage-pr can now turn a valid-but-out-of-scope review finding into a tracked Linear follow-up issue. Phase B gains a fourth 'defer' thread outcome, and a post-convergence step proposes all flagged candidates in one batch — creating issues only on explicit human approval (default no), then writing each issue id/URL back into the defer reply and the consolidated summary. Five new config keys gate the opt-in flow, and initialise-skills reconciles them."
-version:
+release_note: triage-pr can now turn a valid-but-out-of-scope review finding into a tracked Linear follow-up issue. Phase B gains a fourth 'defer' thread outcome, and a post-convergence step proposes all flagged candidates in one batch — creating issues only on explicit human approval (default no), then writing each issue id/URL back into the defer reply and the consolidated summary. Five new config keys gate the opt-in flow, and initialise-skills reconciles them.
+version: 1.2.0
 created_at: '2026-06-29T16:15:49Z'
-merged_at:
+merged_at: '2026-06-29T16:35:39Z'
 branch: a-567-feattriage-pr-capture-out-of-scope-review-suggestions-as
-pr:
-commit:
-merge_strategy:
+pr: 73
+commit: a75c764
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -15,9 +15,10 @@ breaking: false
 issues:
   - A-567
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 13
+  loc_added: 304
+  loc_removed: 37
+  commits: 5
 ---
 
 ## Added

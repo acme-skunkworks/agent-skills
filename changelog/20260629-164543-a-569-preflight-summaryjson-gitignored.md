@@ -1,13 +1,13 @@
 ---
 title: initialise-skills reconciles preflight's .preflight-summary.json into the consumer .gitignore
-release_note: "initialise-skills now ensures a consumer repo's root .gitignore excludes preflight's .preflight-summary.json scratch output — the one edit it makes outside a skill's config.json. The step is append-only and idempotent (adds the commented entry only when absent, creating .gitignore if there is none; never reorders or removes existing lines), gated on the preflight bundle being installed, and surfaced in the dry-run report via a new gitignore field. This stops the file surfacing as an untracked change after a /send-it run."
-version:
+release_note: initialise-skills now ensures a consumer repo's root .gitignore excludes preflight's .preflight-summary.json scratch output — the one edit it makes outside a skill's config.json. The step is append-only and idempotent (adds the commented entry only when absent, creating .gitignore if there is none; never reorders or removes existing lines), gated on the preflight bundle being installed, and surfaced in the dry-run report via a new gitignore field. This stops the file surfacing as an untracked change after a /send-it run.
+version: 1.2.0
 created_at: '2026-06-29T16:45:43Z'
-merged_at:
+merged_at: '2026-06-29T19:33:44Z'
 branch: a-569-preflight-summaryjson-is-not-gitignored-in-skill-consumer
-pr:
-commit:
-merge_strategy:
+pr: 74
+commit: 497c6e5
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -15,9 +15,10 @@ breaking: false
 issues:
   - A-569
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 11
+  loc_added: 359
+  loc_removed: 17
+  commits: 4
 ---
 
 ## Added

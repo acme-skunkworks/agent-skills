@@ -1,12 +1,12 @@
 ---
 title: Make promoteOnGreen the single proceed-on-green authority in triage-pr
-release_note: "The triage-pr skill's prose no longer contradicts its config: promoteOnGreen is now documented as the single repo-level control for the draft→ready flip, and an enabled config IS the human authorisation — an agent proceeds on proven-green CI without seeking a separate sign-off. The stale 'never flip — that is the human's call' line is gone from the command shim, config.example.json and the initialise-skills detector default now match the default-on model, and the existing promotion gates (proven-green, no unresolved human threads, no base drift) and manual-merge behaviour are unchanged."
+release_note: 'The triage-pr skill''s prose no longer contradicts its config: promoteOnGreen is now documented as the single repo-level control for the draft→ready flip, and an enabled config IS the human authorisation — an agent proceeds on proven-green CI without seeking a separate sign-off. The stale ''never flip — that is the human''s call'' line is gone from the command shim, config.example.json and the initialise-skills detector default now match the default-on model, and the existing promotion gates (proven-green, no unresolved human threads, no base drift) and manual-merge behaviour are unchanged.'
 created_at: '2026-06-27T21:22:27Z'
-merged_at:
+merged_at: '2026-06-27T22:06:50Z'
 branch: a-558-promoteongreen-single-authority
-pr:
-commit:
-merge_strategy:
+pr: 68
+commit: 4b23f54
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -14,10 +14,11 @@ breaking: false
 issues:
   - A-558
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 10
+  loc_added: 98
+  loc_removed: 35
   commits: 6
+version: 1.2.0
 ---
 
 ## Fixed

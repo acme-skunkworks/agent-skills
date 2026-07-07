@@ -2,11 +2,11 @@
 title: Per-bundle version-bump check and escape-hatch flags for send-it
 release_note: send-it now offers to bump a changed skill bundle's own version (when the repo opts in via bundleVersioning), and gains --base, --title, and --skip-preflight flags.
 created_at: '2026-06-24T09:34:56Z'
-merged_at:
+merged_at: '2026-06-25T09:33:22Z'
 branch: sk-388-deferred-upgrades-for-the-consolidated-send-it-skill
 pr: 30
-commit:
-merge_strategy:
+commit: fce563a
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -16,10 +16,11 @@ issues:
 affected_packages:
   - infrastructure
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 11
+  loc_added: 538
+  loc_removed: 68
   commits: 5
+version: 1.2.0
 ---
 
 ## Added

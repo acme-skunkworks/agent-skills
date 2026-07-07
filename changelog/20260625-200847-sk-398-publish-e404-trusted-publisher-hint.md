@@ -2,11 +2,11 @@
 title: Surface a Trusted Publisher hint when npm publish fails with E404/E403
 release_note: When the npm publish leg of release.yml fails with what looks like an auth/visibility error (E404/E403), the publish wrapper now captures the output and prints an actionable hint pointing straight at the npm Trusted Publisher binding (repository, workflow, environment) — npm masks an unauthorised write to an existing package as a 404, so the bare error gave no clue to the real cause. Publish failures already self-report via release.yml's notify step now that the repo's GitHub Issues are enabled.
 created_at: '2026-06-25T20:08:47Z'
-merged_at:
+merged_at: '2026-06-25T21:16:54Z'
 branch: sk-398-agent-skills-improve-npm-publish-failure-observability
-pr:
-commit:
-merge_strategy:
+pr: 38
+commit: ebc6492
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -16,10 +16,11 @@ issues:
 affected_packages:
   - infrastructure
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 3
+  loc_added: 107
+  loc_removed: 6
   commits: 3
+version: 1.2.0
 ---
 
 ## Fixed

@@ -2,11 +2,11 @@
 title: Harden the cleanup-repo filesystem-hygiene pass and document its invocation
 release_note: The cleanup-repo skill's filesystem-hygiene script now refuses to run against any root without a .git entry, guarding a destructive sweep against a mis-pointed path, and its --self-test (alongside every skill self-test) now runs in CI so a script regression can't ship green. SKILL.md spells out how to resolve the repo root and the bundle-relative script path.
 created_at: '2026-06-25T18:05:04Z'
-merged_at:
+merged_at: '2026-06-25T18:38:58Z'
 branch: sk-353-cleanup-repo-follow-up-hardening-ci-self-test-root
-pr:
-commit:
-merge_strategy:
+pr: 37
+commit: 6e704b4
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -17,10 +17,11 @@ affected_packages:
   - cleanup-repo
   - infrastructure
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 5
+  loc_added: 146
+  loc_removed: 4
   commits: 3
+version: 1.2.0
 ---
 
 ## Fixed

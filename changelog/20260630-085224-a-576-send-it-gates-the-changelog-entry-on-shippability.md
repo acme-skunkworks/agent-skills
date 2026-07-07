@@ -1,13 +1,13 @@
 ---
 title: send-it gains a changelogScope opt-in so every PR can get a changelog entry
-release_note: "send-it's config gains a changelogScope knob that decouples changelog authoring from the shippability decision. The default \"all\" authors a dated changelog/ entry for every PR — shippable and non-shippable alike — so the changelog is a full record of merged work (release notes still filter to the version-stamped, shippable entries); \"shippable\" preserves the previous behaviour of mirroring only the published-change surface. The PR-title release type stays coupled to shippability, so docs/chore PRs still cut no release. This restores the every-PR changelog convention that repos like Octavo rely on, with the fix contained entirely in send-it (the changelog skill is unchanged)."
-version:
+release_note: send-it's config gains a changelogScope knob that decouples changelog authoring from the shippability decision. The default "all" authors a dated changelog/ entry for every PR — shippable and non-shippable alike — so the changelog is a full record of merged work (release notes still filter to the version-stamped, shippable entries); "shippable" preserves the previous behaviour of mirroring only the published-change surface. The PR-title release type stays coupled to shippability, so docs/chore PRs still cut no release. This restores the every-PR changelog convention that repos like Octavo rely on, with the fix contained entirely in send-it (the changelog skill is unchanged).
+version: 1.2.0
 created_at: '2026-06-30T08:52:24Z'
-merged_at:
+merged_at: '2026-06-30T09:46:12Z'
 branch: a-576-send-it-gates-the-changelog-entry-on-shippability-octavo
-pr:
-commit:
-merge_strategy:
+pr: 75
+commit: 583d2fb
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -15,9 +15,10 @@ breaking: false
 issues:
   - A-576
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 6
+  loc_added: 96
+  loc_removed: 24
+  commits: 3
 ---
 
 ## Added

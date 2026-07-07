@@ -1,22 +1,24 @@
 ---
-title: "fleet-deployment runbook: restore config.json before reconciling on a re-vendor"
-release_note: ""
-created_at: "2026-07-06T14:31:01Z"
-merged_at:
-branch: "a-706-skills-add-copy-deletes-the-consumers-per-skill-configjson"
-pr:
-commit:
-merge_strategy:
-author: "hello@robeasthope.com"
+title: 'fleet-deployment runbook: restore config.json before reconciling on a re-vendor'
+release_note: ''
+created_at: '2026-07-06T14:31:01Z'
+merged_at: '2026-07-06T15:19:50Z'
+branch: a-706-skills-add-copy-deletes-the-consumers-per-skill-configjson
+pr: 105
+commit: d868b36
+merge_strategy: squash
+author: hello@robeasthope.com
 co_authors: []
 category: docs
 breaking: false
-issues: ["A-706"]
+issues:
+  - A-706
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
-  commits:
+  files_changed: 2
+  loc_added: 88
+  loc_removed: 15
+  commits: 3
+version: 1.2.0
 ---
 
 ## Fixed

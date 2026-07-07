@@ -2,11 +2,11 @@
 title: Add --help/--self-test to the changelog scripts and document the full lifecycle
 release_note: 'All six changelog bundle scripts now accept --help (concise usage, exits 0 before any real work) and --self-test (an offline smoke test of their pure logic), matching the rest of the estate — so finalise-changelog.mjs --help prints usage instead of doing a real, file-writing run. The SKILL.md and README also now document the whole lifecycle the bundle owns: the authoring scripts the skill runs and the finalisation/CI-gate scripts the consumer wires into its package.json / CI / release orchestrator.'
 created_at: '2026-06-27T17:04:47Z'
-merged_at:
+merged_at: '2026-06-27T17:25:58Z'
 branch: a-541-changelog-add-help-self-test-and-document-the-full-lifecycle
-pr:
-commit:
-merge_strategy:
+pr: 63
+commit: 62e3753
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -14,10 +14,11 @@ breaking: false
 issues:
   - A-541
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 10
+  loc_added: 569
+  loc_removed: 17
   commits: 1
+version: 1.2.0
 ---
 
 ## Added

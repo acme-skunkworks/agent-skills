@@ -1,12 +1,12 @@
 ---
 title: Fleet runbook config-reset step and recency-based issue-key detection
-release_note: "initialise-skills now detects the current Linear issue key from the most recently committed branch (git for-each-ref --sort=-committerdate) instead of unioning every historical prefix, and accepts single-letter keys (e.g. A) — so a repo whose team was renamed (…→ASW→SK→A) reconciles to the live key rather than stale ones. The fleet-deployment runbook gains the missing step to reset each config.json from its config.example.json before reconciling (so consumers stop inheriting agent-skills' own config), and documents facts.issueKeys as the canonical override for a renamed team."
+release_note: initialise-skills now detects the current Linear issue key from the most recently committed branch (git for-each-ref --sort=-committerdate) instead of unioning every historical prefix, and accepts single-letter keys (e.g. A) — so a repo whose team was renamed (…→ASW→SK→A) reconciles to the live key rather than stale ones. The fleet-deployment runbook gains the missing step to reset each config.json from its config.example.json before reconciling (so consumers stop inheriting agent-skills' own config), and documents facts.issueKeys as the canonical override for a renamed team.
 created_at: '2026-06-27T21:35:27Z'
-merged_at:
+merged_at: '2026-06-27T22:10:11Z'
 branch: a-554-fleet-reset-issuekeys-detection
-pr:
-commit:
-merge_strategy:
+pr: 71
+commit: a3fb249
+merge_strategy: squash
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -15,10 +15,11 @@ issues:
   - A-554
   - A-556
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 7
+  loc_added: 228
+  loc_removed: 25
   commits: 7
+version: 1.2.0
 ---
 
 ## Fixed
