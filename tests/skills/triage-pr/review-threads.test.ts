@@ -2,10 +2,11 @@
 // triage-pr bundle stays test-free whilst the pure fetch/transform logic is still
 // covered in CI. The `gh` network layer is not exercised here — only `buildResult`,
 // which is exactly the surface that needs verifying without hitting a real PR.
+// DEFER_PENDING_MARKER is imported from the write-side script (its source of
+// truth) rather than redeclared, so the test can't drift from the real marker.
+import { DEFER_PENDING_MARKER } from "../../../skills/triage-pr/scripts/respond-threads.mjs";
 import { buildResult } from "../../../skills/triage-pr/scripts/review-threads.mjs";
 import { describe, expect, it } from "vitest";
-
-const DEFER_PENDING_MARKER = "<!-- triage-pr:defer-pending -->";
 
 function ids(threads: Array<{ threadId: string }>) {
   return threads.map((thread) => thread.threadId);
