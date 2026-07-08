@@ -208,6 +208,22 @@ export function resolveSkills(profile) {
 }
 
 /**
+ * The install-set skills that do NOT exist in the source, given a `<skill> →
+ * boolean` existence probe. The apply guard refuses to touch a consumer when this
+ * is non-empty: the wipe removes `<mirror>/<skill>` for every install-set skill
+ * BEFORE re-vendoring, so a name absent upstream would delete the consumer's own
+ * bundle with no way to restore it (A-757 — a repo-local skill wrongly listed in
+ * the fleet manifest). Pure — the caller injects the probe, so the guard is
+ * unit-testable without a filesystem.
+ * @param {string[]} skills               the resolved install set
+ * @param {(skill: string) => boolean} sourceHasSkill
+ * @returns {string[]}
+ */
+export function findMissingSourceSkills(skills, sourceHasSkill) {
+  return skills.filter((skill) => !sourceHasSkill(skill));
+}
+
+/**
  * Build the `npx` argv (excluding the leading "skills") for the --copy install:
  * `add <SOURCE_URL> [--skill X]… [--agent Y]… --copy`. The install source is the
  * canonical GitHub URL, NOT the local checkout: skills.sh writes the source it was
@@ -702,6 +718,26 @@ function main(argv) {
   const facts = buildInitialiseFacts(profile, { ref });
   const installSkills = resolveSkills(profile);
 
+  // Fail-safe (A-757): every install-set skill must exist in the source before we
+  // touch the consumer. The apply path wipes `<mirror>/<skill>` for each of these
+  // BEFORE re-vendoring, and the install pulls from SOURCE_URL@ref — of which this
+  // --source checkout is the mirror — so a skill absent here is absent upstream and
+  // would be deleted with no way to restore it. Refusing here turns a permanent
+  // deletion into a no-op abort, and surfaces the bad manifest entry under --dry-run
+  // too. manifest-lint guards this at the orchestrator, but this is the last line of
+  // defence when that is bypassed (e.g. the `repos` canary override).
+  const missingFromSource = findMissingSourceSkills(installSkills, (skill) =>
+    existsSync(join(source, "skills", skill, "SKILL.md")),
+  );
+  if (missingFromSource.length > 0) {
+    fail(
+      `install set names skill(s) absent from --source (${source}): ${missingFromSource.join(", ")}. ` +
+        "Refusing to touch the consumer — a profile skill missing upstream would be wiped and could not be " +
+        "re-vendored (A-757). Remove it from the fleet manifest, or add it to agent-skills.",
+      2,
+    );
+  }
+
   if (options.apply) {
     // Wipe the install set's vendored dirs BEFORE the --copy so fresh SKILL.md
     // files land even if the CLI's copy is additive (A-741); the restore that
@@ -857,6 +893,31 @@ function selfTest() {
     cases.push({
       name: "resolveWipeTargets is empty when no skills resolve",
       ok: resolveWipeTargets([".claude/skills"], []).length === 0,
+    });
+
+    // findMissingSourceSkills (A-757) — the apply guard's pure core.
+    const present = new Set(["commit", "release-status", "send-it"]);
+    cases.push({
+      name: "findMissingSourceSkills flags a name absent from source",
+      ok:
+        findMissingSourceSkills(
+          ["send-it", "initialise-package-repo"],
+          (skill) => present.has(skill),
+        ).join(",") === "initialise-package-repo",
+    });
+    cases.push({
+      name: "findMissingSourceSkills passes an all-present install set",
+      ok:
+        findMissingSourceSkills(["send-it", "commit"], (skill) =>
+          present.has(skill),
+        ).length === 0,
+    });
+    cases.push({
+      name: "findMissingSourceSkills reports every missing name",
+      ok:
+        findMissingSourceSkills(["pnpm", "vitest", "send-it"], (skill) =>
+          present.has(skill),
+        ).length === 2,
     });
 
     // buildInitialiseFacts.
