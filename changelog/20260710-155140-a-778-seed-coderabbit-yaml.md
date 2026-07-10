@@ -9,6 +9,13 @@ category: chore
 breaking: false
 issues:
   - A-778
+merged_at: '2026-07-10T16:30:33Z'
+commit: dccc825
+pr: 124
+stats:
+  loc_added: 73
+  loc_removed: 0
+  files_changed: 2
 ---
 
 ## Added
