@@ -1,11 +1,11 @@
 ---
 title: Strip erroneous skill-config gitignore rules in consumers
 release_note: initialise-skills now removes inherited .claude/.agents skill config.json ignore rules so consumers can commit runnable config for CI and fresh clones (A-812).
-created_at: "2026-07-10T17:25:52Z"
-merged_at:
+created_at: '2026-07-10T17:25:52Z'
+merged_at: '2026-07-10T17:42:09Z'
 branch: a-812-harden-initialise-skills-strip-skill-config-ignore
-pr:
-commit:
+pr: 127
+commit: 33dcf48
 merge_strategy:
 author: rob@acmeskunkworks.io
 co_authors: []
@@ -14,9 +14,9 @@ breaking: false
 issues:
   - A-812
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 8
+  loc_added: 427
+  loc_removed: 31
 ---
 
 ## Fixed
