@@ -514,10 +514,7 @@ describe("mergeConfig", () => {
             return { value: true };
           }
 
-          if (key === "packageRoots") {
-            return null;
-          }
-
+          // packageRoots (and everything else) undetectable
           return null;
         },
         example: changelogExample,

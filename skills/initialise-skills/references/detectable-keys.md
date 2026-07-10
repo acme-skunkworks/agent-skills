@@ -12,7 +12,7 @@ detector serves every skill that uses a key. A key found in a skill's
 | `linearWorkspaceSlug` | changelog | Supplied via stdin `facts` (Linear MCP) | `needs-manual-input` |
 | `changelog` | send-it | `true` when a `changelog/` directory exists at the repo root; `false` otherwise (no changelog flow). Skill-presence alone does **not** enable it — a repo that vendors the `changelog` skill but keeps no `changelog/` dir stays `false` (A-570) | `true` |
 | `changelogDir` | changelog | Structural default | `changelog` |
-| `packageRoots` | changelog | `pnpm-workspace.yaml` `packages:` globs → top dirs; else root `package.json` `workspaces` field | Example placeholder `["apps", "packages", "services"]` kept when undetectable; **not** flagged `needs-manual-input` when `affectedPackages` is `false` (A-813) |
+| `packageRoots` | changelog | `pnpm-workspace.yaml` `packages:` globs → top dirs; else root `package.json` `workspaces` field; else existing `apps` / `packages` / `services` directories on disk | Example placeholder `["apps", "packages", "services"]` kept when undetectable; **not** flagged `needs-manual-input` when `affectedPackages` is `false` (A-813) |
 | `fallbackPackage` | changelog | Structural default | `infrastructure` |
 | `affectedPackages` | changelog | `true` when a workspace config is detected (same signal as `packageRoots`); `false` otherwise — so single-package repos omit the redundant `affected_packages` field | `false` |
 | `mainBranch` | cleanup-repo | Same as `baseBranch` (the detected default branch) | `main` |
