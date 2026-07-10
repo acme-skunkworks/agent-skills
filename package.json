@@ -50,8 +50,7 @@
     "test:sh": "bash -c 'if command -v bats >/dev/null 2>&1; then bats infrastructure/tests/*.bats; elif [ \"$(uname -s)\" = \"Darwin\" ]; then echo \"⚠️  bats not installed — skipping. Install: brew install bats-core\"; else echo \"⚠️  bats not installed — skipping. Install: apt-get install bats\"; fi'",
     "test:watch": "vitest",
     "tsc": "tsc -p tsconfig.json",
-    "prevalidate:changelog": "pnpm bootstrap:config",
-    "validate:changelog": "node skills/changelog/scripts/validate-changelog.mjs",
+    "validate:changelog": "pnpm exec changelog-core validate",
     "validate:skills": "tsx infrastructure/scripts/validate-skills.ts",
     "vendor:check": "node infrastructure/scripts/vendor-sync.mjs --check",
     "vendor:sync": "node infrastructure/scripts/vendor-sync.mjs"
@@ -74,6 +73,7 @@
     ]
   },
   "devDependencies": {
+    "@acme-skunkworks/changelog-core": "^1.1.0",
     "@acme-skunkworks/eslint-config": "^1.1.0",
     "@acme-skunkworks/markdownlint-config": "^2.0.0",
     "@types/node": "^25.6.0",
