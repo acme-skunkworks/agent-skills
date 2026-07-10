@@ -1,0 +1,9 @@
+{
+  "issueKeys": ["A"],
+  "linearWorkspaceSlug": "acme-skunkworks",
+  "baseBranch": "main",
+  "changelogDir": "changelog",
+  "packageRoots": ["skills"],
+  "fallbackPackage": "infrastructure",
+  "affectedPackages": false
+}
