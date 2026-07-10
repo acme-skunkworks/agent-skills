@@ -23,7 +23,7 @@ compatibility: >-
   App / token check is optional — it uses `gh` when authenticated, else falls
   back to a reminder.
 metadata:
-  version: 0.10.6
+  version: 0.10.7
   author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(git:*), Bash(gh:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---
@@ -61,7 +61,10 @@ Detection is keyed by config-**key name**, not by skill, so one detector serves
 every skill that uses a key (one `baseBranch` detector covers `changelog`,
 `send-it`; one `issueKeys` detector covers `changelog`, `cleanup-repo`,
 `linear-sync`). See [`references/detectable-keys.md`](references/detectable-keys.md)
-for the full table of keys, their detection sources, and fallbacks.
+for the full table of keys, their detection sources, and fallbacks. Changelog's
+monorepo gate (`affectedPackages` / `packageRoots`) and how to flip a host
+between single-package and monorepo are in
+[`references/monorepo-config.md`](references/monorepo-config.md).
 
 `preflight` is intentionally skipped: it self-detects its base branch and
 workspaces and reads an *optional* `preflight.config.json` at the repo root, not

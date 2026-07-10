@@ -39,7 +39,10 @@ All skills live under `skills/<name>/`. The seven shared skills:
   `changelog` config knob is detected as `false` by `initialise-skills`, so it
   skips authoring rather than following an uninstalled skill (A-452).
 - **Monorepo** — the full set; `initialise-skills` detects the workspace and
-  turns on the changelog `affectedPackages` field (A-461).
+  turns on the changelog `affectedPackages` field (A-461). Single↔monorepo
+  flips (including accepting drift on a previously written `false`) are
+  documented in the initialise-skills bundle:
+  [`skills/initialise-skills/references/monorepo-config.md`](../skills/initialise-skills/references/monorepo-config.md).
 
 ## Step 1 — Wipe existing
 
