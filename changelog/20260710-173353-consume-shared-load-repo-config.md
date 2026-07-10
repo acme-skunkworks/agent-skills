@@ -1,8 +1,6 @@
 ---
 title: Consume shared load-repo-config reusable
-release_note: >-
-  CI and pkg-release now float reusable-load-repo-config.yml@v1; the local
-  load-repo-config composite is deleted (A-779).
+release_note: CI and pkg-release now float reusable-load-repo-config.yml@v1; the local load-repo-config composite is deleted (A-779).
 created_at: '2026-07-10T17:33:53Z'
 branch: a-779-consume-shared-load-repo-config
 author: rob@acmeskunkworks.io
@@ -11,6 +9,15 @@ category: chore
 breaking: false
 issues:
   - A-779
+merged_at: '2026-07-10T17:42:11Z'
+commit: dbb4110
+pr: 129
+stats:
+  loc_added: 28
+  loc_removed: 135
+  files_changed: 7
+  commits: 1
+version: 1.2.6
 ---
 
 ## Changed
