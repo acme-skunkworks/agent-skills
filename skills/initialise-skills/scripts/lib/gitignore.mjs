@@ -116,12 +116,14 @@ export function reconcilePreflightIgnore(repoRoot, { write = false } = {}) {
   return { path: gitignorePath, status: "created" };
 }
 
-/** Consumer patterns that must not ignore resolved skill config.json (A-812). */
+/**
+ * Consumer patterns that must not ignore resolved skill config.json (A-812).
+ */
 export const SKILL_CONFIG_IGNORE_PATTERNS = [
-  ".claude/skills/" + "*/config.json",
-  ".agents/skills/" + "*/config.json",
-  "/.claude/skills/" + "*/config.json",
-  "/.agents/skills/" + "*/config.json",
+  ".claude/skills/*/config.json",
+  ".agents/skills/*/config.json",
+  "/.claude/skills/*/config.json",
+  "/.agents/skills/*/config.json",
 ];
 
 /**

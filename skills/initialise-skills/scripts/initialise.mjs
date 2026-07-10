@@ -27,7 +27,10 @@ import {
   isPreflightInstalled,
 } from "./lib/discover.mjs";
 import { restoreClobberedConfigs } from "./lib/git.mjs";
-import { reconcilePreflightIgnore, stripSkillConfigIgnores } from "./lib/gitignore.mjs";
+import {
+  reconcilePreflightIgnore,
+  stripSkillConfigIgnores,
+} from "./lib/gitignore.mjs";
 import { serialiseConfig } from "./lib/jsonio.mjs";
 import { mergeConfig } from "./lib/merge.mjs";
 import { resolveOverrides } from "./lib/overrides.mjs";

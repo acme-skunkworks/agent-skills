@@ -188,11 +188,9 @@ describe("stripSkillConfigIgnores (A-812)", () => {
   });
 
   it("leaves the agent-skills source skills/*/config.json rule alone", () => {
-    const original = [
-      "# source-only (A-615)",
-      "skills/*/config.json",
-      "",
-    ].join("\n");
+    const original = ["# source-only (A-615)", "skills/*/config.json", ""].join(
+      "\n",
+    );
     writeFileSync(ignorePath(), original);
 
     const result = stripSkillConfigIgnores(directory, { write: true });
