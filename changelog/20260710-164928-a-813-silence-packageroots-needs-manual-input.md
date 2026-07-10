@@ -7,6 +7,13 @@ category: fix
 breaking: false
 issues:
   - A-813
+merged_at: '2026-07-10T17:26:05Z'
+commit: 8c134f7
+pr: 125
+stats:
+  loc_added: 332
+  loc_removed: 5
+  files_changed: 8
 ---
 
 ## Fixed
