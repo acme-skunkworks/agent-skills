@@ -354,4 +354,177 @@ describe("mergeConfig", () => {
       expect(changed).toBe(false);
     });
   });
+
+  // A-813: packageRoots must not flag needs-manual-input when the monorepo gate
+  // is off — the placeholder stays, unused at runtime, so the single→mono flip
+  // can still infer when a workspace appears later.
+  describe("gated packageRoots (A-813)", () => {
+    const changelogExample = {
+      affectedPackages: true,
+      fallbackPackage: "infrastructure",
+      packageRoots: ["apps", "packages", "services"],
+    };
+
+    it("single-package: packageRoots stays unchanged, not needs-manual-input", () => {
+      const { changed, data, results } = mergeConfig({
+        config: {
+          affectedPackages: true, // still the example placeholder → inferred false
+          fallbackPackage: "infrastructure",
+          packageRoots: ["apps", "packages", "services"],
+        },
+        detect: (key) => {
+          if (key === "affectedPackages") {
+            return { value: false };
+          }
+
+          if (key === "fallbackPackage") {
+            return { value: "infrastructure" };
+          }
+
+          // packageRoots undetectable on a single-package host
+          return null;
+        },
+        example: changelogExample,
+      });
+      expect(results.affectedPackages.status).toBe("inferred");
+      expect(data.affectedPackages).toBe(false);
+      expect(results.packageRoots.status).toBe("unchanged");
+      expect(data.packageRoots).toEqual(["apps", "packages", "services"]);
+      expect(changed).toBe(true); // affectedPackages flipped false
+    });
+
+    it("single-package with missing packageRoots: still not needs-manual-input", () => {
+      const { results } = mergeConfig({
+        config: {},
+        detect: (key) =>
+          key === "affectedPackages"
+            ? { value: false }
+            : key === "fallbackPackage"
+              ? { value: "infrastructure" }
+              : null,
+        example: changelogExample,
+      });
+      expect(results.affectedPackages.write).toBe(false);
+      expect(results.packageRoots.status).toBe("unchanged");
+    });
+
+    it("monorepo: still infers packageRoots and affectedPackages true", () => {
+      const { data, results } = mergeConfig({
+        config: {
+          affectedPackages: true,
+          fallbackPackage: "infrastructure",
+          packageRoots: ["apps", "packages", "services"],
+        },
+        detect: (key) => {
+          if (key === "affectedPackages") {
+            return { value: true };
+          }
+
+          if (key === "fallbackPackage") {
+            return { value: "infrastructure" };
+          }
+
+          if (key === "packageRoots") {
+            return { value: ["packages"] };
+          }
+
+          return null;
+        },
+        example: changelogExample,
+      });
+      expect(results.affectedPackages.status).toBe("unchanged");
+      expect(results.packageRoots.status).toBe("inferred");
+      expect(data.packageRoots).toEqual(["packages"]);
+      expect(data.affectedPackages).toBe(true);
+    });
+
+    it("placeholder→workspace: packageRoots still upgrades via ours-equals-base", () => {
+      // After a single-package reconcile, affectedPackages is the real value
+      // `false` (drift when a workspace appears — never-clobber) while
+      // packageRoots is still the example placeholder and must infer.
+      const { data, results } = mergeConfig({
+        config: {
+          affectedPackages: false,
+          fallbackPackage: "infrastructure",
+          packageRoots: ["apps", "packages", "services"],
+        },
+        detect: (key) => {
+          if (key === "affectedPackages") {
+            return { value: true };
+          }
+
+          if (key === "fallbackPackage") {
+            return { value: "infrastructure" };
+          }
+
+          if (key === "packageRoots") {
+            return { value: ["apps", "packages"] };
+          }
+
+          return null;
+        },
+        example: changelogExample,
+      });
+      expect(results.affectedPackages.status).toBe("drift");
+      expect(data.affectedPackages).toBe(false);
+      expect(results.packageRoots.status).toBe("inferred");
+      expect(data.packageRoots).toEqual(["apps", "packages"]);
+    });
+
+    it("placeholder→workspace: acceptDrift flips the gate on", () => {
+      const { data, results } = mergeConfig({
+        acceptDrift: ["affectedPackages"],
+        config: {
+          affectedPackages: false,
+          fallbackPackage: "infrastructure",
+          packageRoots: ["apps", "packages", "services"],
+        },
+        detect: (key) => {
+          if (key === "affectedPackages") {
+            return { value: true };
+          }
+
+          if (key === "fallbackPackage") {
+            return { value: "infrastructure" };
+          }
+
+          if (key === "packageRoots") {
+            return { value: ["apps", "packages"] };
+          }
+
+          return null;
+        },
+        example: changelogExample,
+      });
+      expect(results.affectedPackages.status).toBe("inferred");
+      expect(data.affectedPackages).toBe(true);
+      expect(results.packageRoots.status).toBe("inferred");
+      expect(data.packageRoots).toEqual(["apps", "packages"]);
+    });
+
+    it("--set affectedPackages=false silences packageRoots needs-manual-input", () => {
+      const { results } = mergeConfig({
+        config: {
+          affectedPackages: true,
+          packageRoots: ["apps", "packages", "services"],
+        },
+        detect: (key) => {
+          // Simulate a monorepo detector that would keep the gate on — --set wins.
+          if (key === "affectedPackages") {
+            return { value: true };
+          }
+
+          if (key === "packageRoots") {
+            return null;
+          }
+
+          return null;
+        },
+        example: changelogExample,
+        set: { affectedPackages: false },
+      });
+      expect(results.affectedPackages.status).toBe("set");
+      expect(results.packageRoots.status).toBe("unchanged");
+    });
+  });
 });
