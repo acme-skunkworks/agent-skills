@@ -39,7 +39,8 @@ To deploy the shared set across a target repo — wipe its bespoke skill/command
 │   ├── scripts/              # validate-skills, ensure-*.sh bootstraps, fleet-wipe.mjs
 │   └── tests/                # bats (ensure-*.sh) + vitest (changelog)
 ├── skills/                  # one folder per skill
-├── CLAUDE.md
+├── AGENTS.md                # estate-wide shared agent instructions (vendored from shared-agents-md)
+├── CLAUDE.md                # Claude Code entrypoint (`@AGENTS.md` + repo-specific guidance)
 ├── LICENSE
 ├── README.md
 └── package.json
@@ -53,4 +54,4 @@ ADRs land under `architecture/` as `NNNN-<slug>.md`. ADR-0001 — the foundation
 
 ## Contributing
 
-See [CLAUDE.md](./CLAUDE.md) for the conventions (Conventional Commits, draft PRs, release-please versioning driven by the PR title).
+See [AGENTS.md](./AGENTS.md) for estate-wide agent guidance and [CLAUDE.md](./CLAUDE.md) for this repo's conventions (skill layout, `/send-it`, release-please versioning driven by the PR title).

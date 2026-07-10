@@ -2,14 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Writing style
+Claude Code reads only `CLAUDE.md`, so the `@AGENTS.md` line below imports the canonical shared
+block (which Cursor reads from `AGENTS.md` natively). Estate-wide guidance lives there;
+repo-specific guidance follows below.
 
-Use **British English** spelling and grammar in all prose you author for this repo: code comments, documentation (this file, ADRs, READMEs, `changelog/*.md`), commit messages, PR titles and bodies, and user-facing strings.
-
-- **Spelling.** Prefer British forms: _colour_, _behaviour_, _organisation_, _centre_, _catalogue_, _recognise_, _analyse_, _licence_ (noun) / _license_ (verb), _-ise_/_-yse_ over _-ize_/_-yze_.
-- **Grammar and punctuation.** British conventions where they differ from American: single quotes are acceptable when quoting; place full stops outside closing quotation marks when the quoted phrase is partial; _whilst_ and _amongst_ are fine; collective nouns may take a plural verb ('the team are' / 'the team is' are both fine — pick whichever reads better).
-- **Scope: prose, not code.** This rule applies to text written for humans. It does **not** apply to identifiers, dependency names, third-party API field names, or quoted upstream text that already uses US spelling. Examples of things to leave alone: CSS `color`, `background-color`; package names like `serialize-javascript`; API fields like `analyze_url`; quoted error messages from upstream tools.
-- **When in doubt, follow upstream.** If you're touching code that mirrors an external API or library, match the upstream spelling exactly — even in surrounding comments where that name appears. Consistency with the thing being wrapped beats consistency with this rule.
+@AGENTS.md
 
 ## Repo
 
@@ -61,7 +58,6 @@ Node 22 required (`.nvmrc`, `engines.node: ">=22"`, `engine-strict=true` in `.np
 - **Single published package.** npm versioning is repo-level: the root `@acme-skunkworks/agent-skills` is the only published package (ADR-0002), with `files: ["skills/"]` as the published surface. There is no `pnpm-workspace.yaml` and no `workspaces` field. Skills carry their own **non-npm** version in `SKILL.md` `metadata.version` (mirrored in the skill's private `package.json`), bumped by hand — `pnpm validate:skills` enforces that parity in CI (the `🧩 Validate skill bundle metadata` step in the local `skills` job, `🧩 Skills & changelog`).
 - **Skill versioning is non-npm.** Each skill carries its own version in its `package.json` `version` (kept `private: true`) mirrored into `SKILL.md` `metadata.version`, bumped **by hand** per ADR-0001 Decision 2's semver semantics when that skill changes. This label is for consumers/runtime introspection and is decoupled from the root npm release — it is **never** driven by a changeset. See [ADR-0002](architecture/0002-repo-level-npm-versioning.md).
 - **Skill bundle metadata contract.** Every `skills/<name>/` ships a `package.json` with `name: "@acme-skunkworks/skill-<name>"` (the `skill-` prefix + directory name), `private: true`, a semver `version` (starts at `0.1.0`), and `repository.directory: "skills/<name>"`; plus a `SKILL.md` whose `name` equals the directory and whose `metadata.version` **matches** the `package.json` version. Full layout in [ADR-0001 Decision 3](architecture/0001-skill-layout.md). `pnpm validate:skills` enforces the naming/`private`/version + `metadata.version` parity rules in CI (the `🧩 Validate skill bundle metadata` step in the local `skills` job, `🧩 Skills & changelog`); `skills-ref validate` (the `skill-manifests` job) covers the rest of the spec.
-- **Branch naming.** `<linear-id>-<slug>` lower-cased, matching Linear's `gitBranchName` (e.g. `a-132-set-up-the-agent-skills-repo`).
 - **Trunk config key (intentional divergence).** The diff-based skills name the trunk `baseBranch` (`changelog`, `send-it` — they diff `origin/<baseBranch>...HEAD`); `cleanup-repo` names it `mainBranch` (its merge-detection target — **both** its passes resolve against `origin/<mainBranch>`: `git branch --merged origin/<mainBranch>` for git-ancestry merges, **plus** a `gh pr list --head <branch> --base <mainBranch> --state merged` pass that catches squash-merged branches the ancestry check can't see, since a squash lands a fresh commit whose SHA is never an ancestor of the trunk). The two names reflect the two different roles, so they are **not** converged — `initialise-skills` maps between them when reconciling config. Don't "fix" one to match the other (A-538).
 - **Config/example key parity.** The shipped `config.example.json` and this repo's own real config must keep their **key sets identical** (values may differ — the example carries placeholders). Since A-615 the per-skill `config.json` is gitignored (it would otherwise be vendored into consumers by `skills add --copy`), so the real values live in the tracked `infrastructure/dogfood-config/<name>.json` tree — that is what `pnpm validate:skills` compares against each `config.example.json` (A-538). A skill with no dogfood config (e.g. `preflight`, whose config lives at the consumer root) is exempt.
 
@@ -225,8 +221,7 @@ These only matter when you're on a headless host (or have no passkey) and stuck 
 
 ## Linear
 
-- Workspace slug: `acme-skunkworks`. Team key: `A` (ACME Skunkworks).
-- When starting work on an A-… issue, transition it to `In Progress` via the Linear MCP (`mcp__linear-server__save_issue`) — unless it's already In Progress or further along.
+- When starting work on an A-… issue, transition it to `In Progress` via the Linear MCP — unless it's already In Progress or further along.
 - Transition to `In Review` when the PR opens. `Done` / `Canceled` stay manual or via Linear's GitHub integration on PR merge.
 
 ## Out of scope (deferred)
