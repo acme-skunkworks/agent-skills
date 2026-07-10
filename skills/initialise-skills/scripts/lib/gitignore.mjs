@@ -197,6 +197,15 @@ export function planSkillConfigIgnoreStrip(raw) {
         isSkillConfigIgnorePattern(lines[look].trim())
       ) {
         removed.push(trimmed);
+        // Record intervening comment wrap lines for the audit trail; blanks are
+        // dropped silently. The pattern itself is removed on its own iteration.
+        for (let skip = index + 1; skip < look; skip++) {
+          const skipped = lines[skip].trim();
+          if (skipped.startsWith("#")) {
+            removed.push(skipped);
+          }
+        }
+
         index = look - 1;
         continue;
       }
@@ -205,54 +214,55 @@ export function planSkillConfigIgnoreStrip(raw) {
     kept.push(line);
   }
 
-  const collapsed = [];
-  let blankRun = 0;
-  for (const line of kept) {
-    if (line.trim() === "") {
-      blankRun++;
-      if (blankRun <= 1) {
-        collapsed.push(line);
+  // Only tidy blank runs when we actually stripped something — otherwise a
+  // file with consecutive blanks but no skill-config patterns would spuriously
+  // report changed/would-strip.
+  let text;
+  if (removed.length === 0) {
+    text = raw;
+  } else {
+    // Collapse consecutive blank lines left by the strip down to one.
+    const collapsed = [];
+    let blankRun = 0;
+    for (const line of kept) {
+      if (line.trim() === "") {
+        blankRun++;
+        if (blankRun <= 1) {
+          collapsed.push(line);
+        }
+
+        continue;
       }
 
-      continue;
+      blankRun = 0;
+      collapsed.push(line);
     }
 
-    blankRun = 0;
-    collapsed.push(line);
-  }
+    while (
+      collapsed.length >= 2 &&
+      collapsed.at(-1)?.trim() === "" &&
+      collapsed.at(-2)?.trim() === ""
+    ) {
+      collapsed.pop();
+    }
 
-  while (
-    collapsed.length >= 2 &&
-    collapsed.at(-1)?.trim() === "" &&
-    collapsed.at(-2)?.trim() === "" &&
-    removed.length > 0
-  ) {
-    collapsed.pop();
-  }
+    text = collapsed.join(nl);
+    if (raw.endsWith(nl) && text.length > 0 && !text.endsWith(nl)) {
+      text += nl;
+    }
 
-  let text = collapsed.join(nl);
-  if (raw.endsWith(nl) && text.length > 0 && !text.endsWith(nl)) {
-    text += nl;
-  }
-
-  if (text.trim() === "" && raw.trim() !== "" && removed.length > 0) {
-    text = "";
+    if (text.trim() === "") {
+      text = "";
+    }
   }
 
   return {
-    changed: text !== raw,
+    changed: removed.length > 0,
     removed: [...new Set(removed)],
     text,
   };
 }
 
-/**
- * Strip erroneous skill-config.json gitignore rules from a consumer (A-812).
- * Does not touch the agent-skills source pattern (skills/ + star + /config.json).
- * @param {string} repoRoot
- * @param {{ write?: boolean }} [options]
- * @returns {{ path: string, removed: string[], status: "clean"|"stripped"|"would-strip" }}
- */
 export function stripSkillConfigIgnores(repoRoot, { write = false } = {}) {
   const gitignorePath = join(repoRoot, ".gitignore");
   if (!existsSync(gitignorePath)) {

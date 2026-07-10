@@ -226,9 +226,10 @@ export function formatHuman(report) {
     const detail =
       SKILL_CONFIG_IGNORE_LABEL[report.skillConfigIgnore.status] ??
       report.skillConfigIgnore.status;
-    const removed = report.skillConfigIgnore.removed?.length
-      ? ` (${report.skillConfigIgnore.removed.join(", ")})`
-      : "";
+    const patterns = (report.skillConfigIgnore.removed ?? []).filter(
+      (entry) => !entry.startsWith("#"),
+    );
+    const removed = patterns.length ? ` (${patterns.join(", ")})` : "";
     lines.push(`${report.skillConfigIgnore.path}: ${detail}${removed}`, "");
   }
 
