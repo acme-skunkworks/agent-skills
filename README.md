@@ -24,7 +24,7 @@ To deploy the shared set across a target repo — wipe its bespoke skill/command
 │   └── send-it.md           # all-in-one finisher (stopgap until the send-it skill ships)
 ├── .github/
 │   ├── actions/
-│   │   └── load-repo-config/ # infrastructure/repo-config.yaml → step outputs
+│   │   └── (load-repo-config via shared-workflows @v1)
 │   └── workflows/
 │       ├── pkg-release.yml       # publish-only caller of shared-workflows' reusable-pkg-release.yml (npm OIDC + GitHub Packages)
 │       ├── validate.yml          # PR gate: config + reusable lint/build-test callers, local skills + skill-manifests, GO/NO GO
