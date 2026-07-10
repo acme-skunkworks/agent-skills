@@ -166,8 +166,14 @@ Write each skill's `config.json` from detected repo facts (base branch, package
 roots, changelog dir, Linear keys, review bots, …). On a fresh install the
 consumer has only `config.example.json` (agent-skills ships no `config.json` —
 A-615), so `initialise-skills` **creates** each `config.json` from the example's
-key set plus the detected/supplied facts. Dry-run first; it is idempotent and
-never clobbers a deliberate edit (drift is reported, not overwritten).
+key set plus the detected/supplied facts. **Commit those resolved configs** in
+the consumer — they are runtime identity, not secrets. Do **not** copy the
+agent-skills source gitignore rule (`skills/*/config.json`) into a consumer: that
+rule exists only so `skills add --copy` cannot leak ACME values from the source
+repo. `initialise-skills` also strips erroneous `.claude`/`.agents`
+`skills/*/config.json` ignore lines if a consumer inherited them (A-812). Dry-run
+first; it is idempotent and never clobbers a deliberate edit (drift is reported,
+not overwritten).
 
 > **On a re-vendor, restore your configs first.** The step 2 `--copy` install
 > deleted the consumer's existing `config.json` files. If you reach this step
