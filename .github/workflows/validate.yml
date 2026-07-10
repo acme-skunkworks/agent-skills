@@ -34,20 +34,9 @@ permissions:
 # `GO/NO GO` aggregator (A-418) is the required status check.
 jobs:
   config:
-    name: ⚙️ Load repo config
-    runs-on: ubuntu-latest
-    outputs:
-      node_version_file: ${{ steps.repo.outputs.node_version_file }}
-    steps:
-      - name: ⬇️ Checkout repo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          fetch-depth: 1
-          persist-credentials: false
-
-      - name: ⚙️ Load repo config
-        id: repo
-        uses: ./.github/actions/load-repo-config
+    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-load-repo-config.yml@v1
+    permissions:
+      contents: read
 
   lint:
     needs: config
