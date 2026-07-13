@@ -1,7 +1,7 @@
 ---
 title: Correct release-status default and align changelog/release docs to changelog-core
 release_note: release-status now defaults its required check to GO/NO GO, and the changelog/release docs describe the in-repo changelog-core enrichment model.
-version:
+version: 1.2.7
 created_at: '2026-07-13T18:13:33Z'
 merged_at: '2026-07-13T18:54:36Z'
 branch: a-948-docs-update-changelogrelease-docs-skills-to-the-changelog
@@ -17,6 +17,7 @@ stats:
   files_changed: 18
   loc_added: 145
   loc_removed: 92
+  commits: 5
 ---
 
 ## Fixed
