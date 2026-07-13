@@ -1,21 +1,22 @@
 ---
-title: "Correct release-status default and align changelog/release docs to changelog-core"
-release_note: "release-status now defaults its required check to GO/NO GO, and the changelog/release docs describe the in-repo changelog-core enrichment model."
+title: Correct release-status default and align changelog/release docs to changelog-core
+release_note: release-status now defaults its required check to GO/NO GO, and the changelog/release docs describe the in-repo changelog-core enrichment model.
 version:
-created_at: "2026-07-13T18:13:33Z"
-merged_at:
-branch: "a-948-docs-update-changelogrelease-docs-skills-to-the-changelog"
-pr:
-commit:
-author: "rob@acmeskunkworks.io"
+created_at: '2026-07-13T18:13:33Z'
+merged_at: '2026-07-13T18:54:36Z'
+branch: a-948-docs-update-changelogrelease-docs-skills-to-the-changelog
+pr: 132
+commit: 0e4b745
+author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
 breaking: false
-issues: ["A-948"]
+issues:
+  - A-948
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 18
+  loc_added: 145
+  loc_removed: 92
 ---
 
 ## Fixed
