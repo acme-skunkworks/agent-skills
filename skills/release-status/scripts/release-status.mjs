@@ -9,7 +9,7 @@
 //                         patch, !/BREAKING→major; docs/chore/ci/refactor/test/
 //                         build/style→none) and the version that would cut.
 //   2. Release PR        — the open `release-please--branches--main` PR (if any)
-//                         and its required-check (`🔬 Build & Lint`) status.
+//                         and its required-check (`GO/NO GO`) status.
 //   3. Stale autorelease — the recurring stall: the last MERGED release PR still
 //                         carries an `autorelease: pending` label, so
 //                         release-please aborts and releases stop firing.
@@ -39,7 +39,7 @@ import { join } from "node:path";
 const DEFAULTS = {
   mainBranch: "main",
   releaseBranch: "release-please--branches--main",
-  requiredCheck: "🔬 Build & Lint",
+  requiredCheck: "GO/NO GO",
   stalePendingLabel: "autorelease: pending",
 };
 
@@ -674,13 +674,13 @@ function selfTest() {
   // requiredCheckState
   check(
     "requiredCheckState reads a matching check (success)",
-    requiredCheckState([{ conclusion: "SUCCESS", name: "🔬 Build & Lint" }])
-      .state === "success",
+    requiredCheckState([{ conclusion: "SUCCESS", name: "GO/NO GO" }]).state ===
+      "success",
   );
   check(
     "requiredCheckState reads a status-check state",
-    requiredCheckState([{ name: "🔬 Build & Lint", state: "PENDING" }])
-      .state === "pending",
+    requiredCheckState([{ name: "GO/NO GO", state: "PENDING" }]).state ===
+      "pending",
   );
   check(
     "requiredCheckState reports not-found when absent",

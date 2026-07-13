@@ -169,14 +169,13 @@ describe("detectStalePending — the autorelease: pending stall", () => {
 describe("requiredCheckState — required-check rollup reading", () => {
   it("reads an Actions conclusion", () => {
     expect(
-      requiredCheckState([{ conclusion: "SUCCESS", name: "🔬 Build & Lint" }])
-        .state,
+      requiredCheckState([{ conclusion: "SUCCESS", name: "GO/NO GO" }]).state,
     ).toBe("success");
   });
 
   it("reads a status-check state", () => {
     expect(
-      requiredCheckState([{ name: "🔬 Build & Lint", state: "PENDING" }]).state,
+      requiredCheckState([{ name: "GO/NO GO", state: "PENDING" }]).state,
     ).toBe("pending");
   });
 
