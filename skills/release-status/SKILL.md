@@ -5,7 +5,7 @@ description: >-
   version from the merged Conventional-Commit PR titles since the last tag
   (feat→minor, fix/perf/revert→patch, !/BREAKING→major; docs/chore/ci/refactor/
   test/build/style→none), show the open release-please--branches--main PR and its
-  required-check (🔬 Build & Lint) status, detect the recurring stale
+  required-check (GO/NO GO) status, detect the recurring stale
   `autorelease: pending` stall on the last merged release PR (where release-please
   aborts and releases silently stop firing), and confirm tag-vs-version parity
   (does a v<package.json version> tag already exist, or is publishing pending — the
@@ -22,7 +22,7 @@ compatibility: >-
   road-runner-bot `release-orchestrator`), with a publish-only `release.yml`
   gated on a version-vs-tag check.
 metadata:
-  version: 0.1.4
+  version: 0.1.5
   author: Rob Easthope
 allowed-tools: Read, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*)
 ---
@@ -48,7 +48,7 @@ doing. The two never call each other. This skill may reference `send-it` in pros
 | Signal | What it answers | How to read / fix it |
 | --- | --- | --- |
 | **Version preview** | What bump and version would the merged Conventional-Commit PR titles since the last tag produce? | `feat:`→minor, `fix:`/`perf:`/`revert:`→patch, `!`/`BREAKING CHANGE:`→major; `docs`/`chore`/`ci`/`refactor`/`test`/`build`/`style`→none. The strongest wins. `none` means nothing release-triggering has merged since the last tag — no release will cut. |
-| **Release PR** | Is the `release-please--branches--main` PR open, and is its required check (`🔬 Build & Lint`) green? | If open and green, the orchestrator can squash-merge it. If the check is pending/red, the merge is blocked — chase that check. If none is open, release-please hasn't opened one (often because nothing release-triggering merged, or the pipeline is stalled — see below). |
+| **Release PR** | Is the `release-please--branches--main` PR open, and is its required check (`GO/NO GO`) green? | If open and green, the orchestrator can squash-merge it. If the check is pending/red, the merge is blocked — chase that check. If none is open, release-please hasn't opened one (often because nothing release-triggering merged, or the pipeline is stalled — see below). |
 | **Stale `autorelease: pending`** | Does the **last merged** release PR still carry the `autorelease: pending` label? | This is the recurring stall: when a merged release PR keeps that label, release-please **aborts the next release** and the pipeline silently stops firing. Remediation: remove the label from that PR, then re-run the orchestrator (or wait for its cron tick). |
 | **Tag-vs-version parity** | Does a `v<package.json version>` tag already exist? | This is the `release.yml` **version-vs-tag gate**. Tag exists → clean no-op (this version is already published). Tag missing → **publishing is pending** for that version (the gate would run the publish path on the next `main` push). |
 
@@ -64,7 +64,7 @@ match the consuming repo.
 | --- | --- | --- |
 | `mainBranch` | The trunk release-please releases from. | `main` |
 | `releaseBranch` | The branch release-please opens its release PR on. | `release-please--branches--main` |
-| `requiredCheck` | The exact name (incl. emoji) of the required status check the orchestrator polls before merging the release PR. | `🔬 Build & Lint` |
+| `requiredCheck` | The exact name (incl. emoji) of the required status check the orchestrator polls before merging the release PR. | `GO/NO GO` |
 | `stalePendingLabel` | The label release-please applies to a release PR while a release is in flight; **stale** when it lingers on a *merged* PR. | `autorelease: pending` |
 
 ## Usage

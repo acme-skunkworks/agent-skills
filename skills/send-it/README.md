@@ -83,6 +83,6 @@ which send-it's delegated steps read.
 - It does **not** bump the repo/npm version or write any root `CHANGELOG.md` —
   release-please does that from the merged Conventional-Commit PR title. send-it only
   writes the dated `changelog/<ts>-<slug>.md` entry (the curated per-change record),
-  which the release step finalises. (With `bundleVersioning` configured it *does*
+  which the post-merge enricher finalises. (With `bundleVersioning` configured it *does*
   offer to bump a changed skill bundle's own `metadata.version` — a per-bundle label,
   separate from the repo release.)

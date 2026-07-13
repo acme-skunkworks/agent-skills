@@ -31,7 +31,7 @@ Generate it by running the `initialise-skills` skill, or copy the example to
 | --- | --- | --- |
 | `mainBranch` | The trunk release-please releases from. | `main` |
 | `releaseBranch` | The branch release-please opens its release PR on. | `release-please--branches--main` |
-| `requiredCheck` | The exact name (incl. emoji) of the required status check the orchestrator polls before merging the release PR. | `🔬 Build & Lint` |
+| `requiredCheck` | The exact name (incl. emoji) of the required status check the orchestrator polls before merging the release PR. | `GO/NO GO` |
 | `stalePendingLabel` | The label release-please applies while a release is in flight; **stale** when it lingers on a *merged* PR. | `autorelease: pending` |
 
 ## Requirements
@@ -52,7 +52,7 @@ prints a structured report (or `--json`):
    titles since the last tag imply (`feat:`→minor, `fix:`/`perf:`/`revert:`→patch,
    `!`/`BREAKING CHANGE:`→major; `docs`/`chore`/`ci`/… cut no release).
 2. **Release PR** — the open `release-please--branches--main` PR (if any) and its
-   required-check (`🔬 Build & Lint`) status.
+   required-check (`GO/NO GO`) status.
 3. **Stale `autorelease: pending`** — whether the last merged release PR still
    carries the pending label, the recurring stall where release-please aborts and
    releases stop firing.
