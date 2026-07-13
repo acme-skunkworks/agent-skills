@@ -21,7 +21,7 @@ compatibility: >-
   `linear-sync` skills — install them alongside this one. The In Review writeback
   needs the Linear MCP server (via `linear-sync`); it is skipped if unavailable.
 metadata:
-  version: 0.6.1
+  version: 0.6.2
   author: Rob Easthope
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -374,11 +374,11 @@ Follow the [`changelog`](../changelog/SKILL.md) skill to author or update the en
    (`releaseTriggering: false`), `release_note` may be blank when there's no
    user-facing impact.
 
-   Leave the post-merge fields (`merged_at`, `commit`, `pr`, `merge_strategy`, `stats`)
-   and `version` as blank placeholders — the release step finalises them (a non-release
+   Leave the post-merge fields (`merged_at`, `commit`, `pr`, `stats`)
+   and `version` as blank placeholders — the post-merge enricher fills them (a non-release
    entry keeps `version` blank, as no release is cut for it). This includes `pr`: no
-   step here writes it back after the PR opens; the release/enrich step resolves it
-   post-merge from the entry's `branch:`.
+   step here writes it back after the PR opens; the post-merge enricher resolves it
+   from the entry's `branch:`.
 3. Run the enrichment scripts: `node skills/changelog/scripts/set-affected-packages.mjs`
    then `node skills/changelog/scripts/add-links.mjs`.
 4. **Validate:** `node skills/changelog/scripts/validate-changelog.mjs`. It must pass
@@ -484,7 +484,7 @@ Skip silently if `linear-sync` or the Linear MCP server is unavailable.
 - **send-it does not bump versions or write any `CHANGELOG.md`.** release-please
   reads the merged Conventional-Commit PR title, bumps the manifest in the release
   PR, and the release workflow publishes + tags. send-it only writes the dated
-  `changelog/<ts>-<slug>.md` entry (Step 7), finalised at release.
+  `changelog/<ts>-<slug>.md` entry (Step 7), finalised post-merge by the in-repo enricher.
 
 ## Error Handling
 
