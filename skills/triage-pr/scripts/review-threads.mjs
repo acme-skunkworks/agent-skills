@@ -153,10 +153,15 @@ export function hasStickyMarker(body) {
  * headline would stick. A later *non*-marker candidate never downgrades a real summary.
  *
  * Candidates come from two surfaces, concatenated by the caller as
- * `[...issueComments, ...reviewBodies]` — issue-comment bots (CodeRabbit, Claude)
- * are seen first so their behaviour is unchanged, while a review-only bot (Bugbot,
- * whose summary is a `<!-- BUGBOT_REVIEW -->` review body) surfaces via its review.
- * Blank bodies and Bugbot's "not enabled" upsell are dropped by `isSummaryCandidate`.
+ * `[...issueComments, ...reviewBodies]` — issue comments seen first, review bodies
+ * second. A review-only bot (Bugbot, whose summary is a `<!-- BUGBOT_REVIEW -->`
+ * review body) surfaces via its review; the upsell it also posts as an issue comment
+ * is dropped by `isSummaryCandidate`. For a bot that posts a marker on **both**
+ * surfaces (e.g. CodeRabbit — a sticky issue comment and a walkthrough review body),
+ * the review body wins because it is concatenated later and "latest marker wins". That
+ * is deliberate and harmless: the two surfaces carry equivalent summary content, and
+ * only one summary per bot is surfaced either way. Blank bodies and Bugbot's "not
+ * enabled" upsell are dropped by `isSummaryCandidate`.
  * @param {Array<{author?: {login?: string}, body?: string, id?: string}>} commentNodes
  * @param {(login: string|undefined) => boolean} isBot
  */

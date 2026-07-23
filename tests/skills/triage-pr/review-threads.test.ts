@@ -215,6 +215,32 @@ describe("buildResult — review-submission summaries", () => {
     expect(result.aiSummaryComments).toHaveLength(0);
   });
 
+  it("when a bot posts both a sticky issue comment and a sticky review body, the review body wins (concatenated later)", () => {
+    const result = buildResult({
+      bots: ["coderabbitai"],
+      commentNodes: [
+        {
+          author: { login: "coderabbitai" },
+          body: "<!-- use_sticky_comment -->\nWalkthrough (issue comment)",
+          id: "IC_sticky",
+        },
+      ],
+      isDraft: false,
+      number: 7,
+      reviewNodes: [
+        {
+          author: { login: "coderabbitai" },
+          body: "<!-- use_sticky_comment -->\nWalkthrough (review body)",
+          id: "REV_walkthrough",
+          state: "COMMENTED",
+        },
+      ],
+      threadNodes: [],
+    });
+
+    expect(summaryIds(result.aiSummaryComments)).toEqual(["REV_walkthrough"]);
+  });
+
   it("leaves issue-comment summaries unchanged when no reviews are present", () => {
     const result = buildResult({
       bots: ["coderabbitai"],
