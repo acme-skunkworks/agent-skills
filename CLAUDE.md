@@ -228,3 +228,7 @@ These only matter when you're on a headless host (or have no passkey) and stuck 
 ## Out of scope (deferred)
 
 - **commitlint.** No commit-message linting until the repo has enough churn to justify it. Husky + lint-staged landed in [A-345](https://linear.app/acme-skunkworks/issue/A-345) (`.husky/pre-push` blocks direct `main` pushes, `pre-commit` runs lint-staged, `commit-msg` strips the Claude trailer), but the `commit-msg` hook does **not** enforce Conventional Commits — commit messages stay convention-only. (The **PR title** is a different matter: since A-380 it's CI-linted by the standalone `validate-pr-title.yml` (caller of `reusable-validate-pr-title.yml`), because it's the squash subject release-please reads to decide the bump.)
+
+## Commitlint pre-push check
+
+A-1023 adds a best-effort `commitlint --from origin/main --to HEAD` range check to `.husky/pre-push`; it skips with an install hint when `@commitlint/cli` or `origin/main` is missing. CI’s reusable commit-validation workflow remains authoritative. Configuration is `commitlint.config.mjs`, extending `@acme-skunkworks/commitlint-config`.
