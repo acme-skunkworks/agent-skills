@@ -1,20 +1,20 @@
 ---
-title: "Recognise Cursor Bugbot review-body summaries in triage-pr"
-release_note: "triage-pr now surfaces Cursor Bugbot's per-PR review summary, so its headline review is consolidated alongside CodeRabbit's and Claude's."
-created_at: "2026-07-23T11:42:30Z"
-merged_at:
-branch: "triage-pr-bugbot-summary-recognition"
-pr:
-commit:
-author: "rob@acmeskunkworks.io"
+title: Recognise Cursor Bugbot review-body summaries in triage-pr
+release_note: triage-pr now surfaces Cursor Bugbot's per-PR review summary, so its headline review is consolidated alongside CodeRabbit's and Claude's.
+created_at: '2026-07-23T11:42:30Z'
+merged_at: '2026-07-23T13:05:06Z'
+branch: triage-pr-bugbot-summary-recognition
+pr: 135
+commit: 741d463
+author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
 breaking: false
 issues: []
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 5
+  loc_added: 362
+  loc_removed: 35
   commits:
 ---
 
