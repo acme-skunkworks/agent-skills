@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.6.0
+  version: 0.7.0
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -260,15 +260,22 @@ It prints minimal JSON with four groups:
   in Step 8.
 - `humanThreads` — the same shape, for unresolved threads **not** raised by a
   review bot. Surface these in the report for the human; do not auto-action them.
-- `aiSummaryComments` — the sticky issue-level summary the review action posts via
-  `track_progress` / `use_sticky_comment`. At most **one per review bot** is kept:
-  the bot's first issue comment, upgraded to a later one carrying a sticky marker
-  (walkthrough / `use_sticky_comment` / `track_progress` / "Summary by …") if the
-  first had none — so an "I'll review" ack, command acknowledgements, and chatter
-  don't masquerade as the headline review. Surface it **separately**: it is an
-  issue comment, **not** a review thread, so it has no `isResolved` and never
-  appears in `unresolvedThreads`. Missing it would mean missing the headline
-  review.
+- `aiSummaryComments` — the review bot's **headline summary** about the whole PR,
+  drawn from two surfaces: the sticky **issue-level** comment CodeRabbit/Claude post
+  via `track_progress` / `use_sticky_comment`, **and** the **review-submission body**
+  Cursor Bugbot posts (marked `<!-- BUGBOT_REVIEW -->`, always a `COMMENTED` review —
+  it never requests changes). At most **one per review bot** is kept: the bot's
+  **latest marker-bearing** candidate (walkthrough / `use_sticky_comment` /
+  `track_progress` / "Summary by …" / `BUGBOT_REVIEW`), falling back to its **first**
+  candidate when none carries a marker — so an "I'll review" ack, command
+  acknowledgements, chatter, and Bugbot's "not enabled" upsell don't masquerade as the
+  headline review, and a re-review's fresh summary supersedes the earlier one. Because
+  review bodies are considered after issue comments, a bot that posts a marker on
+  **both** surfaces (e.g. CodeRabbit's sticky comment plus a walkthrough review) is
+  surfaced from its review body — equivalent content, so it makes no practical
+  difference. Surface it **separately**: whether an issue comment or a review body, it
+  is **not** a review thread, so it has no `isResolved` and never appears in
+  `unresolvedThreads`. Missing it would mean missing the headline review.
 
 Resolved threads are filtered out so the context stays small. Empty
 `unresolvedThreads`, no AI summary, **and** no `deferredThreads` → report "no
@@ -432,11 +439,12 @@ Under `--dry-run`, list the candidates that *would* be proposed and create nothi
 
 ### Step 11 — Phase B: acknowledge issue-level review comments
 
-Findings that arrive as **issue-level comments** — Claude's whole-review comment,
-CodeRabbit's sticky summary (`aiSummaryComments` from Step 7) — have no resolvable
-per-finding thread, so the thread machinery above never touches them. Once the
-thread loop has converged (and Step 10's capture has minted any follow-up tickets),
-acknowledge them on the PR with **one consolidated comment** mapping each finding →
+Findings that arrive as a **headline summary** — Claude's whole-review comment,
+CodeRabbit's sticky summary, or Bugbot's `<!-- BUGBOT_REVIEW -->` review body (all in
+`aiSummaryComments` from Step 7) — have no resolvable per-finding thread, so the
+thread machinery above never touches them. Once the thread loop has converged (and
+Step 10's capture has minted any follow-up tickets), acknowledge them on the PR with
+**one consolidated comment** mapping each finding →
 `accepted (<sha>)` / `declined (<reason>)` / `out-of-scope (<ticket>)`:
 
 ```bash
