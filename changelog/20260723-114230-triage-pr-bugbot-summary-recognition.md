@@ -26,6 +26,8 @@ stats:
   `<!-- BUGBOT_REVIEW -->` (its bug findings already arrive as actionable inline
   threads), so that summary previously never reached `aiSummaryComments` and Step 11
   could not consolidate it. A new `reviews` GraphQL query feeds review bodies through
-  the same per-author, marker-preferring selector — appended after issue comments so
-  existing issue-comment bots (CodeRabbit, Claude) are unaffected. Blank review bodies
-  and Bugbot's free-tier "not enabled" upsell are excluded.
+  the same per-author selector, which keeps each bot's **latest marker-bearing**
+  candidate (so a re-review's fresh summary supersedes an earlier one). Review bodies
+  are considered after issue comments; a bot posting a marker on both surfaces is
+  surfaced from its review body (equivalent content). Blank review bodies and Bugbot's
+  free-tier "not enabled" upsell are excluded.

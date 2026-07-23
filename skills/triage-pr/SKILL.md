@@ -264,14 +264,18 @@ It prints minimal JSON with four groups:
   drawn from two surfaces: the sticky **issue-level** comment CodeRabbit/Claude post
   via `track_progress` / `use_sticky_comment`, **and** the **review-submission body**
   Cursor Bugbot posts (marked `<!-- BUGBOT_REVIEW -->`, always a `COMMENTED` review —
-  it never requests changes). At most **one per review bot** is kept: the bot's first
-  candidate, upgraded to a later one carrying a sticky marker (walkthrough /
-  `use_sticky_comment` / `track_progress` / "Summary by …" / `BUGBOT_REVIEW`) if the
-  first had none — so an "I'll review" ack, command acknowledgements, chatter, and
-  Bugbot's "not enabled" upsell don't masquerade as the headline review. Surface it
-  **separately**: whether an issue comment or a review body, it is **not** a review
-  thread, so it has no `isResolved` and never appears in `unresolvedThreads`. Missing
-  it would mean missing the headline review.
+  it never requests changes). At most **one per review bot** is kept: the bot's
+  **latest marker-bearing** candidate (walkthrough / `use_sticky_comment` /
+  `track_progress` / "Summary by …" / `BUGBOT_REVIEW`), falling back to its **first**
+  candidate when none carries a marker — so an "I'll review" ack, command
+  acknowledgements, chatter, and Bugbot's "not enabled" upsell don't masquerade as the
+  headline review, and a re-review's fresh summary supersedes the earlier one. Because
+  review bodies are considered after issue comments, a bot that posts a marker on
+  **both** surfaces (e.g. CodeRabbit's sticky comment plus a walkthrough review) is
+  surfaced from its review body — equivalent content, so it makes no practical
+  difference. Surface it **separately**: whether an issue comment or a review body, it
+  is **not** a review thread, so it has no `isResolved` and never appears in
+  `unresolvedThreads`. Missing it would mean missing the headline review.
 
 Resolved threads are filtered out so the context stays small. Empty
 `unresolvedThreads`, no AI summary, **and** no `deferredThreads` → report "no
