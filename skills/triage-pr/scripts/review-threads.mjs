@@ -142,10 +142,15 @@ export function hasStickyMarker(body) {
 /**
  * Pick at most one summary comment per review bot. Filtering candidates by `isBot`
  * alone surfaces *every* bot comment — walkthrough chatter, command
- * acknowledgements — as "the headline review", inflating Phase B context. Instead:
- * keep each bot's **first** candidate, but upgrade to a later one that carries a
- * sticky marker if the first had none (the real summary is often edited in after
- * an initial "reviewing…" ack). Input order is GitHub's chronological order.
+ * acknowledgements — as "the headline review", inflating Phase B context. Instead,
+ * keep each bot's **latest marker-bearing** candidate, falling back to its **first**
+ * candidate when none carries a sticky marker. Input order is GitHub's chronological
+ * order, so "latest marker-bearing" means a fresh summary always supersedes an older
+ * one: an initial "reviewing…" ack (no marker) is upgraded to the real summary, and a
+ * re-review's new summary replaces the previous one. That re-review case matters for a
+ * bot like Bugbot, which submits a **fresh** `<!-- BUGBOT_REVIEW -->` review per commit
+ * rather than editing one comment in place — without preferring the latest, a stale
+ * headline would stick. A later *non*-marker candidate never downgrades a real summary.
  *
  * Candidates come from two surfaces, concatenated by the caller as
  * `[...issueComments, ...reviewBodies]` — issue-comment bots (CodeRabbit, Claude)
@@ -170,12 +175,12 @@ export function selectSummaryComments(commentNodes, isBot) {
       commentId: node.id,
     };
     const existing = byAuthor.get(shaped.author);
-    if (!existing) {
-      byAuthor.set(shaped.author, shaped);
-    } else if (
-      !hasStickyMarker(existing.body) &&
-      hasStickyMarker(shaped.body)
-    ) {
+    if (!existing || hasStickyMarker(shaped.body)) {
+      // First candidate for this bot, or a later marker-bearing one — the latter is
+      // the freshest real summary, so it supersedes whatever was stored (an earlier
+      // ack, or an earlier marker-bearing summary from a prior review round). A later
+      // candidate WITHOUT a marker is left to fall through, never displacing a stored
+      // summary with chatter.
       byAuthor.set(shaped.author, shaped);
     }
   }
@@ -577,7 +582,15 @@ function selfTest() {
     },
   ];
   // Review submissions: Bugbot posts its summary here (not as an issue comment).
+  // Two BUGBOT_REVIEW bodies model a re-review — Bugbot submits a fresh review per
+  // commit rather than editing one in place, so the NEWER one must win.
   const reviewNodes = [
+    {
+      author: { login: "cursor" },
+      body: "<!-- BUGBOT_REVIEW -->\nCursor Bugbot reviewed an earlier commit and found 3 potential issues.",
+      id: "REV_bugbot_stale",
+      state: "COMMENTED",
+    },
     {
       author: { login: "cursor" },
       body: "<!-- BUGBOT_REVIEW -->\nCursor Bugbot has reviewed your changes using default effort and found 2 potential issues.",
@@ -717,6 +730,16 @@ function selfTest() {
       ok:
         result.aiSummaryComments.find((comment) => comment.author === "cursor")
           ?.commentId === "REV_bugbot_summary",
+    },
+    {
+      name: "a re-review's newer summary supersedes an earlier one (same marker)",
+      ok:
+        result.aiSummaryComments.some(
+          (comment) => comment.commentId === "REV_bugbot_summary",
+        ) &&
+        !result.aiSummaryComments.some(
+          (comment) => comment.commentId === "REV_bugbot_stale",
+        ),
     },
   ];
 

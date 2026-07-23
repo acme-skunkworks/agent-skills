@@ -173,6 +173,32 @@ describe("buildResult — review-submission summaries", () => {
     expect(summaryIds(result.aiSummaryComments)).toEqual(["REV_summary"]);
   });
 
+  it("prefers a re-review's newer summary over an earlier one with the same marker", () => {
+    const result = buildResult({
+      bots: ["cursor"],
+      commentNodes: [],
+      isDraft: false,
+      number: 7,
+      reviewNodes: [
+        {
+          author: { login: "cursor" },
+          body: "<!-- BUGBOT_REVIEW -->\nfound 3 potential issues.",
+          id: "REV_old",
+          state: "COMMENTED",
+        },
+        {
+          author: { login: "cursor" },
+          body: "<!-- BUGBOT_REVIEW -->\nfound 1 potential issue.",
+          id: "REV_new",
+          state: "COMMENTED",
+        },
+      ],
+      threadNodes: [],
+    });
+
+    expect(summaryIds(result.aiSummaryComments)).toEqual(["REV_new"]);
+  });
+
   it("never treats a blank review body as a summary", () => {
     const result = buildResult({
       bots: ["cursor"],
