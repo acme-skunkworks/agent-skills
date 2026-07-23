@@ -12,6 +12,10 @@ function ids(threads: Array<{ threadId: string }>) {
   return threads.map((thread) => thread.threadId);
 }
 
+function summaryIds(comments: Array<{ commentId: string }>) {
+  return comments.map((comment) => comment.commentId);
+}
+
 // A raw GraphQL review-thread node (bot logins come back without `[bot]`).
 function threadNode(
   id: string,
@@ -100,5 +104,106 @@ describe("buildResult — deferred bucket", () => {
     });
 
     expect(result.deferredThreads).toEqual([]);
+  });
+});
+
+describe("buildResult — review-submission summaries", () => {
+  it("surfaces a bot's BUGBOT_REVIEW review body as an AI summary", () => {
+    const result = buildResult({
+      bots: ["cursor"],
+      commentNodes: [],
+      isDraft: false,
+      number: 7,
+      reviewNodes: [
+        {
+          author: { login: "cursor" },
+          body: "<!-- BUGBOT_REVIEW -->\nCursor Bugbot has reviewed your changes and found 2 potential issues.",
+          id: "REV_summary",
+          state: "COMMENTED",
+        },
+      ],
+      threadNodes: [],
+    });
+
+    expect(summaryIds(result.aiSummaryComments)).toEqual(["REV_summary"]);
+  });
+
+  it("excludes Bugbot's 'not enabled' upsell issue comment", () => {
+    const result = buildResult({
+      bots: ["cursor"],
+      commentNodes: [
+        {
+          author: { login: "cursor" },
+          body: "Bugbot is not enabled for your account, so this pull request was not reviewed.",
+          id: "IC_upsell",
+        },
+      ],
+      isDraft: false,
+      number: 7,
+      reviewNodes: [],
+      threadNodes: [],
+    });
+
+    expect(result.aiSummaryComments).toHaveLength(0);
+  });
+
+  it("prefers the review-body summary over the upsell when both are present", () => {
+    const result = buildResult({
+      bots: ["cursor"],
+      commentNodes: [
+        {
+          author: { login: "cursor" },
+          body: "Bugbot is not enabled for your account, so this pull request was not reviewed.",
+          id: "IC_upsell",
+        },
+      ],
+      isDraft: false,
+      number: 7,
+      reviewNodes: [
+        {
+          author: { login: "cursor" },
+          body: "<!-- BUGBOT_REVIEW -->\nfound 1 potential issue.",
+          id: "REV_summary",
+          state: "COMMENTED",
+        },
+      ],
+      threadNodes: [],
+    });
+
+    expect(summaryIds(result.aiSummaryComments)).toEqual(["REV_summary"]);
+  });
+
+  it("never treats a blank review body as a summary", () => {
+    const result = buildResult({
+      bots: ["cursor"],
+      commentNodes: [],
+      isDraft: false,
+      number: 7,
+      reviewNodes: [
+        { author: { login: "cursor" }, body: "", id: "REV_blank" },
+        { author: { login: "cursor" }, body: "   \n ", id: "REV_ws" },
+      ],
+      threadNodes: [],
+    });
+
+    expect(result.aiSummaryComments).toHaveLength(0);
+  });
+
+  it("leaves issue-comment summaries unchanged when no reviews are present", () => {
+    const result = buildResult({
+      bots: ["coderabbitai"],
+      commentNodes: [
+        {
+          author: { login: "coderabbitai" },
+          body: "<!-- use_sticky_comment -->\n## Walkthrough",
+          id: "IC_sticky",
+        },
+      ],
+      isDraft: false,
+      number: 7,
+      threadNodes: [],
+    });
+
+    expect(summaryIds(result.aiSummaryComments)).toEqual(["IC_sticky"]);
   });
 });

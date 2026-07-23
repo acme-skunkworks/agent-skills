@@ -18,10 +18,13 @@
 //   - humanThreads      : the same, for threads NOT raised by a review bot —
 //                         surfaced so a human isn't silently dropped, but the
 //                         skill does not auto-action them.
-//   - aiSummaryComments : issue-level comments authored by a review bot (the
-//                         sticky `track_progress` / `use_sticky_comment` summary).
-//                         These are NOT review threads and have no `isResolved`,
-//                         so the reviewThreads query never returns them.
+//   - aiSummaryComments : the headline summary a review bot posts about the whole
+//                         PR, drawn from two surfaces — issue-level comments (the
+//                         sticky `track_progress` / `use_sticky_comment` summary
+//                         CodeRabbit/Claude edit in place) AND review-submission
+//                         bodies (Cursor Bugbot's `<!-- BUGBOT_REVIEW -->` review).
+//                         Neither is a review thread, so neither has `isResolved`
+//                         and the reviewThreads query never returns them.
 //
 // The network layer (gh) is kept separate from the pure transform so the
 // transform is unit-tested by `--self-test` with no network access.
@@ -99,13 +102,33 @@ function shapeThread(node) {
 // review, posted/edited in place via `track_progress` / `use_sticky_comment` or a
 // walkthrough) as opposed to chatter — "I'll review", command acknowledgements,
 // "resolved" replies. Matched case-insensitively against the comment body.
+// `BUGBOT_REVIEW` is Cursor Bugbot's marker: unlike CodeRabbit/Claude it posts its
+// summary as a review-submission body (see `reviewNodes`), not an issue comment.
 const STICKY_MARKERS = [
   /use_sticky_comment/i,
   /track_progress/i,
   /\bwalkthrough\b/i,
   /auto-generated comment/i,
   /\bsummary by\b/i,
+  /<!--\s*BUGBOT_REVIEW\s*-->/i,
 ];
+
+// Cursor Bugbot's free-tier "not reviewed" upsell — the only issue-level comment it
+// posts, and never a real summary. Excluded from summary candidates by its literal
+// text (the `<!-- BUGBOT_FREE_TIER_DISABLED_UPSELL -->` marker is too recent to rely
+// on across a bot's back-catalogue of PRs).
+const NOT_ENABLED_NOTICE = /Bugbot is not enabled for your account/i;
+
+/**
+ * Whether a body is worth considering as a headline summary. Rejects blank bodies
+ * (e.g. an approval review with no text) and Bugbot's "not enabled" upsell.
+ * @param {string} body
+ * @returns {boolean}
+ */
+function isSummaryCandidate(body) {
+  const text = String(body ?? "").trim();
+  return text.length > 0 && !NOT_ENABLED_NOTICE.test(text);
+}
 
 /**
  * Whether a comment body carries a sticky-summary marker.
@@ -117,12 +140,18 @@ export function hasStickyMarker(body) {
 }
 
 /**
- * Pick at most one summary comment per review bot. Filtering issue comments by
- * `isBot` alone surfaces *every* bot comment — walkthrough chatter, command
+ * Pick at most one summary comment per review bot. Filtering candidates by `isBot`
+ * alone surfaces *every* bot comment — walkthrough chatter, command
  * acknowledgements — as "the headline review", inflating Phase B context. Instead:
- * keep each bot's **first** comment, but upgrade to a later one that carries a
+ * keep each bot's **first** candidate, but upgrade to a later one that carries a
  * sticky marker if the first had none (the real summary is often edited in after
  * an initial "reviewing…" ack). Input order is GitHub's chronological order.
+ *
+ * Candidates come from two surfaces, concatenated by the caller as
+ * `[...issueComments, ...reviewBodies]` — issue-comment bots (CodeRabbit, Claude)
+ * are seen first so their behaviour is unchanged, while a review-only bot (Bugbot,
+ * whose summary is a `<!-- BUGBOT_REVIEW -->` review body) surfaces via its review.
+ * Blank bodies and Bugbot's "not enabled" upsell are dropped by `isSummaryCandidate`.
  * @param {Array<{author?: {login?: string}, body?: string, id?: string}>} commentNodes
  * @param {(login: string|undefined) => boolean} isBot
  */
@@ -131,7 +160,7 @@ export function selectSummaryComments(commentNodes, isBot) {
   const byAuthor = new Map();
   for (const node of commentNodes ?? []) {
     const login = node.author?.login;
-    if (!isBot(login)) {
+    if (!isBot(login) || !isSummaryCandidate(node.body)) {
       continue;
     }
 
@@ -176,6 +205,7 @@ export function buildResult({
   includeResolved = false,
   isDraft,
   number,
+  reviewNodes = [],
   threadNodes,
 }) {
   const isBot = makeBotMatcher(bots);
@@ -198,7 +228,12 @@ export function buildResult({
     }
   }
 
-  const aiSummaryComments = selectSummaryComments(commentNodes, isBot);
+  // Issue comments first so issue-comment bots keep their existing summary; review
+  // bodies (Bugbot's `<!-- BUGBOT_REVIEW -->`) follow so a review-only bot surfaces.
+  const aiSummaryComments = selectSummaryComments(
+    [...(commentNodes ?? []), ...(reviewNodes ?? [])],
+    isBot,
+  );
 
   return {
     aiSummaryComments,
@@ -361,6 +396,20 @@ const COMMENTS_QUERY = `query($owner:String!,$name:String!,$number:Int!,$cursor:
   }
 }`;
 
+// Review submissions carry the headline summary for bots that post one as a review
+// rather than an issue comment (Cursor Bugbot). `state` is selected for context but
+// not acted on — Bugbot is always COMMENTED, so it never gates the merge.
+const REVIEWS_QUERY = `query($owner:String!,$name:String!,$number:Int!,$cursor:String){
+  repository(owner:$owner,name:$name){
+    pullRequest(number:$number){
+      reviews(first:100, after:$cursor){
+        pageInfo{ hasNextPage endCursor }
+        nodes{ id author{ login } body state }
+      }
+    }
+  }
+}`;
+
 /**
  * Page through a PR sub-connection, collecting every node. Also returns
  * `isDraft`, which is meaningful only for queries that select it (the threads
@@ -410,9 +459,17 @@ function fetchFromGitHub(number, repo) {
     number,
     (pr) => pr.comments,
   );
+  const reviews = fetchAll(
+    REVIEWS_QUERY,
+    owner,
+    name,
+    number,
+    (pr) => pr.reviews,
+  );
   return {
     commentNodes: comments.nodes,
     isDraft: threads.isDraft,
+    reviewNodes: reviews.nodes,
     threadNodes: threads.nodes,
   };
 }
@@ -512,6 +569,23 @@ function selfTest() {
       id: "IC_sticky",
     },
     { author: { login: "bob" }, body: "lgtm", id: "IC_human" },
+    // Bugbot's only issue-level comment — the free-tier upsell, never a summary.
+    {
+      author: { login: "cursor" },
+      body: "Bugbot is not enabled for your account, so this pull request was not reviewed.",
+      id: "IC_cursor_upsell",
+    },
+  ];
+  // Review submissions: Bugbot posts its summary here (not as an issue comment).
+  const reviewNodes = [
+    {
+      author: { login: "cursor" },
+      body: "<!-- BUGBOT_REVIEW -->\nCursor Bugbot has reviewed your changes using default effort and found 2 potential issues.",
+      id: "REV_bugbot_summary",
+      state: "COMMENTED",
+    },
+    // A human's approval with no body — must not become a "summary".
+    { author: { login: "alice" }, body: "", id: "REV_human_blank" },
   ];
   const bots = DEFAULT_BOTS;
 
@@ -520,6 +594,7 @@ function selfTest() {
     commentNodes,
     isDraft: false,
     number: 7,
+    reviewNodes,
     threadNodes,
   });
   const withResolved = buildResult({
@@ -528,6 +603,7 @@ function selfTest() {
     includeResolved: true,
     isDraft: false,
     number: 7,
+    reviewNodes,
     threadNodes,
   });
 
@@ -617,6 +693,30 @@ function selfTest() {
         !result.aiSummaryComments.some(
           (comment) => comment.commentId === "IC_ack",
         ),
+    },
+    {
+      name: "a bot's review-submission summary (BUGBOT_REVIEW) is surfaced",
+      ok: result.aiSummaryComments.some(
+        (comment) => comment.commentId === "REV_bugbot_summary",
+      ),
+    },
+    {
+      name: "Bugbot's 'not enabled' upsell is not treated as a summary",
+      ok: !result.aiSummaryComments.some(
+        (comment) => comment.commentId === "IC_cursor_upsell",
+      ),
+    },
+    {
+      name: "a blank review body is never a summary",
+      ok: !result.aiSummaryComments.some(
+        (comment) => comment.commentId === "REV_human_blank",
+      ),
+    },
+    {
+      name: "the cursor summary is its review body, not the upsell comment",
+      ok:
+        result.aiSummaryComments.find((comment) => comment.author === "cursor")
+          ?.commentId === "REV_bugbot_summary",
     },
   ];
 
@@ -786,7 +886,7 @@ function main() {
   }
 
   try {
-    const { commentNodes, isDraft, threadNodes } = fetchFromGitHub(
+    const { commentNodes, isDraft, reviewNodes, threadNodes } = fetchFromGitHub(
       pr.number,
       pr.repo,
     );
@@ -796,6 +896,7 @@ function main() {
       includeResolved: options.includeResolved,
       isDraft,
       number: pr.number,
+      reviewNodes,
       threadNodes,
     });
     console.log(JSON.stringify(result, null, 2));
