@@ -1,20 +1,21 @@
 ---
-title: "Add npm ecosystem to Dependabot with Conventional commit prefixes"
+title: Add npm ecosystem to Dependabot with Conventional commit prefixes
 release_note:
-created_at: "2026-07-28T15:13:50Z"
-merged_at:
-branch: "a-980-dependabot-conventional-commit-templates"
-pr:
-commit:
-author: "rob@acmeskunkworks.io"
+created_at: '2026-07-28T15:13:50Z'
+merged_at: '2026-07-28T16:06:13Z'
+branch: a-980-dependabot-conventional-commit-templates
+pr: 139
+commit: fd1cb5c
+author: rob@acmeskunkworks.io
 co_authors: []
 category: chore
 breaking: false
-issues: ["A-980"]
+issues:
+  - A-980
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 2
+  loc_added: 58
+  loc_removed: 0
   commits:
 ---
 
