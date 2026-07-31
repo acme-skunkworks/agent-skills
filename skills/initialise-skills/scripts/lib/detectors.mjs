@@ -133,6 +133,8 @@ export function createDetectors({ linearFacts = {}, repoRoot }) {
     // generic defaults (mirroring the changelog bundle's own DEFAULTS) — emit
     // them confidently rather than flagging for manual input.
     changelogDir: () => ({ value: "changelog" }),
+    // No repo signal; emit triage-pr's default-on impact gate (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
+    deferNonBlocking: () => ({ value: true }),
     fallbackPackage: () => ({ value: "infrastructure" }),
     // triage-pr follow-up capture is opt-in: emit the bundle's own structural
     // defaults confidently (never null) so they aren't flagged needs-manual-input.
@@ -168,8 +170,6 @@ export function createDetectors({ linearFacts = {}, repoRoot }) {
     },
     // No repo signal; emit triage-pr's default-on promotion default (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
     promoteOnGreen: () => ({ value: true }),
-    // No repo signal; emit triage-pr's default-on impact gate (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
-    deferNonBlocking: () => ({ value: true }),
     // Protect the detected default branch, not a hard-coded "main", so a
     // master/develop repo gets a consistent result.
     protectedBranches: () => ({ value: [detect("baseBranch").value] }),
