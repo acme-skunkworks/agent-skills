@@ -3,8 +3,9 @@
 Take a pull request from **draft + failing CI** to **merge-ready**: fix in-scope
 CI failures while the PR is a draft, then — by default — promote the cleanly-green
 draft to ready itself (`promoteOnGreen`, on by default) and fetch the unresolved AI
-review feedback, validate each finding, fix the valid ones and decline the invalid
-ones with reasoning, and re-watch CI until green. Opt out with `--no-promote`
+review feedback, validate each finding, fix high-impact valid ones, defer the rest
+for human-approved Linear capture, decline the invalid ones with reasoning, and
+re-watch CI until green. Opt out with `--no-promote`
 (or `promoteOnGreen: false`) to stop at green for a human to flip; the final merge
 to the trunk always stays with a human.
 
@@ -32,6 +33,7 @@ the per-skill `config.json` is generated on install, not vendored. Run the
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers — bounds the fix-and-watch loop. | `5` |
 | `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before the thread is resolved (the audit trail). `false` resolves accepted threads silently; declines always reply with reasoning regardless. | `true` |
 | `promoteOnGreen` | The single control for the draft→ready flip. When `true`, after Phase A finishes with every required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**, and an enabled config *is* the human authorisation for the flip: proceed on proven green without seeking a separate sign-off. Set `false` (or pass `--no-promote`) to opt out and stop at green. Gated on proven-green CI, no unresolved human review threads, and no unresolved base drift; an explicit user prompt — or `--promote` / `--no-promote` — overrides it per run, and `--ci-only` / `--dry-run` never promote. | `true` |
+| `deferNonBlocking` | When `true` (the default), a valid **in-scope** finding is fixed **now** only if it is **high-impact**; otherwise it is deferred to Step 10's human-approved Linear capture. High-impact means any of: blocks later work; touches agent-skill / Claude Code / CI or release infrastructure; or critical/high severity (correctness, security, data-loss). Classification is model-owned — do not trust bot severity labels. Set `false` to restore scope-only behaviour. | `true` |
 
 ## Requirements
 
@@ -53,7 +55,9 @@ Two phases, chosen from the PR's draft state:
    `promoteOnGreen` or a human). Fetch the
    **unresolved** review threads (bundled `scripts/review-threads.mjs` returns
    minimal JSON), validate each finding against the codebase before changing
-   anything, fix the valid ones, decline the invalid ones with technical
+   anything, fix high-impact valid findings, defer the rest (out of scope or —
+   when `deferNonBlocking` is on — in-scope but not high-impact) for
+   human-approved Linear capture, decline the invalid ones with technical
    reasoning, then loop back through Phase A.
 
 **By default the skill promotes a cleanly-green draft to ready** (`promoteOnGreen` is

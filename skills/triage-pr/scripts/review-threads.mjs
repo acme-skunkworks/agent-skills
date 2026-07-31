@@ -543,7 +543,7 @@ function selfTest() {
           { author: { login: "coderabbitai" }, body: "extract this helper" },
           {
             author: { login: "RobEasthope" },
-            body: `Noted as out of scope.\n\n${DEFER_PENDING_MARKER}`,
+            body: `Noted as deferred.\n\n${DEFER_PENDING_MARKER}`,
           },
         ],
       },

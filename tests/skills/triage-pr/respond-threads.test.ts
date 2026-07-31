@@ -229,7 +229,7 @@ describe("buildConsolidatedComment — issue-level acknowledgement", () => {
       "| Read missing from allowed-tools | Accepted | `abc1234` |",
     );
     expect(body).toContain("| Add a retry wrapper | Declined | YAGNI |");
-    expect(body).toContain("| Refactor fetch | Out of scope | A-411 |");
+    expect(body).toContain("| Refactor fetch | Deferred | A-411 |");
     expect(body).toContain(SUMMARY_MARKER);
   });
 

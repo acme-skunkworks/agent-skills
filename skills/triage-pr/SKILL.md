@@ -6,12 +6,13 @@ description: >-
   tests) using the gh CLI and GitHub Actions logs — never
   weakening CI config to greenwash. After the PR is marked ready-for-review,
   fetch the unresolved AI review threads (Claude Code Review, Bugbot), validate
-  each finding against the codebase before changing anything, fix the valid
-  ones, decline the invalid ones with technical reasoning, then re-watch CI
-  until green. Use when asked to triage a PR, fix failing CI or red checks on a
-  PR, address or respond to PR review comments, action Bugbot or Claude review
-  feedback, get a PR green, or take a draft PR to merge-ready. Handles
-  base-branch drift and in-scope merge conflicts; escalates ambiguous ones.
+  each finding against the codebase before changing anything, fix high-impact
+  valid findings, defer the rest for human-approved Linear capture, decline the
+  invalid ones with technical reasoning, then re-watch CI until green. Use when
+  asked to triage a PR, fix failing CI or red checks on a PR, address or respond
+  to PR review comments, action Bugbot or Claude review feedback, get a PR
+  green, or take a draft PR to merge-ready. Handles base-branch drift and
+  in-scope merge conflicts; escalates ambiguous ones.
 license: MIT
 compatibility: >-
   Requires the `gh` CLI (authenticated — `gh auth status` must pass) and `git`.
@@ -19,7 +20,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.7.0
+  version: 0.8.0
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -35,9 +36,11 @@ phases, choosing the phase from the PR's draft state:
 - **Phase B — after the PR is ready-for-review:** AI review is gated on
   `draft == false`, so once the PR is flipped to ready — by `promoteOnGreen` or a
   human — reviewers (Claude Code Review, Bugbot) post feedback. Fetch the
-  **unresolved** findings, validate each
-  against the codebase before changing anything, fix the valid ones, decline the
-  invalid ones with technical reasoning, then loop back through Phase A.
+  **unresolved** findings, validate each against the codebase before changing
+  anything, **fix high-impact valid findings now**, defer the rest (out of scope
+  *or*, when `deferNonBlocking` is on, in-scope but not high-impact) for
+  human-approved Linear capture, decline the invalid ones with technical
+  reasoning, then loop back through Phase A.
 
 This skill complements `/send-it` (which **opens** the draft PR). The draft→ready
 flip is governed by a single control — `promoteOnGreen` in [`config.json`](config.json)
@@ -59,7 +62,7 @@ The knobs live in [`config.json`](config.json) beside this file. Read it at the
 start of a run and use its values throughout. Edit your copied `config.json` to
 match the consuming repo's review bots and (optionally) its Linear workspace.
 
-The first four govern the **CI + review** loop:
+The first five govern the **CI + review** loop:
 
 | Key | Meaning | Default |
 | --- | --- | --- |
@@ -67,9 +70,11 @@ The first four govern the **CI + review** loop:
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers. Bounds the fix-and-watch loop so it can't spin forever. | `5` |
 | `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before the thread is resolved (the audit trail). `false` resolves accepted threads silently for maintainers who dislike bot-reply noise — declines always reply with reasoning regardless. | `true` |
 | `promoteOnGreen` | The single control for the draft→ready flip. When `true`, after Phase A finishes with **every** required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**, and an enabled config *is* the human authorisation for the flip: proceed on proven green without seeking a separate sign-off. Set `false` (or pass `--no-promote`) to opt out and stop at green. Promotion is suppressed unless the green is *proven* (Step 6's watched rollup, never "no failures yet"), there are **no unresolved human review threads**, and `mergeStateStatus` shows no unresolved base drift (`BEHIND` / `DIRTY`). An explicit user prompt — or `--promote` / `--no-promote` — overrides this per run; `--ci-only` and `--dry-run` never promote. | `true` |
+| `deferNonBlocking` | When `true` (the default), a valid **in-scope** finding is fixed **now** only if it is **high-impact**; otherwise it is deferred to Step 10's human-approved Linear capture (same path as out-of-scope). High-impact means any of: it **blocks later work** on this PR or stacked work; it touches **Claude Code / agent-skill logic / CI or release infrastructure**; or it is **critical/high severity** (correctness, security, data-loss). You classify each finding yourself against those criteria — do **not** trust bot severity labels (CodeRabbit ⚠️/🧹, Bugbot grades). Set `false` to restore scope-only behaviour (every valid in-scope finding is fixed inline; only out-of-scope findings defer). | `true` |
 
 The remaining five configure the **follow-up capture** step (Step 10) — turning a
-valid-but-out-of-scope finding into a tracked Linear issue. They are **opt-in**:
+deferred finding (out of scope, or in-scope but not high-impact when
+`deferNonBlocking` is on) into a tracked Linear issue. They are **opt-in**:
 when `linearTeamName` is empty, capture is disabled and the step is skipped
 silently (no Linear MCP calls). Capture also needs the Linear MCP server; skip it
 silently when it is unavailable.
@@ -293,7 +298,13 @@ Apply the six-step reception (full rules in
 3. **VERIFY** it against the actual codebase. Open the cited lines and confirm
    the issue is real and not already handled. Never trust the bot's framing.
 4. **EVALUATE** — is it correct, in-scope, and not a YAGNI or architecture
-   violation?
+   violation? When it is valid and in-scope **and** `deferNonBlocking` is `true`,
+   also classify **impact** yourself (never from bot severity labels): fix now
+   only if high-impact (blocks later work; touches agent-skill / Claude Code /
+   CI or release infrastructure; or critical/high severity — correctness,
+   security, data-loss). Otherwise treat it as a defer candidate even though it
+   is in scope. When `deferNonBlocking` is `false`, every valid in-scope finding
+   is accepted for fix-now (scope-only behaviour).
 5. **RESPOND** symmetrically — every actioned thread ends **replied-to and
    resolved**, so nothing is resolved silently:
    - **Decline** → reply with concise **technical reasoning**, then resolve.
@@ -303,7 +314,8 @@ Apply the six-step reception (full rules in
      (`Addressed in <sha>.`). When `replyOnAccept` is `false`, resolve without the
      reply.
    - **Outdated** (cited code is gone) → resolve without a reply.
-   - **Defer** (the finding is **valid but out of scope** for this PR — a
+   - **Defer** (the finding is **valid** but **out of scope** for this PR, **or**
+     — when `deferNonBlocking` is on — **in-scope but not high-impact**: a
      worthwhile follow-up, not a change to make here) → **do not** resolve it now.
      Set it aside as a follow-up **candidate**, recording
      `{title, rationale, threadId, path, line}`, and **immediately mark the thread
@@ -376,10 +388,11 @@ including declined or not-yet-handled ones (see
   between Step 8 and Step 10 and was re-triaged every pass. The whole loop stays
   bounded by `maxCiRounds`.
 
-### Step 10 — Phase B: capture out-of-scope findings as follow-up issues
+### Step 10 — Phase B: capture deferred findings as follow-up issues
 
 Once the thread loop has converged, gather every follow-up **candidate** — both
-per-thread defers **and** issue-level findings judged valid-but-out-of-scope. Take
+per-thread defers **and** issue-level findings judged valid but deferred (out of
+scope, or in-scope but not high-impact when `deferNonBlocking` is on). Take
 the **union** of two sources, deduplicated by `threadId`: the candidates flagged in
 memory during Step 8, **and** the fetcher's `deferredThreads` bucket (threads
 already bearing the `defer-pending` marker). The second source is what lets a fresh
@@ -392,7 +405,7 @@ to Step 11.
 otherwise.** It is disabled when `config.linearTeamName` is empty or the Linear MCP
 server is unavailable; in that case (and whenever the human declines below), fall
 back without creating anything: **decline** each per-thread candidate with concise
-technical reasoning (`out of scope; not tracked`) and resolve it, and map each
+technical reasoning (`deferred; not tracked`) and resolve it, and map each
 issue-level candidate as `out-of-scope` with **no** ticket in the Step 11 summary.
 
 When capture is enabled, present **all** candidates as a single batch and ask once

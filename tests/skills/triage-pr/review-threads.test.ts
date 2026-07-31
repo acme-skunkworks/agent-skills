@@ -53,7 +53,7 @@ describe("buildResult — deferred bucket", () => {
       threadNodes: [
         threadNode("T_plain"),
         threadNode("T_deferred", {
-          extraComments: [`Noted as out of scope.\n\n${DEFER_PENDING_MARKER}`],
+          extraComments: [`Noted as deferred.\n\n${DEFER_PENDING_MARKER}`],
         }),
       ],
     });
