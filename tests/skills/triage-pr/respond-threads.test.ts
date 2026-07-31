@@ -206,7 +206,8 @@ describe("buildReplyBody — validation + no sycophancy", () => {
 
   it("builds a defer-pending body with no reference and the pending marker", () => {
     const body = buildReplyBody({ decision: "defer-pending" });
-    expect(body).toContain("follow-up issue will be filed");
+    expect(body).toContain("follow-up issue may be filed");
+    expect(body).toContain("after human approval");
     expect(body).toContain(DEFER_PENDING_MARKER);
     expect(body).not.toContain(THREAD_MARKER);
   });

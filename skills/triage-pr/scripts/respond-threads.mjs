@@ -132,7 +132,7 @@ export function buildReplyBody({ decision, reason, reference, sha }) {
     // Recorded at Step 8, before a ticket exists — so no reference. Carries the
     // NON-resolving DEFER_PENDING_MARKER, never THREAD_MARKER, so Step 10 still
     // posts the final defer reply and resolves.
-    return `Noted as deferred for this PR; a follow-up issue will be filed and linked here.\n\n${DEFER_PENDING_MARKER}`;
+    return `Noted as deferred for this PR; a follow-up issue may be filed and linked here after human approval.\n\n${DEFER_PENDING_MARKER}`;
   }
 
   throw new Error(`no reply body for decision: ${decision}`);
