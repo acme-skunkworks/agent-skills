@@ -39,4 +39,9 @@ stats:
 - Defer reply copy is neutral (`Deferred for this PR…`) so it covers both
   out-of-scope and in-scope-but-not-high-impact findings; the summary display
   label for `out-of-scope` status is now `Deferred`.
-- Bundle versions: `triage-pr` 0.8.0, `initialise-skills` 0.10.8.
+- Bundle versions: `triage-pr` 0.8.1, `initialise-skills` 0.10.8.
+
+## Fixed
+
+- Softened the `defer-pending` reply so it no longer promises a follow-up issue
+  will be filed when capture is disabled or the human declines approval.
