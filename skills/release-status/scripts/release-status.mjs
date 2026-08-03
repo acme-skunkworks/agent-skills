@@ -5,12 +5,13 @@
 // and `git` (never writes), then prints a structured human report or `--json`:
 //
 //   1. Version preview  — the bump the Conventional-Commit subjects on commits
-//                         since the last tag imply (feat→minor, fix/perf/revert→
-//                         patch, !/BREAKING→major; docs/chore/ci/refactor/test/
-//                         build/style→none) and the version that would cut.
-//                         Merge commits are excluded so a merge subject's body
-//                         (often the PR title) is not double-counted with the
-//                         branch commits release-please also walks (A-824).
+//                         since the last tag on origin/<mainBranch> imply
+//                         (feat→minor, fix/perf/revert→patch, !/BREAKING→major;
+//                         docs/chore/ci/refactor/test/build/style→none) and the
+//                         version that would cut. Merge commits are excluded so
+//                         a merge subject's body (often the PR title) is not
+//                         double-counted with the branch commits release-please
+//                         also walks (A-824).
 //   2. Release PR        — the open `release-please--branches--main` PR (if any)
 //                         and its required-check (`GO/NO GO`) status.
 //   3. Stale autorelease — the recurring stall: the last MERGED release PR still
@@ -363,24 +364,34 @@ function readTags() {
 }
 
 /**
- * Commits on the current HEAD since the last tag, newest first, as
- * `{ hash, subject, body }`. Merge commits are excluded (`--no-merges`) so the
- * preview matches release-please's per-commit bump under multi-commit history
- * without double-counting a merge subject's body (often the PR title) against
- * the branch commits that also landed (A-824).
+ * Commits on the configured trunk (`origin/<mainBranch>`) since the last tag,
+ * newest first, as `{ hash, subject, body }`. Merge commits are excluded
+ * (`--no-merges`) so the preview matches release-please's per-commit bump under
+ * multi-commit history without double-counting a merge subject's body (often the
+ * PR title) against the branch commits that also landed (A-824).
  *
- * When there is no tag yet, every non-merge commit reachable from HEAD counts
+ * Evaluating against `origin/<mainBranch>` (not `HEAD`) keeps the preview aligned
+ * with what release-please would compute on the trunk even when the helper is run
+ * from a feature branch or a stale local checkout.
+ *
+ * When there is no tag yet, every non-merge commit reachable from the trunk counts
  * (bootstrap / never-released repos).
  */
-function fetchCommitsSinceLastTag() {
-  let range = "HEAD";
+function fetchCommitsSinceLastTag(mainBranch) {
+  const trunk = `origin/${mainBranch}`;
+  let range = trunk;
   try {
-    const lastTag = run("git", ["describe", "--tags", "--abbrev=0"]).trim();
+    const lastTag = run("git", [
+      "describe",
+      "--tags",
+      "--abbrev=0",
+      trunk,
+    ]).trim();
     if (lastTag) {
-      range = `${lastTag}..HEAD`;
+      range = `${lastTag}..${trunk}`;
     }
   } catch {
-    // no tags yet → whole history
+    // no tags yet → whole trunk history
   }
 
   const raw = run("git", [
@@ -456,7 +467,7 @@ function gather(options, config) {
   const tags = readTags();
   const parity = tagParity(version, tags);
 
-  const commits = fetchCommitsSinceLastTag();
+  const commits = fetchCommitsSinceLastTag(config.mainBranch);
   const bump = previewBump(commits);
   const nextVersion = applyBump(version, bump);
 

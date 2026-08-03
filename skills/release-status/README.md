@@ -39,7 +39,8 @@ Generate it by running the `initialise-skills` skill, or copy the example to
 - `gh` CLI, authenticated (`gh auth status` must pass) — used to read the release
   PR, its checks, and the last merged release PR's labels.
 - `git` — used to read the root `package.json` version, the tags, and
-  **commits since the last tag** for the version preview (merge commits excluded).
+  **commits since the last tag on `origin/<mainBranch>`** for the version preview
+  (merge commits excluded).
 - Node.js >=22 (ES-module support), for the bundled diagnosis helper. No npm
   dependencies, no build step.
 
@@ -49,10 +50,10 @@ The bundled `scripts/release-status.mjs` gathers four independent signals and
 prints a structured report (or `--json`):
 
 1. **Version preview** — the bump and version the Conventional-Commit subjects on
-   commits since the last tag imply (`feat:`→minor, `fix:`/`perf:`/`revert:`→patch,
-   `!`/`BREAKING CHANGE:`→major; `docs`/`chore`/`ci`/… cut no release). Merge
-   commits are excluded. Strongest type wins; a reverted `feat:` still minors
-   (matches release-please — no cancel/netting).
+   commits since the last tag on `origin/<mainBranch>` imply (`feat:`→minor,
+   `fix:`/`perf:`/`revert:`→patch, `!`/`BREAKING CHANGE:`→major; `docs`/`chore`/`ci`/…
+   cut no release). Merge commits are excluded. Strongest type wins; a reverted
+   `feat:` still minors (matches release-please — no cancel/netting).
 2. **Release PR** — the open `release-please--branches--main` PR (if any) and its
    required-check (`GO/NO GO`) status.
 3. **Stale `autorelease: pending`** — whether the last merged release PR still

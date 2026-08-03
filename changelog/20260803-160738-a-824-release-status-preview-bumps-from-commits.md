@@ -21,10 +21,13 @@ stats:
 
 ## Added
 
-- **`release-status`:** version preview reads **commits since the last tag**
-  (`git log <tag>..HEAD --no-merges`) instead of merged PR titles, so the advisory
-  bump matches release-please 17.9.0 under multi-commit (non-squash) history
-  ([A-824](https://linear.app/acme-skunkworks/issue/A-824)).
+- **`release-status`:** version preview reads **commits since the last tag** on
+  the configured trunk (`git log <tag>..origin/<mainBranch> --no-merges`) instead
+  of merged PR titles, so the advisory bump matches release-please 17.9.0 under
+  multi-commit (non-squash) history
+  ([A-824](https://linear.app/acme-skunkworks/issue/A-824)). Evaluating against
+  `origin/<mainBranch>` (not local `HEAD`) keeps the preview aligned with the
+  trunk even when the helper is run from a feature branch.
 
 ## Changed
 

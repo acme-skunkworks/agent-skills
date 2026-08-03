@@ -50,7 +50,7 @@ uses under multi-commit history (A-824) — not merged PR titles.
 
 | Signal | What it answers | How to read / fix it |
 | --- | --- | --- |
-| **Version preview** | What bump and version would the Conventional-Commit subjects on commits since the last tag produce? | `feat:`→minor, `fix:`/`perf:`/`revert:`→patch, `!`/`BREAKING CHANGE:`→major; `docs`/`chore`/`ci`/`refactor`/`test`/`build`/`style`→none. The strongest wins across **all** commits (merge commits excluded). A `feat:` later `revert:`ed in the same window still implies **minor** — no cancel/netting, matching release-please. `none` means nothing release-triggering has landed since the last tag — no release will cut. |
+| **Version preview** | What bump and version would the Conventional-Commit subjects on commits since the last tag on `origin/<mainBranch>` produce? | `feat:`→minor, `fix:`/`perf:`/`revert:`→patch, `!`/`BREAKING CHANGE:`→major; `docs`/`chore`/`ci`/`refactor`/`test`/`build`/`style`→none. The strongest wins across **all** commits (merge commits excluded). A `feat:` later `revert:`ed in the same window still implies **minor** — no cancel/netting, matching release-please. `none` means nothing release-triggering has landed since the last tag — no release will cut. |
 | **Release PR** | Is the `release-please--branches--main` PR open, and is its required check (`GO/NO GO`) green? | If open and green, the orchestrator can squash-merge it. If the check is pending/red, the merge is blocked — chase that check. If none is open, release-please hasn't opened one (often because nothing release-triggering merged, or the pipeline is stalled — see below). |
 | **Stale `autorelease: pending`** | Does the **last merged** release PR still carry the `autorelease: pending` label? | This is the recurring stall: when a merged release PR keeps that label, release-please **aborts the next release** and the pipeline silently stops firing. Remediation: remove the label from that PR, then re-run the orchestrator (or wait for its cron tick). |
 | **Tag-vs-version parity** | Does a `v<package.json version>` tag already exist? | This is the `release.yml` **version-vs-tag gate**. Tag exists → clean no-op (this version is already published). Tag missing → **publishing is pending** for that version (the gate would run the publish path on the next `main` push). |
@@ -109,8 +109,8 @@ node scripts/release-status.mjs --self-test
 
 `gh auth status` must pass, and you must be inside (or pass `--repo` for) the target
 repository. The helper reads the root `package.json` version, local tags, and
-commits since the last tag via `git`, and queries `gh` for the open release PR
-and the last merged release PR's labels.
+commits since the last tag on `origin/<mainBranch>` via `git`, and queries `gh`
+for the open release PR and the last merged release PR's labels.
 
 ### Step 2 — Run the helper and read the four signals
 
