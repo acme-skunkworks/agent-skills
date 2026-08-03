@@ -54,7 +54,8 @@ Two phases, chosen from the PR's draft state:
    weakening CI config to greenwash. Rebase/merge the base branch when failures
    are upstream drift. Loop until CI is green or report blockers. Unattended.
 2. **Phase B — after the PR is ready-for-review.** Hybrid-wait for configured
-   `reviewBots` (headline summaries via `botsReported` / `botsMissing`),
+   `reviewBots` (sticky headlines and/or threads via `botsReported` /
+   `botsMissing`),
    verify-then-propose dispositions, then — by default — **human envelope** before
    applying. Re-envelope when new bot findings appear after apply. With
    `--auto-apply`, fix high-impact findings immediately and keep a Linear-only

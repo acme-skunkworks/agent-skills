@@ -10,11 +10,13 @@ the community `receiving-code-review` and `verification-before-completion` skill
 
 When `humanEnvelope` is `true` (the default), run READ → UNDERSTAND → VERIFY →
 EVALUATE for every finding and produce a disposition plan — then **halt** for one
-same-session batch `[y/N]` before RESPOND / IMPLEMENT / Linear create. The
+same-session batch `[y/N]` before IMPLEMENT / Linear create / resolving replies.
+Proposed-defer threads are marked `defer-pending` (non-resolving) when the plan is
+presented so a restart does not re-emit them while the human decides. The
 envelope covers accept, decline, and defer→Linear in one gate, including findings
 from later AI re-reviews on the same PR. `--auto-apply` / `humanEnvelope: false`
-skips the envelope and restores legacy auto Phase B (impact-gated fix-now;
-Linear-only gate for defers).
+skips the envelope and restores legacy auto Phase B (impact-gated fix-now; mark
+`defer-pending` as soon as a defer is classified; Linear-only gate for defers).
 
 ## Receiving review feedback — the six steps
 
@@ -47,9 +49,11 @@ regression.
      the reply.
    - *Outdated* (cited code is gone) → resolve, no reply.
    - *Defer* (valid but **out of scope** for this PR, **or** — when
-     `deferNonBlocking` is on — **in-scope but not high-impact**) → under the
-     envelope, Linear create + final defer reply happen only after approval. Under
-     auto-apply, mark `defer-pending` then mint tickets on the Linear-only gate.
+     `deferNonBlocking` is on — **in-scope but not high-impact**) → mark
+     `defer-pending` as soon as the finding is classified (envelope: when the
+     plan is presented; auto-apply: on classify). Linear create + final defer
+     reply happen only after envelope approval, or under auto-apply after the
+     Linear-only gate.
 
    The reply is the durable, per-finding audit trail reviewers and humans skimming
    the PR rely on; a silently-resolved accept loses it.

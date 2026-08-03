@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.9.0
+  version: 0.9.1
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -71,14 +71,14 @@ The first eight govern the **CI + review** loop:
 | `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before the thread is resolved (the audit trail). `false` resolves accepted threads silently for maintainers who dislike bot-reply noise — declines always reply with reasoning regardless. | `true` |
 | `promoteOnGreen` | The single control for the draft→ready flip. When `true`, after Phase A finishes with **every** required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**, and an enabled config *is* the human authorisation for the flip: proceed on proven green without seeking a separate sign-off. Set `false` (or pass `--no-promote`) to opt out and stop at green. Promotion is suppressed unless the green is *proven* (Step 6's watched rollup, never "no failures yet"), there are **no unresolved human review threads**, and `mergeStateStatus` shows no unresolved base drift (`BEHIND` / `DIRTY`). An explicit user prompt — or `--promote` / `--no-promote` — overrides this per run; `--ci-only` and `--dry-run` never promote. | `true` |
 | `deferNonBlocking` | When `true` (the default), a valid **in-scope** finding is proposed as **accept** only if it is **high-impact**; otherwise it is proposed as **defer** (same path as out-of-scope). High-impact means any of: it **blocks later work** on this PR or stacked work; it touches **Claude Code / agent-skill logic / CI or release infrastructure**; or it is **critical/high severity** (correctness, security, data-loss). You classify each finding yourself against those criteria — do **not** trust bot severity labels (CodeRabbit ⚠️/🧹, Bugbot grades). Set `false` to restore scope-only behaviour (every valid in-scope finding is proposed as accept; only out-of-scope findings defer). | `true` |
-| `humanEnvelope` | When `true` (the default), Phase B **halts** after verify-then-propose with a full disposition plan (accept / decline / defer→Linear) and waits for one batch `[y/N]` (default no) before any thread write, code change, or Linear create. Same gate covers findings from later AI re-reviews on this PR. Set `false` (or pass `--auto-apply`) to restore legacy auto Phase B (impact-gated fix-now; Linear-only gate for defers). An explicit user prompt overrides the config per run. | `true` |
+| `humanEnvelope` | When `true` (the default), Phase B **halts** after verify-then-propose with a full disposition plan (accept / decline / defer→Linear) and waits for one batch `[y/N]` (default no) before code changes, Linear create, or resolving replies. Proposed-defer threads get a non-resolving `defer-pending` mark when the plan is presented so restarts do not re-emit them. Same gate covers findings from later AI re-reviews on this PR. Set `false` (or pass `--auto-apply`) to restore legacy auto Phase B (impact-gated fix-now; mark `defer-pending` on classify; Linear-only gate for defers). An explicit user prompt overrides the config per run. | `true` |
 | `reviewIdleMinutes` | Hybrid review-settle idle window: after at least one configured bot has reported, treat reviews as settled when there is **no new** bot headline / unresolved-thread activity for this many minutes. | `5` |
 | `reviewWaitMaxMinutes` | Hard cap on the hybrid wait after the ready flip (or Phase B entry on an already-ready PR). If bots are still missing when this expires, run the **slow-bot micro-gate** (proceed / wait longer / abort) before the disposition envelope. | `20` |
 
 The remaining five configure the **follow-up capture** path — turning a deferred
 finding into a tracked Linear issue. Under `humanEnvelope`, capture is part of
 the same envelope approval (not a second prompt). Under `--auto-apply` /
-`humanEnvelope: false`, capture keeps its own Step 11 batch gate. Capture is
+`humanEnvelope: false`, capture keeps its own Step 12 batch gate. Capture is
 **opt-in**: when `linearTeamName` is empty, it is disabled (no Linear MCP calls);
 skip silently when the Linear MCP server is unavailable.
 
@@ -276,15 +276,18 @@ node scripts/review-threads.mjs <pr> --bots "claude,cursor,coderabbitai"
 
 Use the JSON settle fields:
 
-- `botsReported` — configured bots that have an `aiSummaryComments` headline.
-- `botsMissing` — configured bots still without a headline.
+- `botsReported` — configured bots that have a **sticky-marker** headline in
+  `aiSummaryComments` (e.g. `use_sticky_comment` / `BUGBOT_REVIEW`) **and/or** at
+  least one unresolved or deferred thread. A bare ack kept only as
+  `selectSummaryComments`' first-candidate fallback does **not** count.
+- `botsMissing` — configured bots still without a sticky headline or thread.
 
 **Settled when any of:**
 
-1. **All headlines** — `botsMissing` is empty (every `reviewBots` entry has
+1. **All reported** — `botsMissing` is empty (every `reviewBots` entry has
    reported), **or**
 2. **Idle** — at least one bot has reported, and there has been **no new** bot
-   headline / unresolved-thread activity for `reviewIdleMinutes`, **or**
+   sticky-headline / unresolved-thread activity for `reviewIdleMinutes`, **or**
 3. **Max wait** — `reviewWaitMaxMinutes` since Phase B wait started.
 
 Poll quietly (e.g. every 60s); do **not** ping the human while waiting unless the
@@ -344,8 +347,8 @@ the envelope plan; under `--auto-apply`, go to Step 12's Linear path.
 
 Apply READ → UNDERSTAND → VERIFY → EVALUATE for every actionable finding (full
 rules in [`references/review-discipline.md`](references/review-discipline.md)).
-**Do not** RESPOND, IMPLEMENT, mark `defer-pending`, create Linear issues, or
-otherwise write to the PR yet — build a numbered **disposition plan** only:
+**Do not** IMPLEMENT, create Linear issues, or resolve threads yet — build a
+numbered **disposition plan** only:
 
 For each finding record:
 
@@ -359,10 +362,14 @@ For each finding record:
 Impact classification still follows `deferNonBlocking` (propose accept only when
 high-impact when that knob is on).
 
-**When `humanEnvelope` is true** (default) → continue to Step 10.
+**When `humanEnvelope` is true** (default) → continue to Step 10. As soon as the
+plan includes any per-thread `defer`, **immediately** mark those threads with the
+non-resolving `defer-pending` decision (below) so a restart or overlapping run
+does not re-emit them as fresh findings while the human decides. Do **not**
+resolve them yet — Step 11 finalises after approval.
 **When `humanEnvelope` is false / `--auto-apply`** → skip Step 10; proceed to
-Steps 11–12 using today's auto behaviour (fix accepts now; Linear-only gate for
-defers; mark `defer-pending` as you go).
+Steps 11–12 using today's auto behaviour (fix accepts now; mark `defer-pending`
+as soon as you classify a defer, then the Linear-only gate at Step 12).
 
 ### Step 10 — Phase B: human envelope (same-session gate)
 
@@ -379,9 +386,12 @@ Apply this plan? [y/N]
 ```
 
 Keep the session open for the answer — this gate **is** the actionable interrupt.
+Proposed-defer threads should already carry the `defer-pending` marker from
+Step 9 (durable, still open).
 
-- **No / empty** → leave threads untouched; stop; no Step 13 "all done" claim
-  beyond "envelope declined; nothing applied".
+- **No / empty** → leave remaining threads untouched (optional: decline
+  `defer-pending` threads with `deferred; not tracked` if you want them closed);
+  stop; no Step 13 "all done" claim beyond "envelope declined; nothing applied".
 - **Yes** (with optional per-item overrides) → apply the approved plan in Step 11.
 - Under `--dry-run`, print the plan that *would* be proposed and create nothing.
 
@@ -396,15 +406,21 @@ Execute the approved plan (or the auto-apply path) one finding at a time:
 - **Accept** → IMPLEMENT, prove locally, commit/push, re-watch CI (Step 6), then
   reply+resolve via `respond-threads.mjs` only once that fix's CI round is green.
 - **Decline** / **outdated** → reply+resolve immediately (no code).
-- **Defer** → create the Linear issue (when capture enabled) then final
+- **Defer (auto-apply path)** → as soon as you classify the finding as defer,
+  mark it with `defer-pending` (non-resolving) so it is not re-triaged on the next
+  pass; after the Linear-only `[y/N]` at Step 12 (or on capture disabled / no),
+  post the final `defer` reply+resolve (or decline `deferred; not tracked`).
+- **Defer (envelope path)** → thread should already be `defer-pending` from
+  Step 9; on approval create the Linear issue (when capture enabled) then final
   `defer` reply+resolve; when capture is disabled or the human excluded a defer,
-  fall back to decline (`deferred; not tracked`). Under auto-apply without prior
-  envelope approval for Linear, keep the separate Step 12 Linear `[y/N]` for
-  defers only.
+  fall back to decline (`deferred; not tracked`).
 
 ```bash
 node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision accept --sha <sha> --bots "claude,cursor,coderabbitai"
 node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision decline --reason "<technical reasoning>" --bots "claude,cursor,coderabbitai"
+# mark a defer candidate without resolving (envelope Step 9, or auto-apply as you classify):
+node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision defer-pending --bots "claude,cursor,coderabbitai"
+# after Linear mint (or envelope/auto-apply capture approval):
 node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision defer --reference <issue-id> --bots "claude,cursor,coderabbitai"
 ```
 
@@ -489,10 +505,11 @@ Summarise:
   micro-gate, or a hard blocker / budget exhaustion — never with interim "still
   waiting" pings mid-watch.
 - **Human envelope is on by default.** When `humanEnvelope` is true, do not
-  apply Phase B dispositions (code, thread replies, Linear creates) until the
-  same-session batch `[y/N]` succeeds. `--auto-apply` / `humanEnvelope: false`
-  restores legacy auto Phase B. Re-envelope when new bot findings appear after
-  apply.
+  apply Phase B dispositions (code, resolving replies, Linear creates) until the
+  same-session batch `[y/N]` succeeds — except the non-resolving `defer-pending`
+  mark on proposed-defer threads when the plan is presented. `--auto-apply` /
+  `humanEnvelope: false` restores legacy auto Phase B. Re-envelope when new bot
+  findings appear after apply.
 - **Draft → ready is guarded, and on by default.** `promoteOnGreen` is the single
   control for the flip, and an enabled config *is* the authorisation: with it on (the
   default) the skill flips the PR — **only** after a *proven*-green Phase A, with **no

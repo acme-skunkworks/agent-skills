@@ -25,9 +25,12 @@
 //                         bodies (Cursor Bugbot's `<!-- BUGBOT_REVIEW -->` review).
 //                         Neither is a review thread, so neither has `isResolved`
 //                         and the reviewThreads query never returns them.
-//   - botsReported      : configured bot logins that have an aiSummaryComments
-//                         headline (Phase B hybrid-wait settle helper).
-//   - botsMissing       : configured bot logins still without a headline.
+//   - botsReported      : configured bots that have settled enough to count —
+//                         a sticky-marker headline in aiSummaryComments, and/or
+//                         at least one unresolved/deferred thread. Plain acks
+//                         (first-candidate fallbacks without a sticky marker) do
+//                         NOT count, so Step 7 cannot settle on "reviewing now".
+//   - botsMissing       : configured bots still without a sticky headline or thread.
 //
 // The network layer (gh) is kept separate from the pure transform so the
 // transform is unit-tested by `--self-test` with no network access.
@@ -248,15 +251,21 @@ export function buildResult({
     isBot,
   );
 
-  // Settle helpers for the Phase B hybrid wait (SKILL.md Step 7): which configured
-  // bots have posted a headline summary, and which are still outstanding.
+  // Settle helpers for the Phase B hybrid wait (SKILL.md Step 7). A bot counts as
+  // reported only when it has a *sticky-marker* headline (not a bare ack that
+  // selectSummaryComments keeps as first-candidate fallback) and/or has posted
+  // an actionable unresolved/deferred thread.
   const configuredBots = (bots ?? DEFAULT_BOTS).map(normaliseBot);
-  const botsReported = [
-    ...new Set(
-      aiSummaryComments.map((comment) => normaliseBot(comment.author)),
-    ),
-  ];
-  const reportedSet = new Set(botsReported);
+  const reportedSet = new Set();
+  for (const comment of aiSummaryComments) {
+    if (hasStickyMarker(comment.body)) {
+      reportedSet.add(normaliseBot(comment.author));
+    }
+  }
+  for (const thread of [...unresolvedThreads, ...deferredThreads]) {
+    reportedSet.add(normaliseBot(thread.author));
+  }
+  const botsReported = configuredBots.filter((bot) => reportedSet.has(bot));
   const botsMissing = configuredBots.filter((bot) => !reportedSet.has(bot));
 
   return {
@@ -703,7 +712,7 @@ function selfTest() {
       ),
     },
     {
-      name: "botsReported lists authors with headlines; botsMissing the rest",
+      name: "botsReported counts sticky headlines and/or threads; botsMissing the rest",
       ok:
         result.botsReported.includes("coderabbitai") &&
         result.botsReported.includes("claude") &&
