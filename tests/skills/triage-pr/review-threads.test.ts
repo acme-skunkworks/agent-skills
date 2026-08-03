@@ -85,7 +85,7 @@ describe("buildResult — botsReported / botsMissing settle helpers", () => {
       threadNodes: [],
     });
     expect(result.botsMissing).toEqual([]);
-    expect(result.botsReported.sort()).toEqual(["claude", "cursor"]);
+    expect(result.botsReported.toSorted()).toEqual(["claude", "cursor"]);
   });
 });
 
