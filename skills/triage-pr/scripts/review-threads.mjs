@@ -257,14 +257,17 @@ export function buildResult({
   // an actionable unresolved/deferred thread.
   const configuredBots = (bots ?? DEFAULT_BOTS).map(normaliseBot);
   const reportedSet = new Set();
+
   for (const comment of aiSummaryComments) {
     if (hasStickyMarker(comment.body)) {
       reportedSet.add(normaliseBot(comment.author));
     }
   }
+
   for (const thread of [...unresolvedThreads, ...deferredThreads]) {
     reportedSet.add(normaliseBot(thread.author));
   }
+
   const botsReported = configuredBots.filter((bot) => reportedSet.has(bot));
   const botsMissing = configuredBots.filter((bot) => !reportedSet.has(bot));
 
