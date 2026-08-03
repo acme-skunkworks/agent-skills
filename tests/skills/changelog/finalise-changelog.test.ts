@@ -148,6 +148,28 @@ describe("finaliseEntry", () => {
     expect(called).toBe(false);
     expect(parseFrontmatter(out as string).data.version).toBe("9.9.9");
   });
+
+  it("stores mergeCommit.oid (not the feature tip) as commit for a merge-merge PR (A-825)", () => {
+    const mergeOid = "cafebab1234567890abcdef1234567890abcd";
+    const mergeMergePr: ResolvedPr = {
+      ...PR,
+      commits: "5",
+      mergeSha: mergeOid,
+      mergeStrategy: "merge",
+      prNumber: "8",
+    };
+    const out = finaliseEntry(placeholderEntry(), "2.0.0", () => mergeMergePr);
+    expect(out).not.toBeNull();
+    const { data } = parseFrontmatter(out as string);
+    expect(data.commit).toBe("cafebab");
+    expect(data.merge_strategy).toBe("merge");
+    expect(data.stats).toEqual({
+      commits: 5,
+      files_changed: 3,
+      loc_added: 10,
+      loc_removed: 2,
+    });
+  });
 });
 
 type Call = { args: readonly string[]; cmd: string };
@@ -279,5 +301,32 @@ describe("makeResolver", () => {
     expect(resolved?.additions).toBeNull();
     expect(resolved?.deletions).toBeNull();
     expect(resolved?.changedFiles).toBeNull();
+  });
+
+  it("uses mergeCommit.oid as mergeSha for a merge-merge PR (A-825)", () => {
+    const mergeOid = "deadbeef1234567890abcdef1234567890abcd";
+    const { run } = makeRunner({
+      "gh api": () =>
+        JSON.stringify([
+          { parents: [{ sha: "p1" }] },
+          { parents: [{ sha: "p2" }] },
+          { parents: [{ sha: "p3" }] },
+          { parents: [{ sha: "p4" }, { sha: "p5" }] },
+        ]),
+      "gh pr list": () =>
+        JSON.stringify([
+          {
+            headRefOid: "feature-tip-sha-not-on-trunk",
+            mergeCommit: { oid: mergeOid },
+            mergedAt: "2026-08-03T12:00:00Z",
+            number: 8,
+          },
+        ]),
+      "git cat-file": () => "tree x\nparent p1\nparent p2\n",
+    });
+    const resolved = makeResolver(run)("a-825-multi-commit-merge");
+    expect(resolved?.mergeSha).toBe(mergeOid);
+    expect(resolved?.mergeStrategy).toBe("merge");
+    expect(resolved?.commits).toBe("3");
   });
 });

@@ -16,7 +16,7 @@ compatibility: >-
   `preflight-changelog-ci.mjs` step assumes the consumer repo uses pnpm with a
   committed lockfile; skip it if yours does not.
 metadata:
-  version: 0.9.4
+  version: 0.9.5
   author: Rob Easthope
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(node:*), Bash(pnpm:*)
 ---
@@ -87,6 +87,28 @@ filename, rewrite the rest. Otherwise you are in **create mode**.
 (`git fetch origin <base>`) so the diff is accurate — skip the fetch if the
 caller already did it (e.g. a ship flow fetches in its preflight step).
 
+### Multi-commit and merge-commit safety (A-825)
+
+Authoring and post-merge enrichment are safe across **multi-commit feature
+branches** and **merge merges** (as well as squash/rebase merges):
+
+- **One entry per branch, not per commit.** Step 1 looks up by `branch:` in
+  frontmatter; re-running `/changelog` after intermediate commits **updates** the
+  same dated file — it never spawns a second entry for the same branch.
+- **Branch analysis spans the whole PR.** Step 2 uses
+  `git log origin/<base>..HEAD` (and the symmetric diff), so every commit on the
+  feature branch contributes to metadata and body derivation regardless of how
+  many commits land before merge.
+- **Post-merge `commit` is the trunk merge SHA.** Finalise/enrich sets `commit` to
+  the first seven characters of the merged PR's `mergeCommit.oid` — the commit
+  that actually landed on trunk. For a **merge merge** that is the two-parent
+  merge commit; for **squash** it is the single squash commit (which differs
+  from the feature-branch tip).
+- **`stats.commits` counts authored PR work, not merge noise.** The PR commits
+  REST endpoint is scanned and commits with more than one parent (branch
+  `main`-merge resolution commits) are excluded, so a multi-commit branch with
+  occasional merge commits reports the correct authored count.
+
 ### Step 3 — Derive metadata
 
 | Field          | How to derive                                                                                                                                          |
@@ -112,8 +134,11 @@ for the full rules. In short:
 - **Never authored here:** `stats` (`files_changed`, `loc_added`, `loc_removed`,
   `commits`) and the post-merge fields `merged_at` / `commit` / `pr`. The post-merge
   enricher finalises them from canonical GitHub PR data after merge — `pr` included, resolved
-  from the merged PR by its `branch:` (never written by the ship flow). Emit them as
-  blank placeholders on create; leave existing values untouched on update.
+  from the merged PR by its `branch:` (never written by the ship flow). `commit` is the
+  short SHA of `mergeCommit.oid` (trunk landing commit); `stats.commits` is the
+  non-merge commit count on the PR branch (see **Multi-commit and merge-commit
+  safety** above). Emit post-merge fields as blank placeholders on create; leave
+  existing values untouched on update.
 
 The skill **emits the derived `issues` array** as a handoff — a ship flow reuses
 it for the PR body and any Linear writeback (e.g. via a `linear-sync` skill).

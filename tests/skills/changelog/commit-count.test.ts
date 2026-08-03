@@ -73,4 +73,20 @@ describe("nonMergeCommitCount", () => {
     expect(calls[0].args).toContain("repos/{owner}/{repo}/pulls/99/commits");
     expect(calls[0].args).toContain("--paginate");
   });
+
+  it("counts authored commits across a multi-commit branch with merge resolutions (A-825)", () => {
+    // Five feature commits plus two branch-side merge commits (parents > 1).
+    const run = runnerReturning(
+      JSON.stringify([
+        { parents: [{ sha: "p1" }] },
+        { parents: [{ sha: "p2" }] },
+        { parents: [{ sha: "p3" }, { sha: "p4" }] },
+        { parents: [{ sha: "p5" }] },
+        { parents: [{ sha: "p6" }] },
+        { parents: [{ sha: "p7" }, { sha: "p8" }] },
+        { parents: [{ sha: "p9" }] },
+      ]),
+    );
+    expect(nonMergeCommitCount(run, 8)).toBe("5");
+  });
 });
