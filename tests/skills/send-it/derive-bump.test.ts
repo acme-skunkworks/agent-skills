@@ -288,7 +288,7 @@ describe("deriveCategory (A-598 — release-type by semantic category, not path)
     });
   });
 
-  it("stays on the lead commit's type when no commit is a release type", () => {
+  it("stays on the newest commit's type when no commit is a release type", () => {
     // Non-release branch: neither docs nor refactor ranks, so the lead (docs) wins.
     expect(
       deriveCategory([

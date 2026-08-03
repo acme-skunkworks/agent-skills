@@ -3,8 +3,21 @@
 // honour config.json's baseBranch, not the hardcoded origin/main → main chain, so a
 // consumer whose trunk is `develop` diffs against the right base. The git-backed
 // resolveBaseRef itself needs a live repo and is exercised by the skill end-to-end.
-import { baseRefCandidates } from "../../../skills/send-it/scripts/lib/git.mjs";
+// Also asserts `git log --no-merges` for the dual merge policy (A-1176).
+import {
+  baseRefCandidates,
+  gitLogRangeArgs,
+} from "../../../skills/send-it/scripts/lib/git.mjs";
 import { describe, expect, it } from "vitest";
+
+describe("gitLogRangeArgs", () => {
+  it("passes --no-merges so merge subjects are excluded from the bump scan", () => {
+    const args = gitLogRangeArgs("origin/main");
+    expect(args).toContain("--no-merges");
+    expect(args).toContain("origin/main..HEAD");
+    expect(args[0]).toBe("log");
+  });
+});
 
 describe("baseRefCandidates", () => {
   it("collapses to the original chain when baseBranch is main", () => {
