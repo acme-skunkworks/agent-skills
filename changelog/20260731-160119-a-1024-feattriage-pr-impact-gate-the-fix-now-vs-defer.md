@@ -1,11 +1,11 @@
 ---
-title: "Impact-gate triage-pr's fix-now vs defer decision"
-release_note: "triage-pr Phase B now fixes valid in-scope review findings only when they are high-impact; everything else reuses the existing human-approved Linear defer path. A new deferNonBlocking config knob (default on) controls the gate."
-created_at: "2026-07-31T16:01:19Z"
-merged_at:
+title: Impact-gate triage-pr's fix-now vs defer decision
+release_note: triage-pr Phase B now fixes valid in-scope review findings only when they are high-impact; everything else reuses the existing human-approved Linear defer path. A new deferNonBlocking config knob (default on) controls the gate.
+created_at: '2026-07-31T16:01:19Z'
+merged_at: '2026-08-03T10:24:31Z'
 branch: a-1024-feattriage-pr-impact-gate-the-fix-now-vs-defer-decision
-pr:
-commit:
+pr: 143
+commit: 286d0b7
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -13,9 +13,9 @@ breaking: false
 issues:
   - A-1024
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 16
+  loc_added: 144
+  loc_removed: 39
   commits:
 ---
 
