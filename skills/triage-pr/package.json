@@ -1,8 +1,8 @@
 {
   "name": "@acme-skunkworks/skill-triage-pr",
-  "version": "0.7.0",
+  "version": "0.8.1",
   "private": true,
-  "description": "Agent skill: take a pull request from draft with failing CI to merge-ready — fix in-scope CI failures, then validate and action AI review feedback.",
+  "description": "Agent skill: take a pull request from draft with failing CI to merge-ready — fix in-scope CI failures, then validate and action AI review feedback (impact-gated fix-now vs defer).",
   "keywords": [
     "agent-skill",
     "claude-code",

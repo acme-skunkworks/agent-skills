@@ -26,10 +26,17 @@ describe("createDetectors — triage-pr boolean defaults", () => {
     expect(detect("replyOnAccept")).toEqual({ value: true });
   });
 
-  it("never returns null for either key (so neither flags needs-manual-input)", () => {
+  it("infers deferNonBlocking=true (impact gate is the default-on opt-out model)", () => {
+    const { detect, has } = detectorsFor();
+    expect(has("deferNonBlocking")).toBe(true);
+    expect(detect("deferNonBlocking")).toEqual({ value: true });
+  });
+
+  it("never returns null for the boolean keys (so none flags needs-manual-input)", () => {
     const { detect } = detectorsFor();
     expect(detect("promoteOnGreen")).not.toBeNull();
     expect(detect("replyOnAccept")).not.toBeNull();
+    expect(detect("deferNonBlocking")).not.toBeNull();
   });
 });
 

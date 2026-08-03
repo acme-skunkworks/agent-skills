@@ -22,6 +22,11 @@ regression.
    elsewhere. Never trust the bot's framing of the code — read the code.
 4. **EVALUATE.** Decide whether the change is correct *for this project*: in
    scope, compatible with the stack, and not a YAGNI or architecture violation.
+   When it is valid and in-scope **and** `deferNonBlocking` is `true`, also
+   classify **impact** (see **When to fix now vs defer** below) — fix now only
+   if high-impact; otherwise treat it as a defer candidate even though it is in
+   scope. When `deferNonBlocking` is `false`, every valid in-scope finding is
+   accepted for fix-now.
 5. **RESPOND** — symmetrically, so no thread is resolved silently. **Every**
    actioned thread ends replied-to **and** resolved:
    - *Decline* → reply with the technical reasoning, then resolve.
@@ -30,11 +35,13 @@ regression.
      **Resolve timing** below). When `replyOnAccept` is `false`, resolve without
      the reply.
    - *Outdated* (cited code is gone) → resolve, no reply.
-   - *Defer* (valid but **out of scope** for this PR) → don't resolve yet; set it
-     aside as a follow-up candidate. After the loop converges, candidates become
-     tracked Linear issues — **only on explicit human approval** — and the thread is
-     then replied-to (`Out of scope for this PR; tracked as <ticket> for follow-up.`)
-     and resolved. No approval (or capture disabled) → fall back to a *decline*.
+   - *Defer* (valid but **out of scope** for this PR, **or** — when
+     `deferNonBlocking` is on — **in-scope but not high-impact**) → don't resolve
+     yet; set it aside as a follow-up candidate. After the loop converges,
+     candidates become tracked Linear issues — **only on explicit human
+     approval** — and the thread is then replied-to (`Deferred for this PR;
+     tracked as <ticket> for follow-up.`) and resolved. No approval (or capture
+     disabled) → fall back to a *decline*.
 
    The reply is the durable, per-finding audit trail reviewers and humans skimming
    the PR rely on; a silently-resolved accept loses it.
@@ -60,6 +67,27 @@ Push back — with technical reasoning, not defensiveness — when the suggestio
 
 A declined finding still gets a reply explaining *why*, then the thread is
 resolved so it doesn't re-surface.
+
+## When to fix now vs defer
+
+After a finding clears EVALUATE (correct, not YAGNI/architecture), choose
+**accept** vs **defer**:
+
+- **Out of scope** → always defer (regardless of `deferNonBlocking`).
+- **In scope**, `deferNonBlocking` is `false` → accept and fix now (legacy
+  scope-only behaviour).
+- **In scope**, `deferNonBlocking` is `true` (the default) → accept and fix now
+  only when **high-impact**. Otherwise defer.
+
+A finding is **high-impact** when **any** of these hold (classify yourself — do
+**not** trust bot severity labels such as CodeRabbit ⚠️/🧹 or Bugbot grades):
+
+- it **blocks later work** on this PR or stacked work;
+- it touches **Claude Code / agent-skill logic / CI or release infrastructure**; or
+- it is **critical/high severity** (correctness, security, data-loss).
+
+Low-impact nits that are still valid and in-scope become Step 10 follow-up
+candidates so the PR can land high-impact work without accumulating churn.
 
 ## Symmetric reply + resolve — recorded decisions (A-410)
 

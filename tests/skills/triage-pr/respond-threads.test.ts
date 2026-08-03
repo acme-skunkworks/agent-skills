@@ -206,7 +206,8 @@ describe("buildReplyBody — validation + no sycophancy", () => {
 
   it("builds a defer-pending body with no reference and the pending marker", () => {
     const body = buildReplyBody({ decision: "defer-pending" });
-    expect(body).toContain("follow-up issue will be filed");
+    expect(body).toContain("follow-up issue may be filed");
+    expect(body).toContain("after human approval");
     expect(body).toContain(DEFER_PENDING_MARKER);
     expect(body).not.toContain(THREAD_MARKER);
   });
@@ -229,7 +230,7 @@ describe("buildConsolidatedComment — issue-level acknowledgement", () => {
       "| Read missing from allowed-tools | Accepted | `abc1234` |",
     );
     expect(body).toContain("| Add a retry wrapper | Declined | YAGNI |");
-    expect(body).toContain("| Refactor fetch | Out of scope | A-411 |");
+    expect(body).toContain("| Refactor fetch | Deferred | A-411 |");
     expect(body).toContain(SUMMARY_MARKER);
   });
 

@@ -3,6 +3,7 @@
   "maxCiRounds": 5,
   "replyOnAccept": true,
   "promoteOnGreen": true,
+  "deferNonBlocking": true,
   "linearTeamName": "ACME Skunkworks",
   "issueKeys": ["A"],
   "followUpLabel": "",
