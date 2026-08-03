@@ -54,4 +54,4 @@ ADRs land under `architecture/` as `NNNN-<slug>.md`. ADR-0001 — the foundation
 
 ## Contributing
 
-See [AGENTS.md](./AGENTS.md) for estate-wide agent guidance and [CLAUDE.md](./CLAUDE.md) for this repo's conventions (skill layout, `/send-it`, release-please versioning driven by the PR title).
+See [AGENTS.md](./AGENTS.md) for estate-wide agent guidance and [CLAUDE.md](./CLAUDE.md) for this repo's conventions (skill layout, `/send-it`, release-please versioning under the dual merge policy).
