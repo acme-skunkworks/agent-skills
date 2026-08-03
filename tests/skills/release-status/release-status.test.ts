@@ -65,9 +65,9 @@ describe("classifyTitle — Conventional-Commit bump rules", () => {
 
 describe("previewBump — strongest bump across commits (A-824)", () => {
   it("feat beats fix", () => {
-    expect(
-      previewBump([{ subject: "fix: a" }, { subject: "feat: b" }]),
-    ).toBe("minor");
+    expect(previewBump([{ subject: "fix: a" }, { subject: "feat: b" }])).toBe(
+      "minor",
+    );
   });
 
   it("a breaking subject wins over everything", () => {
@@ -78,16 +78,14 @@ describe("previewBump — strongest bump across commits (A-824)", () => {
 
   it("BREAKING CHANGE in a body promotes to major", () => {
     expect(
-      previewBump([
-        { body: "BREAKING CHANGE: drop X", subject: "fix: a" },
-      ]),
+      previewBump([{ body: "BREAKING CHANGE: drop X", subject: "fix: a" }]),
     ).toBe("major");
   });
 
   it("no release-triggering subjects → none", () => {
-    expect(
-      previewBump([{ subject: "chore: a" }, { subject: "docs: b" }]),
-    ).toBe("none");
+    expect(previewBump([{ subject: "chore: a" }, { subject: "docs: b" }])).toBe(
+      "none",
+    );
     expect(previewBump([])).toBe("none");
   });
 

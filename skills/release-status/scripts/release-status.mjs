@@ -512,11 +512,11 @@ function renderHuman(report, config) {
   lines.push("");
 
   const vp = report.versionPreview;
-  lines.push("Version preview (commits since last tag, merge commits excluded):");
-  lines.push(`  current: ${vp.current}`);
   lines.push(
-    `  bump:    ${vp.bump} (${vp.commitCount} commit(s) considered)`,
+    "Version preview (commits since last tag, merge commits excluded):",
   );
+  lines.push(`  current: ${vp.current}`);
+  lines.push(`  bump:    ${vp.bump} (${vp.commitCount} commit(s) considered)`);
   if (vp.willRelease) {
     lines.push(`  next:    ${vp.next} — a release would cut`);
   } else {
