@@ -2,12 +2,12 @@
 
 Take a pull request from **draft + failing CI** to **merge-ready**: fix in-scope
 CI failures while the PR is a draft, then — by default — promote the cleanly-green
-draft to ready itself (`promoteOnGreen`, on by default) and fetch the unresolved AI
-review feedback, validate each finding, fix high-impact valid ones, defer the rest
-for human-approved Linear capture, decline the invalid ones with reasoning, and
-re-watch CI until green. Opt out with `--no-promote`
-(or `promoteOnGreen: false`) to stop at green for a human to flip; the final merge
-to the trunk always stays with a human.
+draft to ready (`promoteOnGreen`), wait for AI reviewers, verify-then-propose
+dispositions, and **halt for a human envelope** before applying accepts, declines,
+or Linear follow-ups. Opt out of the envelope with `--auto-apply` (or
+`humanEnvelope: false`) to restore legacy auto Phase B. Opt out of promotion with
+`--no-promote` (or `promoteOnGreen: false`) to stop at green for a human to flip;
+the final merge to the trunk always stays with a human.
 
 ## Install
 
@@ -29,11 +29,14 @@ the per-skill `config.json` is generated on install, not vendored. Run the
 
 | Key | Meaning | Default |
 | --- | --- | --- |
-| `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback (matched on `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match). Edit to match your install — review-bot logins vary per repo. `github-actions` is excluded by default (it posts CI/release comments, not code review); add it only if your install posts review-type comments via the Actions bot. | `["claude", "cursor", "coderabbitai"]` |
-| `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers — bounds the fix-and-watch loop. | `5` |
-| `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before the thread is resolved (the audit trail). `false` resolves accepted threads silently; declines always reply with reasoning regardless. | `true` |
-| `promoteOnGreen` | The single control for the draft→ready flip. When `true`, after Phase A finishes with every required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**, and an enabled config *is* the human authorisation for the flip: proceed on proven green without seeking a separate sign-off. Set `false` (or pass `--no-promote`) to opt out and stop at green. Gated on proven-green CI, no unresolved human review threads, and no unresolved base drift; an explicit user prompt — or `--promote` / `--no-promote` — overrides it per run, and `--ci-only` / `--dry-run` never promote. | `true` |
-| `deferNonBlocking` | When `true` (the default), a valid **in-scope** finding is fixed **now** only if it is **high-impact**; otherwise it is deferred to Step 10's human-approved Linear capture. High-impact means any of: blocks later work; touches agent-skill / Claude Code / CI or release infrastructure; or critical/high severity (correctness, security, data-loss). Classification is model-owned — do not trust bot severity labels. Set `false` to restore scope-only behaviour. | `true` |
+| `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback (matched on `author.login`; the `[bot]` suffix is normalised). Edit to match your install. `github-actions` is excluded by default. | `["claude", "cursor", "coderabbitai"]` |
+| `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers. | `5` |
+| `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before resolve. | `true` |
+| `promoteOnGreen` | Draft→ready flip after proven-green Phase A. **Default-on.** | `true` |
+| `deferNonBlocking` | Propose accept only for high-impact in-scope findings; otherwise defer. | `true` |
+| `humanEnvelope` | Halt Phase B for a full disposition batch `[y/N]` before applying. **Default-on.** Escape with `--auto-apply`. | `true` |
+| `reviewIdleMinutes` | Hybrid review-settle idle window (minutes). | `5` |
+| `reviewWaitMaxMinutes` | Hard cap on waiting for review bots; then slow-bot micro-gate. | `20` |
 
 ## Requirements
 
@@ -49,35 +52,19 @@ Two phases, chosen from the PR's draft state:
 1. **Phase A — while the PR is a draft.** Inspect failing checks with `gh`, pull
    the failing GitHub Actions logs, and fix failures **in PR scope only** — never
    weakening CI config to greenwash. Rebase/merge the base branch when failures
-   are upstream drift. Loop until CI is green (then stop) or report blockers.
-2. **Phase B — after the PR is ready-for-review.** AI review is gated on
-   `draft == false`, so it only runs once the PR is ready-for-review (flipped by
-   `promoteOnGreen` or a human). Fetch the
-   **unresolved** review threads (bundled `scripts/review-threads.mjs` returns
-   minimal JSON), validate each finding against the codebase before changing
-   anything, fix high-impact valid findings, defer the rest (out of scope or —
-   when `deferNonBlocking` is on — in-scope but not high-impact) for
-   human-approved Linear capture, decline the invalid ones with technical
-   reasoning, then loop back through Phase A.
+   are upstream drift. Loop until CI is green or report blockers. Unattended.
+2. **Phase B — after the PR is ready-for-review.** Hybrid-wait for configured
+   `reviewBots` (sticky headlines and/or threads via `botsReported` /
+   `botsMissing`),
+   verify-then-propose dispositions, then — by default — **human envelope** before
+   applying. Re-envelope when new bot findings appear after apply. With
+   `--auto-apply`, fix high-impact findings immediately and keep a Linear-only
+   gate for defers.
 
-**By default the skill promotes a cleanly-green draft to ready** (`promoteOnGreen` is
-on) — `promoteOnGreen` is the single control for the flip, and an enabled config *is*
-the human authorisation for it, so the skill runs `gh pr ready` once Phase A proves CI
-green and carries on into Phase B without seeking a separate sign-off. Set
-`promoteOnGreen: false` (or pass `--no-promote`) to opt out and stop at green; an
-explicit user prompt — or `--promote` / `--no-promote` — overrides the config per run.
-Promotion is gated on proven-green CI, no unresolved human review threads, and no
-unresolved base drift, and merge to `main` stays a human action. It actions only the
-configured `reviewBots`; human review comments are surfaced in the report but left for
-the human.
+**By default the skill promotes a cleanly-green draft to ready** and continues into
+Phase B. Promotion is gated on proven-green CI, no unresolved human review threads,
+and no unresolved base drift. Merge to `main` stays a human action.
 
 The review-discipline rules folded into Phase B (verify before implementing, no
-sycophancy, evidence before claims) live in
+sycophancy, evidence before claims, human envelope) live in
 [`references/review-discipline.md`](references/review-discipline.md).
-
-**Alert only when CI is terminal.** Do not claim the run is complete, green, or
-ready for attention while any required check is still queued, pending, or in
-progress. Prefer a silent watch over interim "still waiting" pings; alert the
-human at a natural stopping point — Step 12 for a full run, a documented Step 6
-Phase-A early stop (promotion disabled / gate failed / `--ci-only` /
-`--dry-run`), or a hard blocker / round budget that needs a decision.

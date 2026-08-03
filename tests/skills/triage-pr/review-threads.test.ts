@@ -43,6 +43,87 @@ function threadNode(
   };
 }
 
+describe("buildResult — botsReported / botsMissing settle helpers", () => {
+  it("lists configured bots with and without sticky headlines", () => {
+    const result = buildResult({
+      bots: ["claude", "cursor", "coderabbitai"],
+      commentNodes: [
+        {
+          author: { login: "claude" },
+          body: "<!-- use_sticky_comment --> Summary by Claude",
+          id: "IC_claude",
+        },
+      ],
+      isDraft: false,
+      number: 1,
+      reviewNodes: [],
+      threadNodes: [],
+    });
+    expect(result.botsReported).toEqual(["claude"]);
+    expect(result.botsMissing).toEqual(["cursor", "coderabbitai"]);
+  });
+
+  it("does not count a bare ack (first-candidate fallback) as reported", () => {
+    const result = buildResult({
+      bots: ["claude", "cursor", "coderabbitai"],
+      commentNodes: [
+        {
+          author: { login: "claude" },
+          body: "On it — reviewing PR #147 now.",
+          id: "IC_ack",
+        },
+      ],
+      isDraft: false,
+      number: 1,
+      reviewNodes: [],
+      threadNodes: [],
+    });
+    // Still surfaces in aiSummaryComments as the only candidate, but settle
+    // helpers require a sticky marker (or a thread).
+    expect(result.aiSummaryComments).toHaveLength(1);
+    expect(result.botsReported).toEqual([]);
+    expect(result.botsMissing).toEqual(["claude", "cursor", "coderabbitai"]);
+  });
+
+  it("counts a bot as reported when it only has an unresolved thread", () => {
+    const result = buildResult({
+      bots: ["claude", "cursor", "coderabbitai"],
+      commentNodes: [],
+      isDraft: false,
+      number: 1,
+      reviewNodes: [],
+      threadNodes: [threadNode("T_cursor_only", { author: "cursor" })],
+    });
+    expect(result.botsReported).toEqual(["cursor"]);
+    expect(result.botsMissing).toEqual(["claude", "coderabbitai"]);
+  });
+
+  it("treats all bots as reported when each has a sticky headline", () => {
+    const result = buildResult({
+      bots: ["claude", "cursor"],
+      commentNodes: [
+        {
+          author: { login: "claude" },
+          body: "<!-- use_sticky_comment --> Summary by Claude",
+          id: "IC_claude",
+        },
+      ],
+      isDraft: false,
+      number: 1,
+      reviewNodes: [
+        {
+          author: { login: "cursor" },
+          body: "<!-- BUGBOT_REVIEW --> Bugbot summary",
+          id: "REV_cursor",
+        },
+      ],
+      threadNodes: [],
+    });
+    expect(result.botsMissing).toEqual([]);
+    expect(result.botsReported.toSorted()).toEqual(["claude", "cursor"]);
+  });
+});
+
 describe("buildResult — deferred bucket", () => {
   it("routes a bot thread carrying the defer marker into deferredThreads", () => {
     const result = buildResult({
