@@ -2,10 +2,10 @@
 title: 'changelog: document multi-commit and merge-merge enrichment (A-825)'
 release_note: Changelog authoring and finalise/enrich are documented and fixture-tested as safe across multi-commit branches and merge merges — one entry per branch, mergeCommit.oid for commit, non-merge commit counts.
 created_at: '2026-08-03T17:55:00Z'
-merged_at:
+merged_at: '2026-08-03T17:03:32Z'
 branch: a-825-validate-changelog-authoring-changelogfinalise-enrichment
-pr:
-commit:
+pr: 146
+commit: b1b9b0d
 author: rob@acmeskunkworks.io
 co_authors: []
 category: docs
@@ -13,9 +13,9 @@ breaking: false
 issues:
   - A-825
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 8
+  loc_added: 161
+  loc_removed: 21
   commits:
 ---
 
