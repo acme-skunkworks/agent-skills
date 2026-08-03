@@ -110,7 +110,10 @@ node scripts/release-status.mjs --self-test
 `gh auth status` must pass, and you must be inside (or pass `--repo` for) the target
 repository. The helper reads the root `package.json` version, local tags, and
 commits since the last tag on `origin/<mainBranch>` via `git`, and queries `gh`
-for the open release PR and the last merged release PR's labels.
+for the open release PR and the last merged release PR's labels. Ensure
+`origin/<mainBranch>` is up to date (`git fetch origin <mainBranch>`) before
+trusting the version preview — the helper reads the local remote-tracking ref,
+not a live GitHub query.
 
 ### Step 2 — Run the helper and read the four signals
 

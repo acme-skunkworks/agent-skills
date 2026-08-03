@@ -379,6 +379,14 @@ function readTags() {
  */
 function fetchCommitsSinceLastTag(mainBranch) {
   const trunk = `origin/${mainBranch}`;
+  try {
+    run("git", ["rev-parse", "--verify", trunk]);
+  } catch {
+    throw new Error(
+      `missing local ref ${trunk} — run \`git fetch origin ${mainBranch}\` so the version preview can match the trunk`,
+    );
+  }
+
   let range = trunk;
   try {
     const lastTag = run("git", [

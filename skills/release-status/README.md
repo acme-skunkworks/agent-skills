@@ -40,7 +40,9 @@ Generate it by running the `initialise-skills` skill, or copy the example to
   PR, its checks, and the last merged release PR's labels.
 - `git` — used to read the root `package.json` version, the tags, and
   **commits since the last tag on `origin/<mainBranch>`** for the version preview
-  (merge commits excluded).
+  (merge commits excluded). Keep that remote-tracking ref current
+  (`git fetch origin <mainBranch>`) — a stale or missing `origin/<mainBranch>`
+  understates or fails the preview.
 - Node.js >=22 (ES-module support), for the bundled diagnosis helper. No npm
   dependencies, no build step.
 
