@@ -25,6 +25,9 @@
 //                         bodies (Cursor Bugbot's `<!-- BUGBOT_REVIEW -->` review).
 //                         Neither is a review thread, so neither has `isResolved`
 //                         and the reviewThreads query never returns them.
+//   - botsReported      : configured bot logins that have an aiSummaryComments
+//                         headline (Phase B hybrid-wait settle helper).
+//   - botsMissing       : configured bot logins still without a headline.
 //
 // The network layer (gh) is kept separate from the pure transform so the
 // transform is unit-tested by `--self-test` with no network access.
@@ -245,8 +248,21 @@ export function buildResult({
     isBot,
   );
 
+  // Settle helpers for the Phase B hybrid wait (SKILL.md Step 7): which configured
+  // bots have posted a headline summary, and which are still outstanding.
+  const configuredBots = (bots ?? DEFAULT_BOTS).map(normaliseBot);
+  const botsReported = [
+    ...new Set(
+      aiSummaryComments.map((comment) => normaliseBot(comment.author)),
+    ),
+  ];
+  const reportedSet = new Set(botsReported);
+  const botsMissing = configuredBots.filter((bot) => !reportedSet.has(bot));
+
   return {
     aiSummaryComments,
+    botsMissing,
+    botsReported,
     deferredThreads,
     humanThreads,
     isDraft: Boolean(isDraft),
@@ -685,6 +701,14 @@ function selfTest() {
       ok: result.aiSummaryComments.some(
         (comment) => comment.commentId === "IC_summary",
       ),
+    },
+    {
+      name: "botsReported lists authors with headlines; botsMissing the rest",
+      ok:
+        result.botsReported.includes("coderabbitai") &&
+        result.botsReported.includes("claude") &&
+        result.botsReported.includes("cursor") &&
+        result.botsMissing.length === 0,
     },
     {
       name: "human issue comment is not treated as an AI summary",

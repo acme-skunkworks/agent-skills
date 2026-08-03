@@ -43,6 +43,52 @@ function threadNode(
   };
 }
 
+describe("buildResult — botsReported / botsMissing settle helpers", () => {
+  it("lists configured bots with and without headline summaries", () => {
+    const result = buildResult({
+      bots: ["claude", "cursor", "coderabbitai"],
+      commentNodes: [
+        {
+          author: { login: "claude" },
+          body: "<!-- use_sticky_comment --> Summary by Claude",
+          id: "IC_claude",
+        },
+      ],
+      isDraft: false,
+      number: 1,
+      reviewNodes: [],
+      threadNodes: [],
+    });
+    expect(result.botsReported).toEqual(["claude"]);
+    expect(result.botsMissing).toEqual(["cursor", "coderabbitai"]);
+  });
+
+  it("treats all bots as reported when each has a headline", () => {
+    const result = buildResult({
+      bots: ["claude", "cursor"],
+      commentNodes: [
+        {
+          author: { login: "claude" },
+          body: "<!-- use_sticky_comment --> Summary by Claude",
+          id: "IC_claude",
+        },
+      ],
+      isDraft: false,
+      number: 1,
+      reviewNodes: [
+        {
+          author: { login: "cursor" },
+          body: "<!-- BUGBOT_REVIEW --> Bugbot summary",
+          id: "REV_cursor",
+        },
+      ],
+      threadNodes: [],
+    });
+    expect(result.botsMissing).toEqual([]);
+    expect(result.botsReported.sort()).toEqual(["claude", "cursor"]);
+  });
+});
+
 describe("buildResult — deferred bucket", () => {
   it("routes a bot thread carrying the defer marker into deferredThreads", () => {
     const result = buildResult({
