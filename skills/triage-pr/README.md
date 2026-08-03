@@ -77,6 +77,7 @@ sycophancy, evidence before claims) live in
 
 **Alert only when CI is terminal.** Do not claim the run is complete, green, or
 ready for attention while any required check is still queued, pending, or in
-progress. Prefer a silent watch over interim "still waiting" pings; the human is
-alerted at the final report once every required check has reached a terminal
-state (or when a hard blocker / round budget needs a decision).
+progress. Prefer a silent watch over interim "still waiting" pings; alert the
+human at a natural stopping point — Step 12 for a full run, a documented Step 6
+Phase-A early stop (promotion disabled / gate failed / `--ci-only` /
+`--dry-run`), or a hard blocker / round budget that needs a decision.

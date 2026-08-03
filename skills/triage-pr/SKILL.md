@@ -20,7 +20,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.8.2
+  version: 0.8.3
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -218,8 +218,10 @@ gh pr checks <pr> --watch
   claim).
 - **Stay quiet while watching.** Prefer a silent wait / background watch over
   interim "still waiting" pings that interrupt other work. Surface the human only
-  at the Step 12 report, or when a hard blocker / `maxCiRounds` exhaustion needs a
-  decision.
+  at a **natural stopping point**: the Step 12 report (when Phase B ran or the
+  loop converged), a documented Phase-A early stop in this step (promotion
+  disabled / promotion gate failed / `--ci-only` / `--dry-run`), or a hard
+  blocker / `maxCiRounds` exhaustion that needs a decision.
 - **Bound the loop** by `maxCiRounds`. When exhausted, stop and report the
   remaining failures as blockers rather than looping forever.
 - Green **and ready** → continue to Phase B.
@@ -482,10 +484,13 @@ entirely when there were no issue-level findings to map.
 
 ### Step 12 — Report
 
-This step is the **only** completion alert. Emit it only after every required check
-is **terminal** (success or failure), or after the run stopped on a hard blocker /
-`maxCiRounds` exhaustion — never while any required check is still queued, pending,
-or in progress.
+This is the completion alert for a full run (Phase B entered, or the CI/review
+loop converged). Emit it only after every required check is **terminal** (success
+or failure), or after the run stopped on a hard blocker / `maxCiRounds`
+exhaustion — never while any required check is still queued, pending, or in
+progress. Phase-A early stops that never reach this step (promotion disabled,
+promotion gate failed, `--ci-only`, `--dry-run`) report at their Step 6 exit
+instead — those are valid completion alerts, not interim pings.
 
 Summarise:
 
@@ -533,8 +538,10 @@ Summarise:
   running the proving command and reading its exit code. Never claim the run is
   complete, done, or ready for attention while any required check is still
   non-terminal (queued / pending / in progress) — "no failures yet" is not green
-  and not done. Alert the human only at Step 12 (or on a hard blocker / budget
-  exhaustion that needs a decision).
+  and not done. Alert the human only at a natural stopping point: Step 12, a
+  documented Step 6 Phase-A early stop (promotion disabled / gate failed /
+  `--ci-only` / `--dry-run`), or a hard blocker / budget exhaustion that needs a
+  decision — never with interim "still waiting" pings mid-watch.
 - **Draft → ready is guarded, and on by default.** `promoteOnGreen` is the single
   control for the flip, and an enabled config *is* the authorisation: with it on (the
   default) the skill flips the PR — **only** after a *proven*-green Phase A, with **no

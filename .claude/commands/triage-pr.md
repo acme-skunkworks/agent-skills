@@ -22,8 +22,9 @@ unresolved AI review threads once it is ready), with the constraints below.
    invalid ones with technical reasoning. After each push, **loop back to the CI
    phase** — a push re-fires both CI and AI review — until CI is green and no
    unresolved AI threads remain. Do **not** claim the run is done while any
-   required check is still non-terminal; alert the human only at Step 12 (or on a
-   hard blocker / budget exhaustion).
+   required check is still non-terminal; alert the human only at a natural
+   stopping point (Step 12, a documented Step 6 Phase-A early stop, or a hard
+   blocker / budget exhaustion).
 3. **The draft → ready flip is governed by `promoteOnGreen`** (read in step 1) — the
    single control for it. When `true` (the default), an enabled config *is* the
    authorisation: once Phase A is proven-green (no unresolved human threads, no base
