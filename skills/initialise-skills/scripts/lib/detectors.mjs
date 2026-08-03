@@ -22,6 +22,8 @@ import { join } from "node:path";
 const SHIPPABLE_MANIFEST_KEYS = ["name", "version", "files", "publishConfig"];
 const REVIEW_BOTS = ["claude", "cursor", "coderabbitai"];
 const MAX_CI_ROUNDS = 5;
+const REVIEW_IDLE_MINUTES = 5;
+const REVIEW_WAIT_MAX_MINUTES = 20;
 
 /**
  * Detect the published surface from the root package.json `files` field (the
@@ -142,6 +144,9 @@ export function createDetectors({ linearFacts = {}, repoRoot }) {
     followUpLabel: () => ({ value: "" }),
     followUpProject: () => ({ value: "" }),
     followUpState: () => ({ value: "Backlog" }),
+    // No repo signal; emit triage-pr's default-on human envelope (never null) so it
+    // isn't flagged needs-manual-input — a later edit reads as drift and is kept.
+    humanEnvelope: () => ({ value: true }),
     issueKeys: () => {
       const fromFacts = linearFacts.issueKeys;
       if (Array.isArray(fromFacts) && fromFacts.length > 0) {
@@ -176,6 +181,9 @@ export function createDetectors({ linearFacts = {}, repoRoot }) {
     // No repo signal; emit triage-pr's own default (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
     replyOnAccept: () => ({ value: true }),
     reviewBots: () => ({ value: [...REVIEW_BOTS] }),
+    // Hybrid review-settle knobs (A-1179) — structural defaults, never null.
+    reviewIdleMinutes: () => ({ value: REVIEW_IDLE_MINUTES }),
+    reviewWaitMaxMinutes: () => ({ value: REVIEW_WAIT_MAX_MINUTES }),
     shippableManifestKeys: () => ({ value: [...SHIPPABLE_MANIFEST_KEYS] }),
     // Reuse the memoised packageRoots detection rather than re-reading
     // pnpm-workspace.yaml a second time.

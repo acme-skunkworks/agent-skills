@@ -23,6 +23,9 @@ detector serves every skill that uses a key. A key found in a skill's
 | `reviewBots` | triage-pr | Fixed | `["claude", "cursor", "coderabbitai"]` |
 | `maxCiRounds` | triage-pr | Fixed | `5` |
 | `deferNonBlocking` | triage-pr | Fixed (impact gate: defer valid in-scope but non-blocking findings) | `true` |
+| `humanEnvelope` | triage-pr | Fixed (halt Phase B for a disposition approval before applying) | `true` |
+| `reviewIdleMinutes` | triage-pr | Fixed (hybrid review-settle idle window) | `5` |
+| `reviewWaitMaxMinutes` | triage-pr | Fixed (hybrid review-settle hard cap) | `20` |
 | `followUpLabel` | triage-pr | Fixed (opt-in follow-up capture; empty = no label) | `""` |
 | `followUpProject` | triage-pr | Fixed (opt-in follow-up capture; empty = no project) | `""` |
 | `followUpState` | triage-pr | Fixed (opt-in follow-up capture; initial state for created issues) | `"Backlog"` |

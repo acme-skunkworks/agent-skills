@@ -32,11 +32,27 @@ describe("createDetectors — triage-pr boolean defaults", () => {
     expect(detect("deferNonBlocking")).toEqual({ value: true });
   });
 
+  it("infers humanEnvelope=true (disposition gate is the default-on opt-out model)", () => {
+    const { detect, has } = detectorsFor();
+    expect(has("humanEnvelope")).toBe(true);
+    expect(detect("humanEnvelope")).toEqual({ value: true });
+  });
+
+  it("infers reviewIdleMinutes=5 and reviewWaitMaxMinutes=20", () => {
+    const { detect, has } = detectorsFor();
+    expect(has("reviewIdleMinutes")).toBe(true);
+    expect(detect("reviewIdleMinutes")).toEqual({ value: 5 });
+    expect(detect("reviewWaitMaxMinutes")).toEqual({ value: 20 });
+  });
+
   it("never returns null for the boolean keys (so none flags needs-manual-input)", () => {
     const { detect } = detectorsFor();
     expect(detect("promoteOnGreen")).not.toBeNull();
     expect(detect("replyOnAccept")).not.toBeNull();
     expect(detect("deferNonBlocking")).not.toBeNull();
+    expect(detect("humanEnvelope")).not.toBeNull();
+    expect(detect("reviewIdleMinutes")).not.toBeNull();
+    expect(detect("reviewWaitMaxMinutes")).not.toBeNull();
   });
 });
 
