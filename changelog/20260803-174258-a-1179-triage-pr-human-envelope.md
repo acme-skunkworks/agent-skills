@@ -2,10 +2,10 @@
 title: triage-pr human envelope for Phase B AI dispositions
 release_note: triage-pr now waits for AI reviewers after a green promote, verifies findings, and halts for one same-session human envelope before applying accepts, declines, or Linear follow-ups — with a slow-bot micro-gate and re-envelope on later review rounds.
 created_at: '2026-08-03T17:42:58Z'
-merged_at: ''
+merged_at: '2026-08-03T20:58:53Z'
 branch: a-1179-feattriage-pr-auto-phase-a-then-halt-for-a-human-envelope-on
-pr: null
-commit: ''
+pr: 147
+commit: 74fbcb1
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -13,9 +13,9 @@ breaking: false
 issues:
   - A-1179
 stats:
-  files_changed: 13
-  loc_added: 365
-  loc_removed: 321
+  files_changed: 14
+  loc_added: 487
+  loc_removed: 322
   commits:
 ---
 
