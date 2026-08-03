@@ -1,20 +1,21 @@
 ---
-title: "Only alert the human once triage-pr CI is terminal"
-release_note: "triage-pr no longer claims a run is complete while required checks are still queued, pending, or in progress — the human is only alerted at the final report once every required check is terminal."
-created_at: "2026-08-03T16:26:45Z"
-merged_at:
-branch: "a-1178-fixtriage-pr-only-alert-the-human-once-ci-has-fully"
-pr:
-commit:
-author: "rob@acmeskunkworks.io"
+title: Only alert the human once triage-pr CI is terminal
+release_note: triage-pr no longer claims a run is complete while required checks are still queued, pending, or in progress — the human is only alerted at the final report once every required check is terminal.
+created_at: '2026-08-03T16:26:45Z'
+merged_at: '2026-08-03T16:58:05Z'
+branch: a-1178-fixtriage-pr-only-alert-the-human-once-ci-has-fully
+pr: 145
+commit: '9799940'
+author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
 breaking: false
-issues: ["A-1178"]
+issues:
+  - A-1178
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 6
+  loc_added: 81
+  loc_removed: 8
   commits:
 ---
 
