@@ -1,11 +1,11 @@
 ---
-title: 'Refresh AGENTS.md for dual merge policy cutover'
+title: Refresh AGENTS.md for dual merge policy cutover
 release_note: ''
 created_at: '2026-08-03T21:18:00Z'
-merged_at:
+merged_at: '2026-08-03T21:03:32Z'
 branch: a-1177-enable-estate-merge-commits-keep-squash-allowed-for-release
-pr:
-commit:
+pr: 149
+commit: 10ed1f8
 author: rob@acmeskunkworks.io
 co_authors: []
 category: docs
@@ -13,9 +13,9 @@ breaking: false
 issues:
   - A-1177
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 2
+  loc_added: 32
+  loc_removed: 3
   commits:
 ---
 
