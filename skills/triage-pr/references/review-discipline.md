@@ -148,7 +148,8 @@ wrappers, exercised only against real PRs — never unit-tested by spamming one.
 
 ## Evidence before claims
 
-Before asserting that CI is green, a check passes, or a fix works:
+Before asserting that CI is green, a check passes, a fix works, or the run is
+complete:
 
 1. Identify the command that **proves** the claim.
 2. Run it freshly and completely — not from memory of a previous run.
@@ -159,6 +160,10 @@ Banned until you have run the proving command: "should", "probably", "seems to",
 and premature satisfaction ("Done!", "Perfect!", "All green!"). Any wording that
 implies success without fresh verification breaks this rule.
 
+Also banned while any required check is still **non-terminal** (queued, pending,
+or in progress): claiming the run is complete, done, or ready for attention.
+"No failures yet" / mixed pending+pass is neither green nor done.
+
 Proving commands by claim:
 
 | Claim | Proof |
@@ -167,5 +172,6 @@ Proving commands by claim:
 | Tests pass | the test command's output showing zero failures |
 | Build succeeds | the build command exiting `0` |
 | Manifest valid | `npx --yes skills-ref@0.1.5 validate ./skills/<name>` exiting `0` |
-| CI green | `gh pr checks <pr>` showing every required check passed |
+| CI green | `gh pr checks <pr>` showing every required check in a **terminal** pass state (queued / pending / in_progress do not count) |
+| Run complete | `gh pr checks <pr> --watch` (or a fresh rollup) exited with every required check terminal — success or failure |
 | Bug fixed | the original failing symptom now passing |

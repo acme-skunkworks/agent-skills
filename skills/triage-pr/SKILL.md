@@ -20,7 +20,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.8.1
+  version: 0.8.2
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -209,6 +209,17 @@ gh pr checks <pr> --watch
 
 - After each push, watch the rollup to completion. Still red → loop back to
   Step 2.
+- **No early "done".** Do not tell the user the run is complete, green, or ready
+  for attention until `gh pr checks --watch` (or an equivalent fresh rollup) has
+  **exited** and every required check is **terminal** (success or failure). Queued,
+  pending, or in-progress checks are non-terminal — "no failures yet", an empty
+  rollup, or mixed pending+pass is **not** proven green and **not** a completion
+  signal (same discipline as the promotion gate below, applied to every end-of-run
+  claim).
+- **Stay quiet while watching.** Prefer a silent wait / background watch over
+  interim "still waiting" pings that interrupt other work. Surface the human only
+  at the Step 12 report, or when a hard blocker / `maxCiRounds` exhaustion needs a
+  decision.
 - **Bound the loop** by `maxCiRounds`. When exhausted, stop and report the
   remaining failures as blockers rather than looping forever.
 - Green **and ready** → continue to Phase B.
@@ -471,6 +482,11 @@ entirely when there were no issue-level findings to map.
 
 ### Step 12 — Report
 
+This step is the **only** completion alert. Emit it only after every required check
+is **terminal** (success or failure), or after the run stopped on a hard blocker /
+`maxCiRounds` exhaustion — never while any required check is still queued, pending,
+or in progress.
+
 Summarise:
 
 - Checks fixed, each with the failing command it addressed.
@@ -481,7 +497,8 @@ Summarise:
 - Issue-level findings acknowledged in the consolidated comment.
 - Base merges/rebases performed.
 - Remaining blockers (if `maxCiRounds` was exhausted).
-- Final CI state, with the proving command's output.
+- Final CI state, with the proving command's **fresh** exit evidence — check names
+  and their terminal states (not a remembered earlier rollup).
 - Any **human** review comments, surfaced for the human to handle.
 - The PR's draft/ready state: when promotion fired, report the flip (draft → ready)
   and that Phase B then ran; otherwise a reminder that the state is unchanged — the
@@ -513,7 +530,11 @@ Summarise:
   comments but leave them for the human.
 - **No sycophancy.** Decline with technical reasoning, not flattery.
 - **Evidence before claims.** Never say CI is green or a fix works without freshly
-  running the proving command and reading its exit code.
+  running the proving command and reading its exit code. Never claim the run is
+  complete, done, or ready for attention while any required check is still
+  non-terminal (queued / pending / in progress) — "no failures yet" is not green
+  and not done. Alert the human only at Step 12 (or on a hard blocker / budget
+  exhaustion that needs a decision).
 - **Draft → ready is guarded, and on by default.** `promoteOnGreen` is the single
   control for the flip, and an enabled config *is* the authorisation: with it on (the
   default) the skill flips the PR — **only** after a *proven*-green Phase A, with **no

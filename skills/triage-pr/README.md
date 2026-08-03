@@ -74,3 +74,9 @@ the human.
 The review-discipline rules folded into Phase B (verify before implementing, no
 sycophancy, evidence before claims) live in
 [`references/review-discipline.md`](references/review-discipline.md).
+
+**Alert only when CI is terminal.** Do not claim the run is complete, green, or
+ready for attention while any required check is still queued, pending, or in
+progress. Prefer a silent watch over interim "still waiting" pings; the human is
+alerted at the final report once every required check has reached a terminal
+state (or when a hard blocker / round budget needs a decision).
