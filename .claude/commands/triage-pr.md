@@ -13,7 +13,7 @@ unresolved AI review threads once it is ready), with the constraints below.
 
 1. Read the skill's [`config.json`](../../skills/triage-pr/config.json) for
    `reviewBots`, `maxCiRounds`, `replyOnAccept`, and `promoteOnGreen`.
-2. Follow the skill's Steps 1–10: locate the PR and detect its phase, inspect and
+2. Follow the skill's Steps 1–12: locate the PR and detect its phase, inspect and
    classify failing checks (in-scope vs base drift), fix in-scope failures one at
    a time **without weakening any gate**, re-watch CI (bounded by `maxCiRounds`),
    then — once the PR is ready — fetch review feedback
@@ -21,7 +21,10 @@ unresolved AI review threads once it is ready), with the constraints below.
    validate each finding before changing code, fix the valid ones, decline the
    invalid ones with technical reasoning. After each push, **loop back to the CI
    phase** — a push re-fires both CI and AI review — until CI is green and no
-   unresolved AI threads remain.
+   unresolved AI threads remain. Do **not** claim the run is done while any
+   required check is still non-terminal; alert the human only at a natural
+   stopping point (Step 12, a documented Step 6 Phase-A early stop, or a hard
+   blocker / budget exhaustion).
 3. **The draft → ready flip is governed by `promoteOnGreen`** (read in step 1) — the
    single control for it. When `true` (the default), an enabled config *is* the
    authorisation: once Phase A is proven-green (no unresolved human threads, no base
