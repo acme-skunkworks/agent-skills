@@ -10,10 +10,10 @@ It bundles uncommitted work into atomic commits, runs the change-gated lint
 [`preflight`](../../skills/preflight/SKILL.md), authors or updates the dated
 `changelog/<ts>-<slug>.md` entry (via the
 [`changelog`](../../skills/changelog/SKILL.md) skill), composes a **Conventional
-Commits PR title** (the squash subject release-please reads to decide the version
-bump), pushes the branch, opens or updates a PR against `main`, and transitions
-linked Linear issues to **In Review** (via the
-[`linear-sync`](../../skills/linear-sync/SKILL.md) skill).
+Commits PR title** (CI + humans; feature PRs land as merge commits and
+release-please ranks landed commit subjects for the bump — A-1176), pushes the
+branch, opens or updates a PR against `main`, and transitions linked Linear issues
+to **In Review** (via the [`linear-sync`](../../skills/linear-sync/SKILL.md) skill).
 
 ## Process
 
@@ -57,7 +57,8 @@ handles those. The only gate it runs is the change-gated `preflight` lint.
   it (must stay a valid Conventional Commits subject — CI lints it).
 - `--skip-preflight` — skip the lint gate entirely (prints a bypass warning).
 - `--ready` — open the PR ready-for-review instead of draft (default is draft).
-- `--merge-when-ready` — after create/update, enable `gh pr merge --auto --squash`.
+- `--merge-when-ready` — after create/update, enable `gh pr merge --auto --merge`
+  (merge commit for feature PRs — A-1176).
 - `--worktree=<branch-or-path>` — `cd` into a worktree before running. Resolved via
   `git worktree list --porcelain`; errors if it matches no worktree.
 
