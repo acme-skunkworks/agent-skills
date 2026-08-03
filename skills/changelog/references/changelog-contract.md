@@ -49,7 +49,7 @@ omitted or left as a blank placeholder until enrichment.
 | `merged_at` | ISO 8601 UTC with `Z` suffix when set; blank until release. |
 | `branch` | Non-empty string — the stable lookup key for enrichment. |
 | `pr` | Integer when set; blank until post-merge enrichment resolves it from the merged PR. |
-| `commit` | 7-char hex SHA when set; blank until merge. |
+| `commit` | 7-char hex SHA when set; blank until merge. Post-merge enrichment stores the short form of the merged PR's **`mergeCommit.oid`** — the commit that landed on trunk. For a **merge merge** that is the two-parent merge commit; for **squash** it is the squash commit SHA (not necessarily the feature-branch tip). |
 | `author` | Non-empty string (an email). |
 | `co_authors` | Array of strings (`[]` when none). |
 | `category` | One of `feature`, `fix`, `chore`, `docs`, `refactor`, `perf`. |
@@ -87,7 +87,10 @@ Three owners, never overlapping:
    own tag flow owns, and minus `commits`, which the enrich path doesn't resolve).
 
 `branch` is set by the author at create time and is the stable lookup key for
-enrichment.
+enrichment. Authoring is **multi-commit aware**: it analyses
+`git log origin/<base>..HEAD` and looks up an existing entry by `branch:` (update
+vs create), so intermediate commits on the same branch never spawn duplicate
+entries.
 
 `created_at` is **sacred**: set once at create time, preserved verbatim on every
 update. The release step refuses to finalise an entry without it.
