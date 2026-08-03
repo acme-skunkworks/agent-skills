@@ -9,12 +9,16 @@ import {
   classifyTitle,
   detectStalePending,
   parseArgs,
+  parseGitLog,
   parseJson,
   previewBump,
   requiredCheckState,
   tagParity,
 } from "../../../skills/release-status/scripts/release-status.mjs";
 import { describe, expect, it } from "vitest";
+
+const UNIT_SEP = "\u001F";
+const RECORD_SEP = "\u001E";
 
 describe("classifyTitle — Conventional-Commit bump rules", () => {
   it("feat → minor", () => {
@@ -51,32 +55,71 @@ describe("classifyTitle — Conventional-Commit bump rules", () => {
   it("treats a non-string subject defensively", () => {
     expect(classifyTitle(undefined)).toBe("none");
   });
+
+  it("merge-commit subjects are non-conventional → none", () => {
+    expect(classifyTitle("Merge pull request #12 from acme/feature")).toBe(
+      "none",
+    );
+  });
 });
 
-describe("previewBump — strongest bump across merged PRs", () => {
+describe("previewBump — strongest bump across commits (A-824)", () => {
   it("feat beats fix", () => {
-    expect(previewBump([{ title: "fix: a" }, { title: "feat: b" }])).toBe(
+    expect(previewBump([{ subject: "fix: a" }, { subject: "feat: b" }])).toBe(
       "minor",
     );
   });
 
-  it("a breaking title wins over everything", () => {
-    expect(previewBump([{ title: "feat: a" }, { title: "refactor!: b" }])).toBe(
-      "major",
-    );
+  it("a breaking subject wins over everything", () => {
+    expect(
+      previewBump([{ subject: "feat: a" }, { subject: "refactor!: b" }]),
+    ).toBe("major");
   });
 
   it("BREAKING CHANGE in a body promotes to major", () => {
     expect(
-      previewBump([{ body: "BREAKING CHANGE: drop X", title: "fix: a" }]),
+      previewBump([{ body: "BREAKING CHANGE: drop X", subject: "fix: a" }]),
     ).toBe("major");
   });
 
-  it("no release-triggering titles → none", () => {
-    expect(previewBump([{ title: "chore: a" }, { title: "docs: b" }])).toBe(
+  it("no release-triggering subjects → none", () => {
+    expect(previewBump([{ subject: "chore: a" }, { subject: "docs: b" }])).toBe(
       "none",
     );
     expect(previewBump([])).toBe("none");
+  });
+
+  it("feat then revert still minors — no cancel/netting (matches release-please 17.9.0)", () => {
+    // Empirical: DefaultVersioningStrategy sees both feat and revert; feat
+    // wins. release-status mirrors that — it does NOT invent netting.
+    expect(
+      previewBump([
+        { subject: "feat: add x" },
+        { subject: "revert: feat: add x" },
+      ]),
+    ).toBe("minor");
+  });
+
+  it("accepts legacy { title } shape as subject alias", () => {
+    expect(previewBump([{ title: "feat: legacy" }])).toBe("minor");
+  });
+});
+
+describe("parseGitLog — git log --format unit/record separators", () => {
+  it("parses hash/subject/body records", () => {
+    const raw = [
+      `abc123${UNIT_SEP}feat: one${UNIT_SEP}body one${RECORD_SEP}`,
+      `def456${UNIT_SEP}fix: two${UNIT_SEP}${RECORD_SEP}`,
+    ].join("");
+    expect(parseGitLog(raw)).toEqual([
+      { body: "body one", hash: "abc123", subject: "feat: one" },
+      { body: "", hash: "def456", subject: "fix: two" },
+    ]);
+  });
+
+  it("returns [] for empty input", () => {
+    expect(parseGitLog("")).toEqual([]);
+    expect(parseGitLog(undefined)).toEqual([]);
   });
 });
 
