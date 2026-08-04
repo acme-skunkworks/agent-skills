@@ -2,10 +2,10 @@
 title: triage-pr lint-surface gate outranks the in-scope bucket
 release_note: Step 3's In-scope bullet now states that the lint-surface gate takes precedence, so a lint failure whose only remedy is a config change or ignore directive cannot be classified in-scope and fixed before reaching the gate.
 created_at: '2026-08-04T14:45:00Z'
-merged_at: ''
+merged_at: '2026-08-04T14:05:03Z'
 branch: a-1182-gate-outranks-in-scope
-pr: null
-commit: ''
+pr: 153
+commit: 66729f0
 author: rob@acmeskunkworks.io
 co_authors: []
 category: fix
@@ -13,9 +13,9 @@ breaking: false
 issues:
   - A-1182
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 3
+  loc_added: 43
+  loc_removed: 3
   commits:
 ---
 
