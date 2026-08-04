@@ -85,19 +85,19 @@ describe("createDetectors — triage-pr follow-up capture defaults", () => {
 
   it("flags followUpProject needs-manual-input when linearTeamName is set without a project fact", () => {
     const { detect } = createDetectors({
-      repoRoot: "/nonexistent",
       linearFacts: { linearTeamName: "Rheged Studio" },
+      repoRoot: "/nonexistent",
     });
     expect(detect("followUpProject")).toBeNull();
   });
 
   it("uses facts.followUpProject when supplied", () => {
     const { detect } = createDetectors({
-      repoRoot: "/nonexistent",
       linearFacts: {
         followUpProject: "Agent Skills",
         linearTeamName: "Rheged Studio",
       },
+      repoRoot: "/nonexistent",
     });
     expect(detect("followUpProject")).toEqual({ value: "Agent Skills" });
   });
