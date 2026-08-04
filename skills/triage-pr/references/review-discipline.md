@@ -181,7 +181,7 @@ envelope as a `[gated]` plan item, or the Step 13 report) — never as a mid-loo
 The gate targets the agent **introducing** a lint-surface change. When the PR's own
 diff already contains a developer-authored lint config or ignore change, you may
 repair a genuine error in it — a syntax or schema error breaking the lint job, a
-malformed rule id, a typo'd glob that matches nothing. What you may **never** do,
+malformed rule id, a misspelt glob that matches nothing. What you may **never** do,
 under this carve-out or any other, is loosen a rule or widen an ignore beyond what the
 developer wrote.
 

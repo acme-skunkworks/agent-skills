@@ -391,11 +391,14 @@ For each finding record:
 Impact classification still follows `deferNonBlocking` (propose accept only when
 high-impact when that knob is on).
 
-**Lint-surface findings are gated, not proposed as accepts.** When a finding's fix
+**Lint-surface findings are gated, whatever their impact.** When a finding's fix
 would edit lint / format / static-analysis config or add an ignore / disable
 directive, mark the plan item `[gated]` — naming the surface it would touch and the
-preferred alternative (code fix, or a change to the shared config package) — instead
-of `accept`. Under `humanEnvelope` it rides the **same** envelope so the developer
+preferred alternative (code fix, or a change to the shared config package). `[gated]`
+**displaces every other disposition**, not just `accept`: classify the surface
+*before* applying `deferNonBlocking`, so a valid but low-impact lint-surface finding
+is gated rather than routed to `defer` and the Linear follow-up flow. Under
+`humanEnvelope` it rides the **same** envelope so the developer
 sees it in one batch — never a second prompt, and never applied without their explicit
 go-ahead. Under `--auto-apply` / `humanEnvelope: false` there is no envelope, so a
 gated item is simply reported at Step 13 and left unapplied.
@@ -560,7 +563,9 @@ Summarise:
   Phase-A early stop, the Step 10 envelope (as a `[gated]` plan item), or Step 13 —
   never a mid-loop prompt. Prefer fixing the offending code; if the rule is genuinely
   wrong, propose the change in the shared config package rather than a local override.
-  Surface list in
+  The one exception is Step 4's carve-out: you may repair a genuine syntax or schema
+  error in a lint config the developer already put in this PR's diff — never loosening
+  a rule or widening an ignore. Surface list in
   [`references/review-discipline.md`](references/review-discipline.md#lint-surfaces-are-a-developer-decision).
 - **In-scope only.** Fix what this PR's diff is responsible for; don't fix
   unrelated repo problems.

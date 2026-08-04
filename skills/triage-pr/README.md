@@ -54,7 +54,9 @@ Two phases, chosen from the PR's draft state:
    weakening CI config to greenwash. A failure whose only fix would edit lint
    config or add an ignore directive is classified **gated** and reported for the
    developer's sign-off, never applied. Rebase/merge the base branch when failures
-   are upstream drift. Loop until CI is green or report blockers. Unattended.
+   are upstream drift. Loop until CI is green or report blockers — and stop
+   **immediately** once every remaining red check is gated, leaving CI red and
+   promotion blocked. Unattended.
 2. **Phase B — after the PR is ready-for-review.** Hybrid-wait for configured
    `reviewBots` (sticky headlines and/or threads via `botsReported` /
    `botsMissing`),

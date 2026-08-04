@@ -23,8 +23,10 @@ unresolved AI review threads once it is ready), with the constraints below.
    validate each finding before changing code, fix the valid ones, decline the
    invalid ones with technical reasoning. After each push, **loop back to the CI
    phase** — a push re-fires both CI and AI review — until CI is green and no
-   unresolved AI threads remain, **or** until every remaining red is a lint-surface
-   **gated** item, which ends Phase A immediately. Do **not** claim the run is done while any
+   unresolved AI threads remain. **In Phase A**, every remaining red being a
+   lint-surface **gated** item ends the phase immediately (CI stays red, so promotion
+   is blocked); a gated discovery in **Phase B** goes to the Step 12 re-envelope and
+   report instead. Do **not** claim the run is done while any
    required check is still non-terminal; alert the human only at a natural
    stopping point (Step 12, a documented Step 6 Phase-A early stop, or a hard
    blocker / budget exhaustion).
