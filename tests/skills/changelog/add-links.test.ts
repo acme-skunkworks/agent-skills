@@ -1,5 +1,5 @@
 // Imports the BUNDLE script directly (the distributed `.mjs`). `rewriteBody`
-// reads the bundle's own config.json (workspace `acme-skunkworks`, key
+// reads the bundle's own config.json (workspace `rheged-studio`, key
 // A). Reference-style label masking is covered against the bundle
 // in ./add-links-reference-masking.test.ts; this suite
 // covers the issue-key rewrite happy path plus inline-code / fenced-block
@@ -12,7 +12,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 function url(id: string) {
-  return `https://linear.app/acme-skunkworks/issue/${id}`;
+  return `https://linear.app/rheged-studio/issue/${id}`;
 }
 
 describe("rewriteBody — issue-key linking (happy path)", () => {

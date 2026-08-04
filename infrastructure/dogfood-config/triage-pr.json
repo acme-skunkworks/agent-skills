@@ -7,7 +7,7 @@
   "humanEnvelope": true,
   "reviewIdleMinutes": 5,
   "reviewWaitMaxMinutes": 20,
-  "linearTeamName": "ACME Skunkworks",
+  "linearTeamName": "Rheged Studio",
   "issueKeys": ["A"],
   "followUpLabel": "",
   "followUpProject": "",
