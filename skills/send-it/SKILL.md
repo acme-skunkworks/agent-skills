@@ -569,7 +569,10 @@ the linked issues are already In Review before triage begins.
    ```
 
    Forward `--dry-run`, `--ci-only`, `--no-promote`, and `--auto-apply` **verbatim**
-   when they were passed to send-it; add nothing else. `triage-pr` reads its own
+   when they were passed to send-it, plus `--no-promote` when sub-step 3's cold-start
+   gate added it — that one is a safety flag this step owns, not a user flag, and
+   dropping it would let an unverified rollup promote a draft. Add nothing beyond
+   those. `triage-pr` reads its own
    `config.json` (`promoteOnGreen`, `humanEnvelope`, `reviewBots`, `maxCiRounds`, …) —
    send-it configures nothing about it, exactly as it configures nothing about
    `commit`, `preflight`, `changelog`, or `linear-sync`.
