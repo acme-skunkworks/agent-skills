@@ -21,7 +21,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.10.0
+  version: 0.10.1
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -183,7 +183,10 @@ git diff --name-only origin/<base>...HEAD   # files this PR actually touches
 ```
 
 - **In-scope** — the failure names files in this PR's diff, or is a lint / test /
-  build failure reproducible on the branch head. Fix it (Step 4).
+  build failure reproducible on the branch head. Fix it (Step 4) — **unless** its
+  only remedy would change lint / format / static-analysis config or add an ignore
+  or disable directive, in which case **Lint-surface gated** (below) takes
+  precedence, regardless of how clearly the failure belongs to this PR.
 - **Upstream / base drift** — the job also fails on `origin/<base>` independent of
   this diff, **or** `mergeStateStatus == BEHIND`, **or** the error names files the
   PR never touched. Remedy is to rebase/merge the base (Step 5), **not** to edit
