@@ -274,6 +274,7 @@ is the only required field:
 | `facts.linearTeamName` | string | | — | Forwarded to `initialise-skills` (it can't derive this). |
 | `facts.linearWorkspaceSlug` | string | | — | Forwarded to `initialise-skills`. |
 | `facts.issueKeys` | string[] | | detected | Overrides branch-prefix detection (e.g. `["A"]`) — see the renamed-team note above. |
+| `facts.followUpProject` | string | | — | Forwarded to `initialise-skills` for triage-pr's `followUpProject` (required when `linearTeamName` is set — A-1204). |
 
 The lock provenance (`lockSource`, `lockRef`) is supplied by the script, not the
 profile. Worked example:
@@ -287,7 +288,8 @@ profile. Worked example:
   "facts": {
     "linearTeamName": "Rheged Studio",
     "linearWorkspaceSlug": "rheged-studio",
-    "issueKeys": ["A"]
+    "issueKeys": ["A"],
+    "followUpProject": "Agent Skills"
   }
 }
 ```

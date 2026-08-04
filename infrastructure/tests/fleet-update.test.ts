@@ -178,6 +178,7 @@ describe("buildInitialiseFacts", () => {
     const { facts } = buildInitialiseFacts(
       {
         facts: {
+          followUpProject: "Agent Skills",
           issueKeys: ["A"],
           linearTeamName: "Acme",
           linearWorkspaceSlug: "acme",
@@ -189,6 +190,7 @@ describe("buildInitialiseFacts", () => {
     expect(facts.lockRef).toBe("v1.2.3");
     expect(facts.linearTeamName).toBe("Acme");
     expect(facts.linearWorkspaceSlug).toBe("acme");
+    expect(facts.followUpProject).toBe("Agent Skills");
     expect(facts.issueKeys).toEqual(["A"]);
   });
 

@@ -1,6 +1,6 @@
 ---
 description: Run change-gated, branch-scoped lint preflight on the current branch and report — no commits, changelog, push, or PR.
-allowed-tools: Read, Bash(git:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
+allowed-tools: Read, Bash(git:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
 
 # Preflight
@@ -32,9 +32,10 @@ user to review and commit themselves.
      commit. If a linter failed to run rather than reporting violations, surface
      its stderr instead of looping.
    - **Exit 2 (pre-existing violations only)** — show the list and ask: fix now
-     (leave fixes in the working tree), or open a debt issue in Linear (assign the
-     maintainer; link the branch in the description). Do not block on shipping —
-     there is nothing to ship here.
+     (leave fixes in the working tree), or defer to a Linear debt issue per the
+     preflight skill's **Debt-issue create** contract (`linearTeamName` +
+     `debtProject` in root `preflight.config.json`; refuse create without a
+     resolved project). Do not block on shipping — there is nothing to ship here.
 
 ## Flags
 

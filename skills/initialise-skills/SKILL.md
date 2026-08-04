@@ -24,9 +24,9 @@ compatibility: >-
   App / token check is optional — it uses `gh` when authenticated, else falls
   back to a reminder.
 metadata:
-  version: 0.10.10
+  version: 0.11.0
   author: Rob Easthope
-allowed-tools: Read, Bash(node:*), Bash(git:*), Bash(gh:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
+allowed-tools: Read, Bash(node:*), Bash(git:*), Bash(gh:*), mcp__linear-server__list_teams, mcp__linear-server__get_team, mcp__linear-server__list_projects
 ---
 
 # initialise-skills
@@ -139,9 +139,11 @@ This is the foundation for detecting which repos are behind — see
    `manualKeys`, and `totals`.
 
 2. **Fill the facts.** For each `needs-manual-input` Linear key
-   (`linearTeamName`, `linearWorkspaceSlug`), fetch the value via the Linear MCP
-   when it is available — `mcp__linear-server__list_teams` for the team name, and
-   the workspace slug from the team/organisation — otherwise ask the user. Collect
+   (`linearTeamName`, `linearWorkspaceSlug`, and `followUpProject` when capture is
+   on), fetch the value via the Linear MCP when it is available —
+   `mcp__linear-server__list_teams` for the team name,
+   `mcp__linear-server__list_projects` for the repo's Linear project, and the
+   workspace slug from the team/organisation — otherwise ask the user. Collect
    these into a `facts` object. Also add the **lock provenance** here:
    `lockSource` (the source repo the skills were installed from — the
    agent-skills repo URL) and `lockRef` (the ref installed from; **default `main`**,
@@ -160,7 +162,7 @@ This is the foundation for detecting which repos are behind — see
    as stdin JSON:
 
    ```bash
-   echo '{"facts":{"linearTeamName":"…","linearWorkspaceSlug":"…","lockSource":"https://github.com/acme-skunkworks/agent-skills","lockRef":"main"},"acceptDrift":{"changelog":["issueKeys"]}}' \
+   echo '{"facts":{"linearTeamName":"…","linearWorkspaceSlug":"…","followUpProject":"…","lockSource":"https://github.com/acme-skunkworks/agent-skills","lockRef":"main"},"acceptDrift":{"changelog":["issueKeys"]}}' \
      | node <skills-dir>/initialise-skills/scripts/initialise.mjs --write --json
    ```
 
