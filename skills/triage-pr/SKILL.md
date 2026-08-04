@@ -21,7 +21,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.10.1
+  version: 0.10.2
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -44,7 +44,13 @@ phases, choosing the phase from the PR's draft state:
   defer the rest for a Linear-only gate). After apply, re-watch CI and
   **re-envelope** if new bot findings appear.
 
-This skill complements `/send-it` (which **opens** the draft PR). The draft→ready
+This skill complements `/send-it` (which **opens** the draft PR) and, since send-it
+0.8.0, is **invoked** by it as its final step (A-1151): send-it opens the PR, waits
+for at least one check to register, then hands off here — forwarding `--ci-only`,
+`--no-promote`, and `--auto-apply` verbatim. Running `/triage-pr` directly stays fully
+supported for mid-flight re-runs.
+
+The draft→ready
 flip is governed by a single control — `promoteOnGreen` in [`config.json`](config.json)
 — and **an enabled config *is* the authorisation** for it: when `promoteOnGreen` is
 `true` (the default), human authorisation for the flip is **already acquired via the
