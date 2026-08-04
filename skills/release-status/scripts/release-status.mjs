@@ -91,9 +91,6 @@ export function classifyTitle(subject, body = "") {
  * Reduce a list of commits (each `{ subject, body }`) to the strongest bump
  * they imply. Empty / all-none → "none" (no release would cut).
  *
- * Accepts a legacy `{ title, body }` shape too (title → subject) so older
- * fixtures keep working.
- *
  * Policy (A-824): match release-please — strongest Conventional type wins;
  * a `feat:` later `revert:`ed in the same window still implies **minor**
  * (no cancel/netting). Merge-commit subjects should already be excluded by
@@ -102,7 +99,7 @@ export function classifyTitle(subject, body = "") {
 export function previewBump(commits) {
   let best = "none";
   for (const commit of commits ?? []) {
-    const subject = commit.subject ?? commit.title ?? "";
+    const subject = commit.subject ?? "";
     const bump = classifyTitle(subject, commit.body);
     if (BUMP_RANK[bump] > BUMP_RANK[best]) {
       best = bump;

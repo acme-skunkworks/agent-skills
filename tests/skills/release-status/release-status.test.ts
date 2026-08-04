@@ -99,10 +99,6 @@ describe("previewBump — strongest bump across commits (A-824)", () => {
       ]),
     ).toBe("minor");
   });
-
-  it("accepts legacy { title } shape as subject alias", () => {
-    expect(previewBump([{ title: "feat: legacy" }])).toBe("minor");
-  });
 });
 
 describe("parseGitLog — git log --format unit/record separators", () => {

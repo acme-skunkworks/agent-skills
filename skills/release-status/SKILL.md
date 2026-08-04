@@ -22,7 +22,7 @@ compatibility: >-
   road-runner-bot `release-orchestrator`), with a publish-only `release.yml`
   gated on a version-vs-tag check.
 metadata:
-  version: 0.2.0
+  version: 0.2.1
   author: Rob Easthope
 allowed-tools: Read, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*)
 ---
