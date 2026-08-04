@@ -5,6 +5,7 @@
 - **Tracking:** [A-1176](https://linear.app/acme-skunkworks/issue/A-1176)
 - **Supersedes:** —
 - **Amends:** [ADR-0003](0003-release-please-versioning.md) Decision 1 (bump source under merge commits)
+- **Amended by:** [A-1151](https://linear.app/acme-skunkworks/issue/A-1151) — send-it 0.8.0 removed `--merge-when-ready`, so it no longer arms `gh pr merge --auto --merge`; the two body references below are historical. The merge-commit decision itself stands, and merging by hand (or arming auto-merge yourself) still uses `--merge`, never `--squash`.
 - **Related:** [A-1175](https://linear.app/acme-skunkworks/issue/A-1175) (release + fan-out stay squash), [A-1177](https://linear.app/acme-skunkworks/issue/A-1177) (keep squash allowed), [A-824](https://linear.app/acme-skunkworks/issue/A-824) (commit-subject bumps), [A-823](https://linear.app/acme-skunkworks/issue/A-823) / [A-983](https://linear.app/acme-skunkworks/issue/A-983) (Commitlint / validate-commits)
 
 ## Context
