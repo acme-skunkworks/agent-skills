@@ -21,7 +21,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.10.2
+  version: 0.11.0
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -96,7 +96,7 @@ skip silently when the Linear MCP server is unavailable.
 | `linearTeamName` | Linear team **name** (not the key — the key is renamed over time, the name is stable) the follow-up issues are created under. Empty disables capture entirely. | `""` |
 | `issueKeys` | Team-key prefixes that may appear in branch names, used to recognise issue ids the same way `linear-sync` does. Mirrors the established `issueKeys` convention. | `[]` |
 | `followUpLabel` | Optional label applied to each created follow-up issue (e.g. `follow-up`). Empty = no label. | `""` |
-| `followUpProject` | Optional Linear project (name, id, or slug) the follow-up issues are filed under. Empty = no project. | `""` |
+| `followUpProject` | Linear project (name, id, or slug) the follow-up issues are filed under. **Required when `linearTeamName` is set** — empty or unresolved must refuse create (never file with no project). | `""` |
 | `followUpState` | Optional initial workflow state (type, name, or id — e.g. `Backlog`) for created issues. Empty = the team's default state. | `"Backlog"` |
 
 Only the configured `reviewBots` are actioned in Phase B. Human review comments
@@ -495,9 +495,21 @@ node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision defer-pend
 node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision defer --reference <issue-id> --bots "claude,cursor,coderabbitai"
 ```
 
-Linear create details (team by **name**, state by **type**, links, labels) match
-the previous capture contract — resolve via `list_issue_statuses` /
-`list_projects` and fail loudly on typos.
+Linear create details (team by **name**, state by **type**, links, labels,
+**project**) match the previous capture contract — resolve via
+`list_issue_statuses` / `list_projects` and fail loudly on typos.
+
+**Fail closed on project.** When capture is enabled (`linearTeamName` set),
+`followUpProject` is required. Before minting any issue:
+
+1. If `followUpProject` is empty → **do not** call `save_issue`. Abort capture
+   loudly (tell the human to set `followUpProject` in `config.json`), and fall
+   back to decline / `deferred; not tracked` for each defer candidate.
+2. If set → resolve it with `list_projects` (name, id, or slug). On a miss →
+   **do not** call `save_issue`; fail loudly with the unresolved value (same
+   decline fallback).
+3. On a hit → always pass the resolved `project` on every `save_issue` create.
+   Never omit `project`.
 
 ### Step 12 — Phase B: issue-level ack + re-envelope
 
