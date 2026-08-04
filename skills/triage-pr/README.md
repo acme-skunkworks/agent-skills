@@ -51,8 +51,12 @@ Two phases, chosen from the PR's draft state:
 
 1. **Phase A — while the PR is a draft.** Inspect failing checks with `gh`, pull
    the failing GitHub Actions logs, and fix failures **in PR scope only** — never
-   weakening CI config to greenwash. Rebase/merge the base branch when failures
-   are upstream drift. Loop until CI is green or report blockers. Unattended.
+   weakening CI config to greenwash. A failure whose only fix would edit lint
+   config or add an ignore directive is classified **gated** and reported for the
+   developer's sign-off, never applied. Rebase/merge the base branch when failures
+   are upstream drift. Loop until CI is green or report blockers — and stop
+   **immediately** once every remaining red check is gated, leaving CI red and
+   promotion blocked. Unattended.
 2. **Phase B — after the PR is ready-for-review.** Hybrid-wait for configured
    `reviewBots` (sticky headlines and/or threads via `botsReported` /
    `botsMissing`),
