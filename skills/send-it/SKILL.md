@@ -491,26 +491,26 @@ the proven-green draft to ready, then Phase B waits for the AI reviewers, verifi
 every finding, and halts at its human envelope. This step runs **after** Step 10 so
 the linked issues are already In Review before triage begins.
 
-> **Don't reach for `--skip-triage` to finish sooner.** It exists for the cases where
-> the chain genuinely cannot work, not as a shortcut, and it is **never** the default:
-> `triage: true` ships in `config.example.json`, and `initialise-skills` writes `true`
-> when reconciling a consumer. Skipping leaves the PR un-triaged — red CI unfixed, bot
-> findings unread — which is the state this step exists to prevent, so treat it the
-> way Step 5 treats `--skip-preflight`: say **why** in the run's report.
->
-> Legitimate reasons, all narrow:
->
-> - the PR changes the chain itself, so the running prose and the prose on disk
->   disagree (this bundle's own ship runs);
-> - `triage-pr` isn't installed — handled by sub-step 1 below, no flag needed;
-> - CI is gated on `draft == false`, so a draft never registers a check — prefer
->   `triage: false` in that repo's config over a per-run flag;
-> - the user explicitly asked to stop at the open PR.
->
-> When it does apply, print `ℹ️ triage chain skipped (--skip-triage): <reason>` — or
-> `(triage: false)` — report the PR URL, and stop. That is the pre-0.8.0 behaviour.
+1. **Check the opt-out first — before anything else in this step.** If `--skip-triage`
+   was passed, or `config.json` sets `triage: false`, print
+   `ℹ️ triage chain skipped (--skip-triage): <reason>` — or `(triage: false)` — report
+   the PR URL, and **stop the run here**. Do not run the install check, and do not
+   start the cold-start poll: a skipped chain must cost nothing. That is the pre-0.8.0
+   behaviour.
 
-1. **Confirm `triage-pr` is installed** — look for `../triage-pr/SKILL.md` beside this
+   > **Don't reach for it to finish sooner.** The opt-out exists for the cases where
+   > the chain genuinely cannot work, not as a shortcut, and it is **never** the
+   > default: `triage: true` ships in `config.example.json`, and `initialise-skills`
+   > writes `true` when reconciling a consumer. Skipping leaves the PR un-triaged —
+   > red CI unfixed, bot findings unread — which is the state this step exists to
+   > prevent, so treat it the way Step 5 treats `--skip-preflight`: say **why** in the
+   > report. The legitimate reasons are narrow: the PR changes the chain itself, so
+   > the running prose and the prose on disk disagree (this bundle's own ship runs);
+   > CI is gated on `draft == false`, so a draft never registers a check (prefer
+   > `triage: false` in that repo's config over a per-run flag); or the user asked to
+   > stop at the open PR. A missing `triage-pr` needs no flag — sub-step 2 handles it.
+
+2. **Confirm `triage-pr` is installed** — look for `../triage-pr/SKILL.md` beside this
    bundle. If it is absent, print
 
    ```text
@@ -521,7 +521,7 @@ the linked issues are already In Review before triage begins.
    and finish the run normally. A missing sibling **warns, never fails** — the same
    soft-skip contract Step 10 applies to `linear-sync`.
 
-2. **Wait for CI to register — the cold-start gate.** Step 9 created or updated the PR
+3. **Wait for CI to register — the cold-start gate.** Step 9 created or updated the PR
    moments ago, so GitHub Actions may not have registered a single check yet. An empty
    `statusCheckRollup` handed to a cold `triage-pr` reads as "nothing failing", and with
    `promoteOnGreen` on (its default) that would flip the draft to ready **before CI ever
@@ -546,7 +546,7 @@ the linked issues are already In Review before triage begins.
    done
    ```
 
-   - **At least one check registered** → continue to sub-step 3.
+   - **At least one check registered** → continue to sub-step 4.
    - **`gh` itself fails** → stop and surface the error (authentication, rate limit, a
      deleted PR). Do **not** fall through to the no-checks branch: an unverifiable
      state is not the same as a verified-empty one, and only the latter is safe to
@@ -558,7 +558,7 @@ the linked issues are already In Review before triage begins.
      `--no-promote` to the hand-off below, so an empty rollup can never be read as a
      proven green and flip the draft to ready. Nothing else about the chain changes.
 
-3. **Hand off.** **If send-it was run with `--dry-run`, `--dry-run` goes on this
+4. **Hand off.** **If send-it was run with `--dry-run`, `--dry-run` goes on this
    command too — always.** A live `triage-pr` commits, pushes, and can flip the draft
    to ready, so a dry run that omits it stops being a dry run. Follow the
    [`triage-pr`](../triage-pr/SKILL.md) skill against the PR from Step 9, naming its
@@ -574,14 +574,14 @@ the linked issues are already In Review before triage begins.
    send-it configures nothing about it, exactly as it configures nothing about
    `commit`, `preflight`, `changelog`, or `linear-sync`.
 
-4. **Run the full chain.** Don't stop between phases: Phase A's fix→push→watch loop,
+5. **Run the full chain.** Don't stop between phases: Phase A's fix→push→watch loop,
    the promotion gate, then Phase B's review wait and verify-then-propose. Halt where
    `triage-pr` halts — its human envelope, its slow-bot micro-gate, a hard blocker, or
    `maxCiRounds` exhaustion. The envelope **is** the run's natural stopping point: don't
    answer it on the user's behalf, and don't print a send-it "all done" over the top of
    it.
 
-5. **Report once.** `triage-pr`'s own final report is the run's report — prepend
+6. **Report once.** `triage-pr`'s own final report is the run's report — prepend
    send-it's line items (branch, PR URL, changelog entry, Linear transitions) to it
    rather than emitting a second, competing summary. Respect triage-pr's quiet rule
    (A-1178): no interim pings around the hand-off.
