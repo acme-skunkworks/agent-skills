@@ -2,10 +2,10 @@
 title: triage-pr gates lint-config and lint-ignore changes on developer sign-off
 release_note: triage-pr no longer edits lint configuration or adds ignore directives on its own initiative — a failure whose only remedy touches a lint surface is classified gated, reported at the existing stopping points, and left for the developer to decide.
 created_at: '2026-08-04T13:08:00Z'
-merged_at: ''
+merged_at: '2026-08-04T13:25:23Z'
 branch: a-1182-triage-pr-lint-surface-gate
-pr: null
-commit: ''
+pr: 152
+commit: 2ab5353
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -13,9 +13,9 @@ breaking: false
 issues:
   - A-1182
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 6
+  loc_added: 251
+  loc_removed: 20
   commits:
 ---
 
