@@ -793,6 +793,37 @@ function main(argv) {
 
 // ---- self-test -----------------------------------------------------------
 
+/**
+ * @returns {{ name: string, ok: boolean }[]}
+ */
+function buildInitialiseFactsSelfTestCases() {
+  const built = buildInitialiseFacts(
+    {
+      facts: {
+        followUpProject: "Agent Skills",
+        issueKeys: ["A"],
+        linearTeamName: "Acme",
+      },
+    },
+    { ref: "v1.2.3" },
+  );
+  return [
+    {
+      name: "buildInitialiseFacts sets lockSource/lockRef and forwards facts",
+      ok:
+        built.facts.lockSource === SOURCE_URL &&
+        built.facts.lockRef === "v1.2.3" &&
+        built.facts.linearTeamName === "Acme" &&
+        built.facts.followUpProject === "Agent Skills" &&
+        built.facts.issueKeys[0] === "A",
+    },
+    {
+      name: "buildInitialiseFacts omits absent Linear facts",
+      ok: !("linearWorkspaceSlug" in built.facts),
+    },
+  ];
+}
+
 function selfTest() {
   // Pure-function checks only — no filesystem, so no temp dir to build or clean.
   const cases = [];
@@ -925,30 +956,7 @@ function selfTest() {
         ).length === 2,
     });
 
-    // buildInitialiseFacts.
-    const built = buildInitialiseFacts(
-      {
-        facts: {
-          followUpProject: "Agent Skills",
-          issueKeys: ["A"],
-          linearTeamName: "Acme",
-        },
-      },
-      { ref: "v1.2.3" },
-    );
-    cases.push({
-      name: "buildInitialiseFacts sets lockSource/lockRef and forwards facts",
-      ok:
-        built.facts.lockSource === SOURCE_URL &&
-        built.facts.lockRef === "v1.2.3" &&
-        built.facts.linearTeamName === "Acme" &&
-        built.facts.followUpProject === "Agent Skills" &&
-        built.facts.issueKeys[0] === "A",
-    });
-    cases.push({
-      name: "buildInitialiseFacts omits absent Linear facts",
-      ok: !("linearWorkspaceSlug" in built.facts),
-    });
+    cases.push(...buildInitialiseFactsSelfTestCases());
 
     // detectClobberedConfigs.
     const clobbered = detectClobberedConfigs(
