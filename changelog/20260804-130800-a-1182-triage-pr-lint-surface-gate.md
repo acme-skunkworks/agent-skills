@@ -21,7 +21,7 @@ stats:
 
 ## Added
 
-- **Lint-surface gate (rule, not a knob — [A-1182](https://linear.app/acme-skunkworks/issue/A-1182)).**
+- **Lint-surface gate (rule, not a knob — [A-1182](https://linear.app/rheged-studio/issue/A-1182)).**
   A lint / format / static-analysis failure whose only available remedy is a
   **config change** or a new **ignore / disable directive** is now classified
   **gated** in Step 3 — beside in-scope and upstream — and the agent does not make

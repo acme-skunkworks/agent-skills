@@ -24,7 +24,7 @@ version: 1.2.2
 **`initialise-skills` (0.10.5 → 0.10.6).** Re-vendoring the shared bundles into a
 consumer with `npx skills add … --copy` performs a clean bundle-directory
 replacement. Because agent-skills **gitignores** its own `config.json`
-([A-615](https://linear.app/acme-skunkworks/issue/A-615)) the source bundle ships
+([A-615](https://linear.app/rheged-studio/issue/A-615)) the source bundle ships
 none, so the `--copy` **deletes** (older CLIs) or **overwrites** (current CLIs, with
 the neutral example) every consumer's **tracked** `config.json`. Running
 `initialise.mjs` next then reconciled onto those wiped values and **silently
@@ -42,8 +42,8 @@ mutating. It degrades to a no-op outside a git repo and on a first-ever install
 (a never-committed config is untracked, not `D`/`M`, so it never matches).
 
 This is the general-CLI counterpart to the restore the
-[A-617](https://linear.app/acme-skunkworks/issue/A-617) `fleet-update` pipeline
+[A-617](https://linear.app/rheged-studio/issue/A-617) `fleet-update` pipeline
 already performs for the fan-out: now a human re-vendoring by hand is protected
 too. The deeper fix — stopping `skills add --copy` deleting consumer-only files in
 the skills.sh CLI itself (option 1) — remains tracked upstream on
-[A-706](https://linear.app/acme-skunkworks/issue/A-706).
+[A-706](https://linear.app/rheged-studio/issue/A-706).

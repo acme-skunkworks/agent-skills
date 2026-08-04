@@ -23,8 +23,8 @@ stats:
 
 ## Fixed
 
-- **The [A-582](https://linear.app/acme-skunkworks/issue/A-582) gitignore tests reference an undefined `dir`
-  ([A-602](https://linear.app/acme-skunkworks/issue/A-602)).** The two `!`-unignore cases
+- **The [A-582](https://linear.app/rheged-studio/issue/A-582) gitignore tests reference an undefined `dir`
+  ([A-602](https://linear.app/rheged-studio/issue/A-602)).** The two `!`-unignore cases
   added to `tests/skills/initialise-skills/gitignore.test.ts` called
   `reconcilePreflightIgnore(dir, …)`, but the `describe` block defines the temp root as
   `directory` — so both threw `ReferenceError: dir is not defined` and `pnpm test` failed.

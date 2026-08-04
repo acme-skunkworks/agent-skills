@@ -23,10 +23,10 @@ stats:
 
 - **ADR-0005** documents the dual merge policy: feature/ship PRs → merge commits;
   release-please version PRs and fan-out PRs → squash; both merge methods stay
-  allowed ([A-1177](https://linear.app/acme-skunkworks/issue/A-1177)); Commitlint /
+  allowed ([A-1177](https://linear.app/rheged-studio/issue/A-1177)); Commitlint /
   validate-commits as the commit-subject prerequisite
-  ([A-823](https://linear.app/acme-skunkworks/issue/A-823) /
-  [A-983](https://linear.app/acme-skunkworks/issue/A-983)).
+  ([A-823](https://linear.app/rheged-studio/issue/A-823) /
+  [A-983](https://linear.app/rheged-studio/issue/A-983)).
 
 ## Changed
 
@@ -34,8 +34,8 @@ stats:
   the dual policy; `--merge-when-ready` now enables `gh pr merge --auto --merge`;
   Step 6 keeps a Conventional Commits PR title for CI and humans while feature-PR
   bumps after merge come from landed commit subjects
-  ([A-824](https://linear.app/acme-skunkworks/issue/A-824)); dominant type across
-  commits ([A-387](https://linear.app/acme-skunkworks/issue/A-387)). Bundle bumped
+  ([A-824](https://linear.app/rheged-studio/issue/A-824)); dominant type across
+  commits ([A-387](https://linear.app/rheged-studio/issue/A-387)). Bundle bumped
   `0.6.2` → `0.7.0`.
 - **`derive-bump` / `git.mjs`:** `git log --no-merges` so merge subjects are not
   mixed into the pre-merge bump scan; header comments updated for A-1176.

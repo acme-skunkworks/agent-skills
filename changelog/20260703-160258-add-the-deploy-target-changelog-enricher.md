@@ -24,7 +24,7 @@ stats:
 ## Added
 
 - **`enrich-changelog.mjs` — the deploy-target post-merge changelog enricher
-  ([A-675](https://linear.app/acme-skunkworks/issue/A-675)).** Deploy targets (octavo, shared-workflows) are never checked out during
+  ([A-675](https://linear.app/rheged-studio/issue/A-675)).** Deploy targets (octavo, shared-workflows) are never checked out during
   the release flow, so — unlike npm targets, which enrich at release time via
   `finalise-changelog.mjs` (`changelog:finalise`) — their entries could only be filled
   afterwards, from the release orchestrator's daily `enrich-changelogs.yml` cron. That

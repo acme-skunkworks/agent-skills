@@ -32,14 +32,14 @@ flagged and never staged silently. In-scope files are grouped one commit per
 coherent unit (type + optional scope + British-English body; `!` /
 `BREAKING CHANGE:` for breaking changes). It commits only — no push, PR,
 changelog, or Linear writeback. Contract-only skill: the grouping is model-driven
-and the `SKILL.md` prose is the source of truth ([A-350](https://linear.app/acme-skunkworks/issue/A-350)).
+and the `SKILL.md` prose is the source of truth ([A-350](https://linear.app/rheged-studio/issue/A-350)).
 
 ## Changed
 
 **send-it:** Step 3 now delegates to the `commit` skill instead of carrying its own
 commit-grouping prose — the standalone `/commit` command supplies the second
 consumer that justifies centralising the contract. The bundle is bumped to `0.6.0`
-and now names `commit` among its required delegated siblings ([A-350](https://linear.app/acme-skunkworks/issue/A-350)).
+and now names `commit` among its required delegated siblings ([A-350](https://linear.app/rheged-studio/issue/A-350)).
 
-Per-component atomic-commit splitting stays **parked** ([A-374](https://linear.app/acme-skunkworks/issue/A-374)):
+Per-component atomic-commit splitting stays **parked** ([A-374](https://linear.app/rheged-studio/issue/A-374)):
 `/commit` groups by intent, not component or package boundaries.

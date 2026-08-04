@@ -23,7 +23,7 @@ stats:
 
 ## Added
 
-- **`blockOnWarnings` config option ([A-601](https://linear.app/acme-skunkworks/issue/A-601)).**
+- **`blockOnWarnings` config option ([A-601](https://linear.app/rheged-studio/issue/A-601)).**
   A new `preflight.config.json` key (default `false`) controls whether introduced ESLint
   warning-severity findings gate the ship. Left off, preflight matches `pnpm lint` / CI
   semantics; set `true` to make warn-level findings the branch adds block as well.
@@ -31,7 +31,7 @@ stats:
 ## Changed
 
 - **preflight blocks only on introduced _errors_ by default
-  ([A-601](https://linear.app/acme-skunkworks/issue/A-601)).** Previously every introduced
+  ([A-601](https://linear.app/rheged-studio/issue/A-601)).** Previously every introduced
   finding — warnings included — counted toward `introducedCount` and hard-blocked, so a file
   the branch newly brought into the lint surface could fail preflight on warn-level rules even
   though `pnpm lint` and CI stayed green (exit 0 on warnings). Violations now carry a

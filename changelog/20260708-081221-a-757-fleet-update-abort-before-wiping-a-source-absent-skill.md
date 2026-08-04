@@ -21,7 +21,7 @@ version: 1.2.4
 
 ## Fixed
 
-The skills-update fan-out ([A-713](https://linear.app/acme-skunkworks/issue/A-713))
+The skills-update fan-out ([A-713](https://linear.app/rheged-studio/issue/A-713))
 could **permanently delete a consumer's own skill**. `fleet-update.mjs` wipes
 `<mirror>/<skill>` for every skill in the resolved install set **before**
 re-vendoring, and re-vendors from `SOURCE_URL@ref`. A profile that named a skill

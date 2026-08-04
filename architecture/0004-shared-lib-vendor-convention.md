@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-06-27
-- **Tracking:** [A-534](https://linear.app/acme-skunkworks/issue/A-534)
+- **Tracking:** [A-534](https://linear.app/rheged-studio/issue/A-534)
 - **Supersedes:** —
 - **Superseded by:** —
 

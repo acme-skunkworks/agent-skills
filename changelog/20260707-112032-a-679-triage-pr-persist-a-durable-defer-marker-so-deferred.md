@@ -25,7 +25,7 @@ version: 1.2.1
 
 **`triage-pr` (0.5.2 → 0.6.0) — a deferred review thread now carries a durable
 marker between Step 8 and Step 10
-([A-679](https://linear.app/acme-skunkworks/issue/A-679)).** A review thread judged
+([A-679](https://linear.app/rheged-studio/issue/A-679)).** A review thread judged
 valid-but-out-of-scope was recorded as an in-memory follow-up candidate at Step 8
 and only resolved at Step 10 (once its ticket was minted), left unresolved **and**
 unreplied in between with no durable marker. Because all triage-pr state is

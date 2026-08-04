@@ -40,4 +40,4 @@ The key is added to both the tracked dogfood-config source and
 `config.example.json` (their key sets stay identical, as `pnpm validate:skills`
 enforces), documented in the SKILL.md and README Configuration tables, and the
 `cleanup-repo` bundle version is bumped `0.3.3` → `0.4.0`
-([A-701](https://linear.app/acme-skunkworks/issue/A-701)).
+([A-701](https://linear.app/rheged-studio/issue/A-701)).

@@ -52,4 +52,4 @@ plus a `set` parameter threaded through `scripts/lib/merge.mjs`'s `mergeConfig`
 (applying overrides after the key loop under a new `set` status that carries the
 replaced value as `from`), surfaced by `scripts/lib/report.mjs`. The
 `initialise-skills` bundle version is bumped `0.7.0` → `0.8.0`
-([A-704](https://linear.app/acme-skunkworks/issue/A-704)).
+([A-704](https://linear.app/rheged-studio/issue/A-704)).

@@ -20,7 +20,7 @@ version: 1.2.5
 
 ## Fixed
 
-- **`packageRoots` gated by `affectedPackages` ([A-813](https://linear.app/acme-skunkworks/issue/A-813)).**
+- **`packageRoots` gated by `affectedPackages` ([A-813](https://linear.app/rheged-studio/issue/A-813)).**
   On a single-package host the roots detector still returns null, but with
   `affectedPackages: false` the merge reclassifies `packageRoots` from
   `needs-manual-input` to `unchanged` and leaves the example placeholder in

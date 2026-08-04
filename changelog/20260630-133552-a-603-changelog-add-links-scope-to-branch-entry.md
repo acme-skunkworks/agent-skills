@@ -24,7 +24,7 @@ stats:
 ## Changed
 
 - **`add-links.mjs` scopes to the current branch's entry by default
-  ([A-603](https://linear.app/acme-skunkworks/issue/A-603)).** The script that linkifies
+  ([A-603](https://linear.app/rheged-studio/issue/A-603)).** The script that linkifies
   bare Linear issue IDs in changelog bodies previously rewrote **every** entry in the
   directory on every run. Because any historical entry with an un-linkified ID would be
   rewritten as collateral, authoring a new entry churned unrelated, already-merged files —
