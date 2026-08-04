@@ -239,7 +239,8 @@ gh pr checks <pr> --watch
 ```
 
 - After each push, watch the rollup to completion. Still red → loop back to
-  Step 2.
+  Step 2 — **unless** every remaining red check is a Step 3 **gated** item, which
+  ends Phase A immediately (see the gated-exit rule below).
 - **No early "done".** Do not tell the user the run is complete, green, or ready
   for attention until `gh pr checks --watch` (or an equivalent fresh rollup) has
   **exited** and every required check is **terminal** (success or failure). Queued,
@@ -452,8 +453,14 @@ Execute the approved plan (or the auto-apply path) one finding at a time:
   `defer` reply+resolve; when capture is disabled or the human excluded a defer,
   fall back to decline (`deferred; not tracked`).
 - **Gated (lint surface)** → apply **only** when the developer explicitly approved
-  that item in the envelope; otherwise leave the thread untouched and carry the item
-  into the Step 13 report. If it only becomes clear **mid-apply** that an approved
+  that item in the envelope. Their sign-off is what turns it into an accept, so from
+  there it runs the **Accept** path exactly: IMPLEMENT the signed-off config or ignore
+  change, prove locally, commit/push, re-watch CI (Step 6), then reply+resolve once
+  that fix's CI round is green — with `--decision accept`, referencing the fixing
+  commit. `gated` is a **plan label only**; `respond-threads.mjs` has no such decision
+  (its set is `accept` / `decline` / `defer` / `defer-pending` / `outdated`) and
+  passing one would throw. Without sign-off, leave the thread untouched and carry the
+  item into the Step 13 report. If it only becomes clear **mid-apply** that an approved
   accept needs a lint-config edit or an ignore directive, stop that item, apply
   nothing, and re-present it as `[gated]` in the Step 12 re-envelope. The gate holds
   under `--auto-apply` / `humanEnvelope: false` too — there it is reported, never
