@@ -20,6 +20,7 @@ detector serves every skill that uses a key. A key found in a skill's
 | `shippablePaths` | send-it | Root `package.json` `files` field (paths npm ships), else detected package roots | `[]` |
 | `shippableManifestKeys` | send-it | Fixed | `["name", "version", "files", "publishConfig"]` |
 | `bundleVersioning` | send-it | Present only when the repo ships multiple skill bundles (a `skills/`-style dir with ≥1 `SKILL.md` subdir) | omitted otherwise |
+| `triage` | send-it | Fixed (chain into `triage-pr` once the PR is open — send-it Step 11). Not keyed off `triage-pr` being vendored: Step 11 soft-skips with a warning when the sibling is absent (A-1151) | `true` |
 | `reviewBots` | triage-pr | Fixed | `["claude", "cursor", "coderabbitai"]` |
 | `maxCiRounds` | triage-pr | Fixed | `5` |
 | `deferNonBlocking` | triage-pr | Fixed (impact gate: defer valid in-scope but non-blocking findings) | `true` |

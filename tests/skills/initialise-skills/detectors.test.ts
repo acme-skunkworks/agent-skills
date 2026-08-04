@@ -38,6 +38,14 @@ describe("createDetectors — triage-pr boolean defaults", () => {
     expect(detect("humanEnvelope")).toEqual({ value: true });
   });
 
+  // A-1151: send-it's Step 11 triage chain. Fixed `true` rather than "is triage-pr
+  // vendored?" — Step 11 soft-skips with a warning when the sibling is absent.
+  it("infers triage=true (send-it chains into triage-pr by default)", () => {
+    const { detect, has } = detectorsFor();
+    expect(has("triage")).toBe(true);
+    expect(detect("triage")).toEqual({ value: true });
+  });
+
   it("infers reviewIdleMinutes=5 and reviewWaitMaxMinutes=20", () => {
     const { detect, has } = detectorsFor();
     expect(has("reviewIdleMinutes")).toBe(true);
@@ -47,6 +55,7 @@ describe("createDetectors — triage-pr boolean defaults", () => {
 
   it("never returns null for the boolean keys (so none flags needs-manual-input)", () => {
     const { detect } = detectorsFor();
+    expect(detect("triage")).not.toBeNull();
     expect(detect("promoteOnGreen")).not.toBeNull();
     expect(detect("replyOnAccept")).not.toBeNull();
     expect(detect("deferNonBlocking")).not.toBeNull();

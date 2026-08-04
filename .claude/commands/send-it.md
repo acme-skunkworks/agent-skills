@@ -1,6 +1,6 @@
 ---
-description: Bundle uncommitted work, run the lint preflight, write a dated changelog entry, set a Conventional Commits PR title, push the branch, open or update a PR, and move linked Linear issues to In Review.
-allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
+description: Bundle uncommitted work, run the lint preflight, write a dated changelog entry, set a Conventional Commits PR title, push the branch, open or update a PR, move linked Linear issues to In Review, then chain into triage-pr to drive the PR to merge-ready.
+allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), Bash(npx:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
 
 The all-in-one ship finisher for this repo. This is the entry point for the
@@ -14,6 +14,12 @@ Commits PR title** (CI + humans; feature PRs land as merge commits and
 release-please ranks landed commit subjects for the bump — A-1176), pushes the
 branch, opens or updates a PR against `main`, and transitions linked Linear issues
 to **In Review** (via the [`linear-sync`](../../skills/linear-sync/SKILL.md) skill).
+
+It then **chains into [`triage-pr`](../../skills/triage-pr/SKILL.md)** (Step 11) to
+drive the PR to merge-ready: the Phase A CI fix loop, the promote-on-proven-green
+flip, then Phase B up to triage-pr's human envelope. So a default run is unattended
+for roughly 30 minutes and ends on a `[y/N]` prompt, not a report. `--skip-triage`
+ends the run at the open PR instead.
 
 ## Process
 
@@ -46,7 +52,8 @@ handles those. The only gate it runs is the change-gated `preflight` lint.
 ## Flags
 
 - `--dry-run` — preview the changelog entry, branch, and conventional PR title; make
-  no commits, no push, no `gh` calls. Exit 0.
+  no commits and no push. Chains into `triage-pr --dry-run` when a PR already exists,
+  so it makes read-only `gh` calls. Exit 0.
 - `--branch=<name>` — override the auto-derived branch name when on `main` with
   uncommitted changes.
 - `--issue=<ID>` — prefix the auto-derived slug with a Linear issue ID (e.g.
@@ -56,11 +63,18 @@ handles those. The only gate it runs is the change-gated `preflight` lint.
 - `--title="<conventional subject>"` — set the PR title verbatim instead of deriving
   it (must stay a valid Conventional Commits subject — CI lints it).
 - `--skip-preflight` — skip the lint gate entirely (prints a bypass warning).
+- `--skip-triage` — end the run at the open PR; skip the Step 11 `triage-pr` chain.
+  Not a shortcut — see Step 11 for the narrow cases where it applies, and say why in
+  the report.
+- `--ci-only` / `--no-promote` / `--auto-apply` — forwarded verbatim to `triage-pr`;
+  no effect on send-it's own steps.
 - `--ready` — open the PR ready-for-review instead of draft (default is draft).
-- `--merge-when-ready` — after create/update, enable `gh pr merge --auto --merge`
-  (merge commit for feature PRs — A-1176).
 - `--worktree=<branch-or-path>` — `cd` into a worktree before running. Resolved via
   `git worktree list --porcelain`; errors if it matches no worktree.
+
+`--merge-when-ready` was removed in send-it 0.8.0 — send-it no longer arms
+auto-merge, so a chained triage run can't land the PR while its disposition plan is
+still awaiting approval. Merging stays a human action.
 
 ## Arguments
 

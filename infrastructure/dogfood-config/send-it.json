@@ -3,5 +3,6 @@
   "shippablePaths": ["skills/"],
   "shippableManifestKeys": ["name", "version", "files", "publishConfig"],
   "bundleVersioning": { "root": "skills", "manifest": "package.json", "skillFile": "SKILL.md" },
-  "changelog": true
+  "changelog": true,
+  "triage": true
 }
