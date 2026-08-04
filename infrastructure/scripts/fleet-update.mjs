@@ -289,13 +289,18 @@ export function skillsAddEnvironment(baseEnvironment = process.env) {
  */
 export function buildInitialiseFacts(profile, { ref }) {
   const facts = { lockRef: ref, lockSource: SOURCE_URL };
-  const { issueKeys, linearTeamName, linearWorkspaceSlug } = profile.facts;
+  const { followUpProject, issueKeys, linearTeamName, linearWorkspaceSlug } =
+    profile.facts;
   if (typeof linearTeamName === "string") {
     facts.linearTeamName = linearTeamName;
   }
 
   if (typeof linearWorkspaceSlug === "string") {
     facts.linearWorkspaceSlug = linearWorkspaceSlug;
+  }
+
+  if (typeof followUpProject === "string") {
+    facts.followUpProject = followUpProject;
   }
 
   if (Array.isArray(issueKeys)) {
@@ -922,7 +927,13 @@ function selfTest() {
 
     // buildInitialiseFacts.
     const built = buildInitialiseFacts(
-      { facts: { issueKeys: ["A"], linearTeamName: "Acme" } },
+      {
+        facts: {
+          followUpProject: "Agent Skills",
+          issueKeys: ["A"],
+          linearTeamName: "Acme",
+        },
+      },
       { ref: "v1.2.3" },
     );
     cases.push({
@@ -931,6 +942,7 @@ function selfTest() {
         built.facts.lockSource === SOURCE_URL &&
         built.facts.lockRef === "v1.2.3" &&
         built.facts.linearTeamName === "Acme" &&
+        built.facts.followUpProject === "Agent Skills" &&
         built.facts.issueKeys[0] === "A",
     });
     cases.push({

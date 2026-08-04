@@ -65,11 +65,11 @@ describe("createDetectors — triage-pr boolean defaults", () => {
   });
 });
 
-// A-567: triage-pr's opt-in follow-up capture keys are repo-independent
-// structural defaults — they emit a value (never null) so they aren't flagged
-// needs-manual-input, with empty label/project meaning "unset".
+// A-567 / A-1204: triage-pr follow-up capture defaults — label + state stay
+// confident structural defaults; project is required when capture is on
+// (linearTeamName supplied via facts) and otherwise stays empty.
 describe("createDetectors — triage-pr follow-up capture defaults", () => {
-  it("infers empty followUpLabel / followUpProject and a Backlog state", () => {
+  it("infers empty followUpLabel / followUpProject and a Backlog state when capture is off", () => {
     const { detect, has } = detectorsFor();
     expect(has("followUpLabel")).toBe(true);
     expect(detect("followUpLabel")).toEqual({ value: "" });
@@ -77,11 +77,29 @@ describe("createDetectors — triage-pr follow-up capture defaults", () => {
     expect(detect("followUpState")).toEqual({ value: "Backlog" });
   });
 
-  it("never returns null for any of the three (so none flags needs-manual-input)", () => {
+  it("never returns null for label / state (so neither flags needs-manual-input)", () => {
     const { detect } = detectorsFor();
     expect(detect("followUpLabel")).not.toBeNull();
-    expect(detect("followUpProject")).not.toBeNull();
     expect(detect("followUpState")).not.toBeNull();
+  });
+
+  it("flags followUpProject needs-manual-input when linearTeamName is set without a project fact", () => {
+    const { detect } = createDetectors({
+      repoRoot: "/nonexistent",
+      linearFacts: { linearTeamName: "Rheged Studio" },
+    });
+    expect(detect("followUpProject")).toBeNull();
+  });
+
+  it("uses facts.followUpProject when supplied", () => {
+    const { detect } = createDetectors({
+      repoRoot: "/nonexistent",
+      linearFacts: {
+        followUpProject: "Agent Skills",
+        linearTeamName: "Rheged Studio",
+      },
+    });
+    expect(detect("followUpProject")).toEqual({ value: "Agent Skills" });
   });
 });
 

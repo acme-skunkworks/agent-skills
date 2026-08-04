@@ -90,7 +90,7 @@ function detectBundleRoot(repoRoot) {
  * Build a memoised `detect(key)` for a host repo.
  * @param {object} params
  * @param {string} params.repoRoot host repo root the detectors scan
- * @param {{ linearTeamName?: string, linearWorkspaceSlug?: string, issueKeys?: string[] }} [params.linearFacts]
+ * @param {{ linearTeamName?: string, linearWorkspaceSlug?: string, issueKeys?: string[], followUpProject?: string }} [params.linearFacts]
  *   facts the script cannot derive from git/fs (supplied by Claude via the Linear MCP)
  * @returns {{ detect: (key: string) => ({ value: unknown } | null), has: (key: string) => boolean }}
  */
@@ -138,11 +138,22 @@ export function createDetectors({ linearFacts = {}, repoRoot }) {
     // No repo signal; emit triage-pr's default-on impact gate (never null) so it isn't flagged needs-manual-input — a later edit reads as drift and is kept.
     deferNonBlocking: () => ({ value: true }),
     fallbackPackage: () => ({ value: "infrastructure" }),
-    // triage-pr follow-up capture is opt-in: emit the bundle's own structural
-    // defaults confidently (never null) so they aren't flagged needs-manual-input.
-    // Empty label/project mean "unset"; a consumer edit reads as drift and is kept.
+    // triage-pr follow-up capture: label stays an optional empty default; project
+    // is required when capture is on (linearTeamName set) — prefer facts, else
+    // flag needs-manual-input rather than writing a confident empty "no project".
     followUpLabel: () => ({ value: "" }),
-    followUpProject: () => ({ value: "" }),
+    followUpProject: () => {
+      const fromFacts = linearFacts.followUpProject;
+      if (typeof fromFacts === "string" && fromFacts.trim()) {
+        return { value: fromFacts.trim() };
+      }
+
+      if (linearFacts.linearTeamName) {
+        return null;
+      }
+
+      return { value: "" };
+    },
     followUpState: () => ({ value: "Backlog" }),
     // No repo signal; emit triage-pr's default-on human envelope (never null) so it
     // isn't flagged needs-manual-input — a later edit reads as drift and is kept.
