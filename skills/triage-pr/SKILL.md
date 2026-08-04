@@ -19,7 +19,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.9.1
+  version: 0.10.0
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -173,7 +173,7 @@ gh run view <run-id> --log-failed
 Capture the **actual failing command and error lines**, not just the check name.
 You are diagnosing a root cause, not pattern-matching a label.
 
-### Step 3 — Phase A: classify each failure (in-scope vs upstream)
+### Step 3 — Phase A: classify each failure (in-scope vs upstream vs gated)
 
 ```bash
 git fetch origin <base>
@@ -186,12 +186,32 @@ git diff --name-only origin/<base>...HEAD   # files this PR actually touches
   this diff, **or** `mergeStateStatus == BEHIND`, **or** the error names files the
   PR never touched. Remedy is to rebase/merge the base (Step 5), **not** to edit
   the failing code.
-- A failure that can only be "fixed" by weakening a gate is never in-scope — see
-  **Important rules**.
+- **Lint-surface gated** — the only remedy available is a change to lint / format /
+  static-analysis **config**, or a new **ignore / disable directive**. That is a
+  **developer decision**, so it is not in-scope and you do not make it. Record a
+  **gated item** — the file, the change you would have made, why no code fix was
+  available, and the preferred alternative (fix the offending code, or raise the rule
+  change in the shared config package) — then carry on with the rest of the round and
+  report it at the next natural stopping point (Step 6 / Step 13). The full surface
+  list is in
+  [`references/review-discipline.md`](references/review-discipline.md#lint-surfaces-are-a-developer-decision).
+- A failure that can only be "fixed" by weakening a gate is never in-scope — that is
+  the hard ban in **Important rules**; the gated bucket above is its human-decided
+  grey zone.
 
 ### Step 4 — Phase A: fix in-scope failures, one at a time
 
 - Apply the smallest fix that addresses the **root cause** within the PR's scope.
+- **Fix the code, never the lint surface.** For a lint / format / static-analysis
+  failure the preference order is: (1) fix the offending **code**; (2) if the rule
+  itself is genuinely wrong, the remedy is a change to the **shared config package**
+  (`@acme-skunkworks/eslint-config`, `@acme-skunkworks/markdownlint-config`, …),
+  proposed to the developer — not landed here; (3) a local config override or an
+  ignore / disable directive only with the developer's sign-off. You never take (2)
+  or (3) on your own initiative — classify it as gated (Step 3) and keep going.
+  *Carve-out:* when the PR's own diff already contains a developer-authored lint
+  config or ignore change, you may repair a genuine error in it (e.g. a syntax or
+  schema error breaking the lint job), but never loosen a rule or widen an ignore.
 - Re-run the **specific** failing command locally and read its exit code before
   claiming it fixed (e.g. `pnpm lint`,
   `npx --yes skills-ref@0.1.5 validate ./skills/<name>`, the failing test). Pin the
@@ -232,10 +252,16 @@ gh pr checks <pr> --watch
   at a **natural stopping point**: the **human envelope** (Step 10 — actionable
   dispositions to approve), the Step 13 report (when the loop converged), a
   documented Phase-A early stop in this step (promotion disabled / promotion gate
-  failed / `--ci-only` / `--dry-run`), the slow-bot micro-gate (Step 7), or a hard
-  blocker / `maxCiRounds` exhaustion that needs a decision. The envelope *is*
-  actionable — do not treat A-1178's "don't pull attention" rule as a reason to
-  skip it.
+  failed / gated lint-surface items outstanding / `--ci-only` / `--dry-run`), the
+  slow-bot micro-gate (Step 7), or a hard blocker / `maxCiRounds` exhaustion that
+  needs a decision. The envelope *is* actionable — do not treat A-1178's "don't
+  pull attention" rule as a reason to skip it.
+- **Gated lint-surface items end the loop.** When every remaining red check is a
+  Step 3 **gated** item, stop **immediately** — do not spend `maxCiRounds` re-watching
+  a failure you have decided not to fix. Report each gated item (file, the change you
+  would have made, the preferred alternative) as a Phase-A early stop and hand the
+  decision to the developer. CI is not green, so the promotion gate below cannot pass
+  either; name the gated items as the specific reason it wasn't promoted.
 - **Bound the loop** by `maxCiRounds`. When exhausted, stop and report the
   remaining failures as blockers rather than looping forever.
 - Green **and ready** → continue to Phase B.
@@ -354,13 +380,22 @@ For each finding record:
 
 - source bot + path:line (or issue-level summary item)
 - verification sketch (real? in-scope? high-impact?)
-- proposed disposition: `accept` | `decline` | `defer` | `outdated`
+- proposed disposition: `accept` | `decline` | `defer` | `outdated` | `gated`
 - for `accept`: concrete fix sketch
 - for `decline`: technical reasoning
 - for `defer`: draft Linear title + rationale
 
 Impact classification still follows `deferNonBlocking` (propose accept only when
 high-impact when that knob is on).
+
+**Lint-surface findings are gated, not proposed as accepts.** When a finding's fix
+would edit lint / format / static-analysis config or add an ignore / disable
+directive, mark the plan item `[gated]` — naming the surface it would touch and the
+preferred alternative (code fix, or a change to the shared config package) — instead
+of `accept`. Under `humanEnvelope` it rides the **same** envelope so the developer
+sees it in one batch — never a second prompt, and never applied without their explicit
+go-ahead. Under `--auto-apply` / `humanEnvelope: false` there is no envelope, so a
+gated item is simply reported at Step 13 and left unapplied.
 
 **When `humanEnvelope` is true** (default) → continue to Step 10. As soon as the
 plan includes any per-thread `defer`, **immediately** mark those threads with the
@@ -380,6 +415,8 @@ Phase B disposition plan (nothing applied yet):
   1. [accept] Fix null guard in src/api.ts:42 — …
   2. [decline] Suggested rewrite is YAGNI — …
   3. [defer] Extract retry helper — draft: "Add retry backoff to fetch layer"
+  4. [gated] Would need `eslint.config.mjs` rule change — your call; prefer a
+     change to @acme-skunkworks/eslint-config
   Bots still outstanding at wait end: cursor (if any)
 Apply this plan? [y/N]
   (optional overrides: "yes except decline #1, defer #2 as …")
@@ -414,6 +451,13 @@ Execute the approved plan (or the auto-apply path) one finding at a time:
   Step 9; on approval create the Linear issue (when capture enabled) then final
   `defer` reply+resolve; when capture is disabled or the human excluded a defer,
   fall back to decline (`deferred; not tracked`).
+- **Gated (lint surface)** → apply **only** when the developer explicitly approved
+  that item in the envelope; otherwise leave the thread untouched and carry the item
+  into the Step 13 report. If it only becomes clear **mid-apply** that an approved
+  accept needs a lint-config edit or an ignore directive, stop that item, apply
+  nothing, and re-present it as `[gated]` in the Step 12 re-envelope. The gate holds
+  under `--auto-apply` / `humanEnvelope: false` too — there it is reported, never
+  auto-applied.
 
 ```bash
 node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision accept --sha <sha> --bots "claude,cursor,coderabbitai"
@@ -459,6 +503,10 @@ Summarise:
 - Envelope outcome (approved / declined / auto-apply) and any slow-bot decisions.
 - Findings accepted and fixed (with the resolving commit).
 - Findings declined, each with the technical reasoning given.
+- **Gated lint-surface items** awaiting the developer's decision — each with the
+  file, the change that would have been made, why no code fix was available, and the
+  preferred alternative (fix the code, or raise it in the shared config package).
+  Nothing on this list was applied.
 - Follow-up issues created (each with its Linear id/URL), or deferred candidates
   that were not tracked.
 - Issue-level findings acknowledged in the consolidated comment.
@@ -488,6 +536,18 @@ Summarise:
 - **Never greenwash.** Never edit `.github/workflows/*`, disable or loosen a lint
   rule, delete or skip a test, or relax a CI threshold to make a check pass. Fix
   the code, or report the failure as a blocker.
+- **Lint surfaces are a developer decision.** Never edit lint / format /
+  static-analysis config, and never add an ignore or disable directive, on your own
+  initiative — not even a plausible, narrowly scoped one. Greenwashing (weakening a
+  gate purely to pass CI) is the **hard ban** above; everything else that touches a
+  lint surface is the **human-gated grey zone** — it may well be legitimate, but it is
+  the **developer's** call, not yours. Classify it as **gated** (Step 3), keep fixing
+  everything else, and report it at the next natural stopping point: the Step 6
+  Phase-A early stop, the Step 10 envelope (as a `[gated]` plan item), or Step 13 —
+  never a mid-loop prompt. Prefer fixing the offending code; if the rule is genuinely
+  wrong, propose the change in the shared config package rather than a local override.
+  Surface list in
+  [`references/review-discipline.md`](references/review-discipline.md#lint-surfaces-are-a-developer-decision).
 - **In-scope only.** Fix what this PR's diff is responsible for; don't fix
   unrelated repo problems.
 - **Validate before implementing.** Never apply a review suggestion without first

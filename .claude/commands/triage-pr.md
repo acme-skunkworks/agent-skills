@@ -14,8 +14,10 @@ unresolved AI review threads once it is ready), with the constraints below.
 1. Read the skill's [`config.json`](../../skills/triage-pr/config.json) for
    `reviewBots`, `maxCiRounds`, `replyOnAccept`, and `promoteOnGreen`.
 2. Follow the skill's Steps 1–12: locate the PR and detect its phase, inspect and
-   classify failing checks (in-scope vs base drift), fix in-scope failures one at
-   a time **without weakening any gate**, re-watch CI (bounded by `maxCiRounds`),
+   classify failing checks (in-scope vs base drift vs lint-surface **gated**), fix
+   in-scope failures one at a time **without weakening any gate** — never editing lint
+   config or adding an ignore directive on your own initiative; classify those as gated
+   and report them for the developer's sign-off — re-watch CI (bounded by `maxCiRounds`),
    then — once the PR is ready — fetch review feedback
    (`node skills/triage-pr/scripts/review-threads.mjs <pr> --bots "<reviewBots>"`),
    validate each finding before changing code, fix the valid ones, decline the
