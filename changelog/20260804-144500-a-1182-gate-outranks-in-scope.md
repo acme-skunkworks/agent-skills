@@ -21,7 +21,7 @@ stats:
 
 ## Fixed
 
-- **Bucket precedence in Step 3 ([A-1182](https://linear.app/acme-skunkworks/issue/A-1182)).**
+- **Bucket precedence in Step 3 ([A-1182](https://linear.app/rheged-studio/issue/A-1182)).**
   The **In-scope** bullet told the agent to fix any lint failure reproducible on
   the branch head, and it is listed *before* **Lint-surface gated**. A reader
   matching the buckets top-down could classify a lint-only-surface failure as

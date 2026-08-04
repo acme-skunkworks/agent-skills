@@ -285,8 +285,8 @@ profile. Worked example:
   "agents": ["claude-code", "cursor"],
   "repoType": "single",
   "facts": {
-    "linearTeamName": "ACME Skunkworks",
-    "linearWorkspaceSlug": "acme-skunkworks",
+    "linearTeamName": "Rheged Studio",
+    "linearWorkspaceSlug": "rheged-studio",
     "issueKeys": ["A"]
   }
 }

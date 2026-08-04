@@ -23,7 +23,7 @@ version: 1.2.0
 
 ## Changed
 
-- **`triage-pr` promotes a green draft PR to ready-for-review by default ([A-526](https://linear.app/acme-skunkworks/issue/A-526)).**
+- **`triage-pr` promotes a green draft PR to ready-for-review by default ([A-526](https://linear.app/rheged-studio/issue/A-526)).**
   The `promoteOnGreen` knob in the skill's `config.json` now defaults to `true`, so
   a cleanly-green Phase A automatically runs `gh pr ready <pr>` — the gate that turns
   AI review on — and continues into Phase B, rather than stopping at green and

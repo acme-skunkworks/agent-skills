@@ -24,12 +24,12 @@ stats:
 ## Fixed
 
 - **`skills add --copy` no longer vendors this repo's own `config.json` into consumers
-  ([A-615](https://linear.app/acme-skunkworks/issue/A-615)).** skills.sh copies every
+  ([A-615](https://linear.app/rheged-studio/issue/A-615)).** skills.sh copies every
   tracked file under `skills/<name>/`, and there is no ignore mechanism (ADR-0001
   Decision 4), so a tracked `config.json` leaked agent-skills' values into the consuming
-  repo — a fresh install silently inherited them ([A-554](https://linear.app/acme-skunkworks/issue/A-554))
+  repo — a fresh install silently inherited them ([A-554](https://linear.app/rheged-studio/issue/A-554))
   and every upgrade re-vendored them, regressing deliberate no-detector edits
-  ([A-612](https://linear.app/acme-skunkworks/issue/A-612)). `skills/*/config.json` is now
+  ([A-612](https://linear.app/rheged-studio/issue/A-612)). `skills/*/config.json` is now
   gitignored and excluded from the npm tarball (`files: ["!skills/*/config.json"]`), so
   only the neutral `config.example.json` ships. On a fresh install `initialise-skills`
   generates `config.json` from the example baseline; on upgrade the consumer's own
@@ -50,7 +50,7 @@ stats:
 
 - **`validate:skills` config-key parity** now compares each `config.example.json` against
   the tracked `infrastructure/dogfood-config/<name>.json` rather than the (now gitignored)
-  `skills/<name>/config.json`, preserving the [A-538](https://linear.app/acme-skunkworks/issue/A-538)
+  `skills/<name>/config.json`, preserving the [A-538](https://linear.app/rheged-studio/issue/A-538)
   guard.
 - **Fleet-deployment runbook** drops the "reset each `config.json` from its example" step
   (now four steps: wipe → install → reconcile → verify); the skill READMEs and `CLAUDE.md`

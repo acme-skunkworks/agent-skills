@@ -23,7 +23,7 @@ version: 1.2.0
 
 ## Fixed
 
-- **Linear workspace slug corrected to `acme-skunkworks` ([A-521](https://linear.app/acme-skunkworks/issue/A-521)).** The
+- **Linear workspace slug corrected to `acme-skunkworks` ([A-521](https://linear.app/rheged-studio/issue/A-521)).** The
   `changelog` bundle's `config.json` carried `linearWorkspaceSlug:
   goose-and-hobbes` — a different (climbwell's) workspace — so `add-links.mjs`
   generated changelog links pointing at the wrong workspace. It now reads
@@ -33,7 +33,7 @@ version: 1.2.0
 
 ## Changed
 
-- **Retired the lingering `ASW`/`SK` sample keys in the test fixtures ([A-521](https://linear.app/acme-skunkworks/issue/A-521)).**
+- **Retired the lingering `ASW`/`SK` sample keys in the test fixtures ([A-521](https://linear.app/rheged-studio/issue/A-521)).**
   Generic parser/merge fixtures that still used the retired `ASW`/`SK` team keys
   now use the current `A` key, or — where a case deliberately exercises
   multi-element, order-insensitive set equality — neutral placeholders

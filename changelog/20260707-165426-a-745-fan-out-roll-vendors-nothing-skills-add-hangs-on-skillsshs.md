@@ -21,7 +21,7 @@ version: 1.2.3
 
 ## Fixed
 
-The skills-update fan-out ([A-713](https://linear.app/acme-skunkworks/issue/A-713)) reached its first live canary and **vendored
+The skills-update fan-out ([A-713](https://linear.app/rheged-studio/issue/A-713)) reached its first live canary and **vendored
 nothing**: `fleet-update.mjs --apply` wiped the bundle dirs, ran
 `npx skills add … --copy`, restored configs, reconciled — but every re-vendored
 bundle came out **without its `SKILL.md`**, so `initialise` recorded no versions

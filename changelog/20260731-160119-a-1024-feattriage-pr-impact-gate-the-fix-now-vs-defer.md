@@ -21,7 +21,7 @@ stats:
 
 ## Added
 
-- **Impact gate on Phase B fix-now ([A-1024](https://linear.app/acme-skunkworks/issue/A-1024)).**
+- **Impact gate on Phase B fix-now ([A-1024](https://linear.app/rheged-studio/issue/A-1024)).**
   When `deferNonBlocking` is on (the default), a valid in-scope finding is fixed
   inline only if it is high-impact — it blocks later work, touches agent-skill /
   Claude Code / CI or release infrastructure, or is critical/high severity

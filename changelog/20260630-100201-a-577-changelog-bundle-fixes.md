@@ -26,7 +26,7 @@ stats:
 ## Fixed
 
 - **`add-links` no longer corrupts an entry when inline code is nested inside a link
-  ([A-577](https://linear.app/acme-skunkworks/issue/A-577)).** The masker replaces fenced code,
+  ([A-577](https://linear.app/rheged-studio/issue/A-577)).** The masker replaces fenced code,
   inline code, and existing links with NUL-delimited placeholder tokens before linkifying bare
   issue IDs, then restores them. The restore was a single pass, so a span like `` [`code`](url) ``
   — where the inner inline-code mask sits inside the outer already-linked mask — restored the outer
@@ -35,14 +35,14 @@ stats:
   fully restore. A `--self-test` case and a vitest regression cover inline-code-inside-a-link.
 
 - **`finalise-changelog` re-enriches an entry whose `stats` block has no `commits` child
-  ([A-579](https://linear.app/acme-skunkworks/issue/A-579)).** The `needsEnrich` gate tested
+  ([A-579](https://linear.app/rheged-studio/issue/A-579)).** The `needsEnrich` gate tested
   `blank(fm.stats)` (the object), not `blank(fm.stats.commits)`. An entry with `merged_at`/`commit`/`pr`
   set and a populated `stats` block but no `commits` child therefore skipped enrichment and was
   version-stamped without it — and the line-63 short-circuit then made the missing count
   un-backfillable through finalise forever. The gate now also enriches when `stats.commits` is blank.
 
 - **`backfill-commits` mirrors the stats-block indent instead of assuming two spaces
-  ([A-581](https://linear.app/acme-skunkworks/issue/A-581)).** `setStatsCommits()` walked the
+  ([A-581](https://linear.app/rheged-studio/issue/A-581)).** `setStatsCommits()` walked the
   indented children of the `stats:` block but spliced the new `commits:` line with a hard-coded
   two-space indent, so a four-space block would be mis-nested. It now derives the child indent from
   the block itself and reuses it.

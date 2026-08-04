@@ -25,7 +25,7 @@ stats:
   behaviour in `SKILL.md` and `references/changelog-contract.md` — one dated
   entry per `branch:` (update vs create), post-merge `commit` from
   `mergeCommit.oid`, and `stats.commits` excluding branch merge commits
-  ([A-825](https://linear.app/acme-skunkworks/issue/A-825)).
+  ([A-825](https://linear.app/rheged-studio/issue/A-825)).
 - **`finalise-changelog.mjs` / `commit-count.mjs`:** refresh header comments —
   production enrichment is `@acme-skunkworks/changelog-core` via
   `reusable-changelog-enrich.yml`; skill scripts remain published source.

@@ -23,5 +23,5 @@ version: 1.2.5
 ## Added
 
 - Repo-root `.coderabbit.yaml` seeded from the estate reference profile
-  ([A-778](https://linear.app/acme-skunkworks/issue/A-778)). The file is
+  ([A-778](https://linear.app/rheged-studio/issue/A-778)). The file is
   repo-owned — the orchestrator no longer fans it out.

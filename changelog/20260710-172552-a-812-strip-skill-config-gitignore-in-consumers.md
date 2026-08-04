@@ -26,9 +26,9 @@ version: 1.2.6
 - `initialise-skills` strips erroneous `.claude/skills/*/config.json` and
   `.agents/skills/*/config.json` ignore rules (and the accompanying comment
   block) from a consumer's root `.gitignore`
-  ([A-812](https://linear.app/acme-skunkworks/issue/A-812)). Those patterns
+  ([A-812](https://linear.app/rheged-studio/issue/A-812)). Those patterns
   belong only in the agent-skills **source** repo (`skills/*/config.json`,
-  [A-615](https://linear.app/acme-skunkworks/issue/A-615)) and as a template-seed guard — in a consumer the resolved
+  [A-615](https://linear.app/rheged-studio/issue/A-615)) and as a template-seed guard — in a consumer the resolved
   `config.json` must be committed.
 - The source-repo `skills/*/config.json` gitignore is left untouched.
 

@@ -54,4 +54,4 @@ prints the per-skill bump list (`updates`, `added`, `removed`, `downgrades`,
 push fleet-update orchestrator.
 
 The `initialise-skills` bundle version is bumped `0.8.0` → `0.9.0`
-([A-616](https://linear.app/acme-skunkworks/issue/A-616)).
+([A-616](https://linear.app/rheged-studio/issue/A-616)).

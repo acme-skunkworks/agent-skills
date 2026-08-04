@@ -25,11 +25,11 @@ version: 1.2.1
 
 Second, larger batch of CodeRabbit findings against the vendored canonical bundles,
 surfaced once the rate-limit window on the
-[A-681](https://linear.app/acme-skunkworks/issue/A-681) Wave C/D consumer re-vendor
+[A-681](https://linear.app/rheged-studio/issue/A-681) Wave C/D consumer re-vendor
 PRs cleared. Per the standing
-[A-573](https://linear.app/acme-skunkworks/issue/A-573) disposition the findings are
+[A-573](https://linear.app/rheged-studio/issue/A-573) disposition the findings are
 fixed **upstream** here and reach consumers on the next fleet sync; the Wave C/D PRs
-merged as faithful vendors ([A-730](https://linear.app/acme-skunkworks/issue/A-730)).
+merged as faithful vendors ([A-730](https://linear.app/rheged-studio/issue/A-730)).
 
 **`initialise-skills` (0.10.3 → 0.10.4).** `check-updates` now treats a brand-new
 upstream bundle the consumer hasn't vendored as an update: `updatesAvailable` reflects
@@ -61,7 +61,7 @@ instead of mixing the named `argv` / `env` import with a bare-global `process.ex
 
 Each behaviour is covered by new vitest cases in the central suites. Not part of this
 batch: the `initialise-skills` `merge.mjs` "recompute `changed`" item (already fixed
-upstream by #110, [A-728](https://linear.app/acme-skunkworks/issue/A-728) →
+upstream by #110, [A-728](https://linear.app/rheged-studio/issue/A-728) →
 initialise-skills 0.10.3), and the reported `send-it` SKILL.md item, which has no
 basis in its cited source PR (shared-workflows#47 does not touch `send-it`; its only
 CodeRabbit comment is a trivial locale nit on `check-updates.mjs`, folded in above).

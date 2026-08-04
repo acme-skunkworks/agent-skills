@@ -23,8 +23,8 @@ version: 1.2.0
 
 ## Fixed
 
-- **`promoteOnGreen` is now the single proceed-on-green authority ([A-558](https://linear.app/acme-skunkworks/issue/A-558)).**
-  [A-526](https://linear.app/acme-skunkworks/issue/A-526) made flipping a proven-green draft to ready the default (`promoteOnGreen: true`),
+- **`promoteOnGreen` is now the single proceed-on-green authority ([A-558](https://linear.app/rheged-studio/issue/A-558)).**
+  [A-526](https://linear.app/rheged-studio/issue/A-526) made flipping a proven-green draft to ready the default (`promoteOnGreen: true`),
   but the surrounding prose still encoded the old human-authorisation gate, so an agent
   reading the skill was told to both proceed and not proceed. The `.claude/commands/triage-pr.md`
   shim's "Never flip the PR from draft to ready — that is the human's call" line is

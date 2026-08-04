@@ -77,9 +77,9 @@ describe("classifyKey", () => {
         "linearWorkspaceSlug",
         "your-workspace-slug",
         "your-workspace-slug",
-        detected("acme-skunkworks"),
+        detected("rheged-studio"),
       ),
-    ).toEqual({ status: "inferred", write: "acme-skunkworks" });
+    ).toEqual({ status: "inferred", write: "rheged-studio" });
   });
 
   it("needs-manual-input — placeholder kept when no detector", () => {

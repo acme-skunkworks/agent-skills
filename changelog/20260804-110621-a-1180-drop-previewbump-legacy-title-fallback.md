@@ -25,4 +25,4 @@ stats:
   `previewBump`, remove the self-serving vitest case, and update the JSDoc so the
   helper only documents `{ subject, body }` — the only shape
   `parseGitLog` / `fetchCommitsSinceLastTag` ever emit
-  ([A-1180](https://linear.app/acme-skunkworks/issue/A-1180)).
+  ([A-1180](https://linear.app/rheged-studio/issue/A-1180)).

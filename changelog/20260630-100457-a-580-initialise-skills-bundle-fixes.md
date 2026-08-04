@@ -28,7 +28,7 @@ stats:
 ## Fixed
 
 - **Branch-name parsing preserves embedded slashes
-  ([A-580](https://linear.app/acme-skunkworks/issue/A-580)).** `listBranchNames` and
+  ([A-580](https://linear.app/rheged-studio/issue/A-580)).** `listBranchNames` and
   `listBranchNamesByRecency` formatted refs with `%(refname:short)` and stripped the first
   path segment with `/^[^/]+\//`, which mangled a slash-named local branch — `A-123/demo`
   became `demo`, losing the issue key. They now format with `%(refname)` (full ref) and strip
@@ -36,26 +36,26 @@ stats:
   name so `detectIssueKeys()` still finds the key.
 
 - **`send-it.changelog` is gated on a real `changelog/` directory, not skill presence
-  ([A-570](https://linear.app/acme-skunkworks/issue/A-570)).** The detector flipped `changelog`
+  ([A-570](https://linear.app/rheged-studio/issue/A-570)).** The detector flipped `changelog`
   to `true` whenever the companion `changelog` skill was vendored, so a repo that over-installed
   the skill but keeps no changelog of its own (e.g. release-orchestrator, which runs *other*
   repos' `changelog:finalise`) was wrongly set `true` and would try to author entries with
   nowhere to live. It now keys solely off a `changelog/` directory at the repo root.
 
 - **The gitignore reconcile respects an explicit `!`-unignore
-  ([A-582](https://linear.app/acme-skunkworks/issue/A-582)).** `hasEntry()` only matched the
+  ([A-582](https://linear.app/rheged-studio/issue/A-582)).** `hasEntry()` only matched the
   positive forms, so a deliberate `!.preflight-summary.json` was treated as absent and a
   positive ignore rule was appended over it — under last-match-wins, silently re-ignoring a file
   the consumer chose to track. The negation forms now count as already-handled.
 
 - **The gitignore reconcile gains skill-local error handling
-  ([A-583](https://linear.app/acme-skunkworks/issue/A-583)).** A write failure now emits a
+  ([A-583](https://linear.app/rheged-studio/issue/A-583)).** A write failure now emits a
   `.gitignore`-specific message before `exit(2)`, mirroring the per-skill config write handler,
   rather than relying on the generic top-level catch.
 
 ## Changed
 
-- **Docs ([A-584](https://linear.app/acme-skunkworks/issue/A-584)).** `detectable-keys.md`
+- **Docs ([A-584](https://linear.app/rheged-studio/issue/A-584)).** `detectable-keys.md`
   rewords the awkward "`issueKeys` order is not drift" heading to "order does not count as drift",
   and updates the `changelog` detection row to match the dir-only rule above.
 
