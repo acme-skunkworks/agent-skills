@@ -26,8 +26,8 @@ stats:
   the branch head, and it is listed *before* **Lint-surface gated**. A reader
   matching the buckets top-down could classify a lint-only-surface failure as
   in-scope and fix it before reaching the gate. The In-scope bullet now names the
-  precedence explicitly: the gate wins however clearly the failure belongs to
-  this PR.
+  precedence explicitly: **Lint-surface gated** takes precedence, regardless of how
+  clearly the failure belongs to the PR.
 
   Raised by Cursor Bugbot on [#152](https://github.com/acme-skunkworks/agent-skills/pull/152)
   and approved there, but landed after that PR merged — hence this follow-up.

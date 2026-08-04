@@ -184,8 +184,9 @@ git diff --name-only origin/<base>...HEAD   # files this PR actually touches
 
 - **In-scope** — the failure names files in this PR's diff, or is a lint / test /
   build failure reproducible on the branch head. Fix it (Step 4) — **unless** its
-  only remedy is a lint-surface change, which takes precedence over this bucket
-  however clearly the failure belongs to the PR (see **Lint-surface gated** below).
+  only remedy would change lint / format / static-analysis config or add an ignore
+  or disable directive, in which case **Lint-surface gated** (below) takes
+  precedence, regardless of how clearly the failure belongs to this PR.
 - **Upstream / base drift** — the job also fails on `origin/<base>` independent of
   this diff, **or** `mergeStateStatus == BEHIND`, **or** the error names files the
   PR never touched. Remedy is to rebase/merge the base (Step 5), **not** to edit
