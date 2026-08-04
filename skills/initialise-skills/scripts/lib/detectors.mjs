@@ -193,6 +193,12 @@ export function createDetectors({ linearFacts = {}, repoRoot }) {
         detect("packageRoots")?.value ?? [],
       ),
     }),
+    // No repo signal; emit send-it's default-on triage chain (never null) so it isn't
+    // flagged needs-manual-input. Deliberately not keyed off `triage-pr` being
+    // vendored: send-it's Step 11 already soft-skips with a warning when the sibling
+    // is absent, so a fixed `true` can't misfire the way `changelog` did (A-570). A
+    // later edit to `false` reads as drift and is kept.
+    triage: () => ({ value: true }),
     // preflight self-detects its workspace map at runtime; never write it.
     workspaces: () => null,
   };
