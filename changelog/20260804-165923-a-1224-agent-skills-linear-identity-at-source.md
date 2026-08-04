@@ -1,11 +1,11 @@
 ---
 title: Update the Linear identity to Rheged Studio
-release_note: "Points this repo's Linear configuration at the renamed Rheged Studio team and rheged-studio workspace, restoring Linear writeback for the linear-sync, triage-pr, cleanup-repo and send-it skills."
+release_note: Points this repo's Linear configuration at the renamed Rheged Studio team and rheged-studio workspace, restoring Linear writeback for the linear-sync, triage-pr, cleanup-repo and send-it skills.
 created_at: '2026-08-04T16:59:23Z'
-merged_at:
+merged_at: '2026-08-04T17:24:47Z'
 branch: a-1224-agent-skills-linear-identity-at-source
-pr:
-commit:
+pr: 155
+commit: ff04e07
 author: rob@acmeskunkworks.io
 co_authors: []
 category: chore
@@ -13,9 +13,9 @@ breaking: false
 issues:
   - A-1224
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 90
+  loc_added: 215
+  loc_removed: 169
   commits:
 ---
 
