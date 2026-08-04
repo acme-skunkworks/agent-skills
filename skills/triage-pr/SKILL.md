@@ -461,7 +461,12 @@ Execute the approved plan (or the auto-apply path) one finding at a time:
   that fix's CI round is green — with `--decision accept`, referencing the fixing
   commit. `gated` is a **plan label only**; `respond-threads.mjs` has no such decision
   (its set is `accept` / `decline` / `defer` / `defer-pending` / `outdated`) and
-  passing one would throw. Without sign-off, leave the thread untouched and carry the
+  passing one would throw. **Except `.github/workflows/*`** — approval never
+  authorises a workflow edit. **Never greenwash** bans those outright, and this gate
+  does not relax it: when a signed-off item would touch a workflow (e.g. a CI
+  lint-step severity knob), report that the developer must make the change
+  themselves, and reply+resolve without a code change. Without sign-off, leave the
+  thread untouched and carry the
   item into the Step 13 report. If it only becomes clear **mid-apply** that an approved
   accept needs a lint-config edit or an ignore directive, stop that item, apply
   nothing, and re-present it as `[gated]` in the Step 12 re-envelope. The gate holds
@@ -570,9 +575,9 @@ Summarise:
   non-terminal (queued / pending / in progress) — "no failures yet" is not green
   and not done. Alert the human only at a natural stopping point: the **human
   envelope** (Step 10), Step 13, a documented Step 6 Phase-A early stop
-  (promotion disabled / gate failed / `--ci-only` / `--dry-run`), the slow-bot
-  micro-gate, or a hard blocker / budget exhaustion — never with interim "still
-  waiting" pings mid-watch.
+  (promotion disabled / gate failed / gated lint-surface items outstanding /
+  `--ci-only` / `--dry-run`), the slow-bot micro-gate, or a hard blocker / budget
+  exhaustion — never with interim "still waiting" pings mid-watch.
 - **Human envelope is on by default.** When `humanEnvelope` is true, do not
   apply Phase B dispositions (code, resolving replies, Linear creates) until the
   same-session batch `[y/N]` succeeds — except the non-resolving `defer-pending`
