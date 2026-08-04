@@ -1,11 +1,11 @@
 ---
 title: send-it chains into triage-pr once the PR is open
-release_note: send-it no longer stops at the open PR. A new Step 11 hands the freshly-opened PR to the triage-pr skill and runs the full chain — Phase A's CI fix loop and promote-on-proven-green flip, then Phase B's review wait and verify-then-propose pass — halting at triage-pr's human envelope. A default run therefore stays unattended for roughly 30 minutes and ends on a prompt rather than a report; --skip-triage, or the new triage config key set to false, restores the old bounded-finisher shape. Before handing off, send-it polls for at least one registered check so an empty statusCheckRollup can never be read as green and promote a draft before CI ran. --merge-when-ready is removed: with the chain in play an armed auto-merge could land a branch while its disposition plan awaited approval, so send-it never arms auto-merge and merging stays a human action.
+release_note: 'send-it no longer stops at the open PR. A new Step 11 hands the freshly-opened PR to the triage-pr skill and runs the full chain — Phase A''s CI fix loop and promote-on-proven-green flip, then Phase B''s review wait and verify-then-propose pass — halting at triage-pr''s human envelope. A default run therefore stays unattended for roughly 30 minutes and ends on a prompt rather than a report; --skip-triage, or the new triage config key set to false, restores the old bounded-finisher shape. Before handing off, send-it polls for at least one registered check so an empty statusCheckRollup can never be read as green and promote a draft before CI ran. --merge-when-ready is removed: with the chain in play an armed auto-merge could land a branch while its disposition plan awaited approval, so send-it never arms auto-merge and merging stays a human action.'
 created_at: '2026-08-04T16:30:00Z'
-merged_at: ''
+merged_at: '2026-08-04T16:49:38Z'
 branch: a-1151-send-it-chain-triage-pr
-pr: null
-commit: ''
+pr: 154
+commit: 6e02156
 author: rob@acmeskunkworks.io
 co_authors: []
 category: feature
@@ -13,9 +13,9 @@ breaking: false
 issues:
   - A-1151
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 16
+  loc_added: 386
+  loc_removed: 49
   commits:
 ---
 
