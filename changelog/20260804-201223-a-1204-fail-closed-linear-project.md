@@ -1,7 +1,7 @@
 ---
 title: Fail closed when skills mint Linear issues without a project
 release_note: triage-pr and preflight refuse to create Linear issues without a resolved project; initialise-skills stops treating an empty followUpProject as intentional.
-created_at: "2026-08-04T20:12:23Z"
+created_at: '2026-08-04T20:12:23Z'
 branch: a-1204-fail-closed-when-skills-mint-linear-issues-without-a-project
 author: rob@acmeskunkworks.io
 co_authors: []
@@ -9,6 +9,13 @@ category: feature
 breaking: false
 issues:
   - A-1204
+merged_at: '2026-08-04T20:38:25Z'
+commit: 9d2c5d6
+pr: 157
+stats:
+  loc_added: 192
+  loc_removed: 58
+  files_changed: 17
 ---
 
 ## Changed
