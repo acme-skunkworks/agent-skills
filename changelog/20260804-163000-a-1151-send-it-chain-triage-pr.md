@@ -40,11 +40,15 @@ stats:
   triage-pr's own "no failures yet is not green" rule guards its watch loop, not a
   cold entry, so this belongs on the calling side.
 
-- **`triage` config key and `--skip-triage`.** The chain is on by default; set
-  `triage: false`, or pass `--skip-triage`, to end the run at the open PR.
-  `--ci-only`, `--no-promote`, and `--auto-apply` are forwarded to triage-pr verbatim
-  and have no effect on send-it's own steps. A missing `triage-pr` **warns and
-  finishes normally** — the same soft-skip contract Step 10 applies to `linear-sync`.
+- **`triage` config key and `--skip-triage`.** The chain is on by default and is
+  **part of the run, not an optional extra**: `--skip-triage` / `triage: false` is for
+  the narrow cases where it cannot work — a PR that changes the chain itself,
+  `triage-pr` absent, or CI gated on `draft == false` — not a way to finish sooner,
+  and a run that skips it must say why. `--ci-only`, `--no-promote`, `--auto-apply`
+  and `--dry-run` are forwarded to triage-pr verbatim and have no effect on send-it's
+  own steps. A missing `triage-pr` **warns and finishes normally** — deliberately
+  louder than Step 10's silent `linear-sync` skip, because a skipped Linear writeback
+  changes nothing about the PR whereas a skipped triage chain leaves work undone.
 
 ## Removed
 
