@@ -13,9 +13,9 @@ breaking: false
 issues:
   - A-1182
 stats:
-  files_changed: 6
-  loc_added: 213
-  loc_removed: 13
+  files_changed:
+  loc_added:
+  loc_removed:
   commits:
 ---
 

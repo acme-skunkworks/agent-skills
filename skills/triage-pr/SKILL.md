@@ -4,7 +4,9 @@ description: >-
   Drive a pull request from draft with failing CI to merge-ready. While the PR
   is a draft, inspect and fix in-scope CI failures (lint, manifest-lint, build,
   tests) using the gh CLI and GitHub Actions logs — never
-  weakening CI config to greenwash. After the PR is marked ready-for-review,
+  weakening CI config to greenwash, and never editing lint config or adding an
+  ignore directive unprompted (those are gated for the developer's sign-off and
+  reported, not applied). After the PR is marked ready-for-review,
   wait for AI reviewers, verify each finding, then — by default — halt for a
   human envelope before applying dispositions (accept / decline / defer→Linear);
   with --auto-apply, fix high-impact findings and defer the rest as before. Use

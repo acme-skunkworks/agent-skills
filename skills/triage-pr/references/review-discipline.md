@@ -136,6 +136,13 @@ Two reasons it stays with the human:
 - CI lint-step knobs that change rule severity (`--max-warnings`, `continue-on-error`
   on a lint step, a severity flag on the linter invocation)
 
+> **The workflow ban is not relaxed by this gate.** Those CI lint-step knobs live in
+> `.github/workflows/*`, which **Never greenwash** forbids the agent from editing
+> **at all**. Listing them here means such a failure is *reported* to the developer
+> like any other gated item — it does **not** open a sign-off path for the agent to
+> edit a workflow. Where the two rules overlap, the stricter one wins: the agent
+> never touches it, and the developer makes the change themselves.
+
 **Ignore / disable directives** — inline, block, or file-level:
 
 - `eslint-disable`, `eslint-disable-next-line`, `eslint-disable-line`
