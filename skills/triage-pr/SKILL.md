@@ -44,8 +44,9 @@ phases, choosing the phase from the PR's draft state:
   defer the rest for a Linear-only gate). After apply, re-watch CI and
   **re-envelope** if new bot findings appear.
 
-This skill complements `/send-it` (which **opens** the draft PR) and, since send-it
-0.8.0, is **invoked** by it as its final step (A-1151): send-it opens the PR, waits
+This skill complements `/send-it` (which **opens or updates** the pull request) and,
+since send-it 0.8.0, is **invoked** by it as its final step (A-1151): send-it opens or
+updates the PR, waits
 for at least one check to register, then hands off here — forwarding `--ci-only`,
 `--no-promote`, and `--auto-apply` verbatim. Running `/triage-pr` directly stays fully
 supported for mid-flight re-runs.

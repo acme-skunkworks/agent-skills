@@ -64,6 +64,8 @@ handles those. The only gate it runs is the change-gated `preflight` lint.
   it (must stay a valid Conventional Commits subject — CI lints it).
 - `--skip-preflight` — skip the lint gate entirely (prints a bypass warning).
 - `--skip-triage` — end the run at the open PR; skip the Step 11 `triage-pr` chain.
+  Not a shortcut — see Step 11 for the narrow cases where it applies, and say why in
+  the report.
 - `--ci-only` / `--no-promote` / `--auto-apply` — forwarded verbatim to `triage-pr`;
   no effect on send-it's own steps.
 - `--ready` — open the PR ready-for-review instead of draft (default is draft).

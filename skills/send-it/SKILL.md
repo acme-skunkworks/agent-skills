@@ -9,8 +9,9 @@ description: >-
   skill to drive the PR to merge-ready. Use when asked to ship, send it,
   finish a branch, open or update a PR for the current work, or wrap up and push.
   A thin orchestrator that delegates the commit step to the `commit` skill, the
-  lint gate to the `preflight` skill, the changelog to the `changelog` skill, and
-  the Linear writeback to the `linear-sync` skill; it owns the branch guard, the
+  lint gate to the `preflight` skill, the changelog to the `changelog` skill, the
+  Linear writeback to the `linear-sync` skill, and the post-PR triage to the
+  `triage-pr` skill; it owns the branch guard, the
   release-type decision (by the change's semantic category), PR-title composition,
   push, and PR. One skill serves monorepos and single-package repos alike.
 license: MIT
@@ -19,8 +20,8 @@ compatibility: >-
   bundled `derive-bump.mjs` / `check-skill-bumps.mjs` helpers (Node built-ins only —
   no npm dependencies, no build step, no tsx). Delegates to the `commit`,
   `preflight`, `changelog`, `linear-sync`, and `triage-pr` skills — install them
-  alongside this one. The In Review writeback needs the Linear MCP server; the
-  Step 11 triage chain needs `triage-pr`. Both only warn when unavailable.
+  alongside this one. A missing `linear-sync` or Linear MCP server skips the In
+  Review writeback silently; a missing `triage-pr` warns and stops at the open PR.
 metadata:
   version: 0.8.0
   author: Rob Easthope
@@ -105,8 +106,12 @@ read by the delegated steps.
 ## Prerequisites
 
 - `gh` CLI installed and authenticated (`gh auth status`).
-- The sibling skills (`commit`, `preflight`, `changelog`, `linear-sync`) installed;
-  `triage-pr` too for the Step 11 chain (optional — a missing one only warns).
+- The sibling skills (`commit`, `preflight`, `changelog`) installed.
+- `linear-sync` — optional; without it (or the Linear MCP server) the In Review
+  writeback is skipped **silently** (Step 10).
+- `triage-pr` — optional; without it the Step 11 chain **warns** and the run finishes
+  at the open PR. The two behave differently on purpose: a skipped Linear writeback
+  changes nothing about the PR, whereas a skipped triage chain leaves work undone.
 
 ## Process
 
@@ -407,6 +412,13 @@ Follow the [`changelog`](../changelog/SKILL.md) skill to author or update the en
 
 ### Step 8: Commit the changelog entry and push
 
+> **`--dry-run` writes nothing from here on.** Steps 8–11 are the mutating half of the
+> run. Under `--dry-run`, print what each would do and perform **none** of it: no
+> `git commit`, no `git push`, no `gh pr create` / `gh pr edit`, no Linear transition
+> (pass `--dry-run` down to `linear-sync` so `save_issue` is never called), and
+> `--dry-run` on the Step 11 hand-off. A dry run may **read** — `gh pr view`, the
+> triage-pr preview — but it never writes. Then exit 0.
+
 If a `changelog/` entry was written in Step 7 (i.e. `changelog` is not `false`), commit
 only that file:
 
@@ -437,7 +449,7 @@ fan-out automation keep using squash outside this skill.
 
 > **send-it never arms auto-merge.** It opens and updates the PR; landing it stays a
 > human action (A-1151). The old `--merge-when-ready` flag — which armed
-> `gh pr merge --auto --merge` here — is **gone as of 0.8.0**: from Step 11 onward a
+> `gh pr merge --auto --merge` here — is **gone as of 0.8.0**: from Step 11 onward, a
 > run can be sitting at triage-pr's disposition envelope, and an armed auto-merge
 > could land the branch while that plan is still awaiting approval. Merge by hand, or
 > arm auto-merge yourself once you're happy with the PR.
@@ -472,16 +484,31 @@ Skip silently if `linear-sync` or the Linear MCP server is unavailable.
 
 ### Step 11: Drive the PR to merge-ready — delegate to the `triage-pr` skill
 
-> **`--skip-triage`** (or `config.json` `triage: false`) ends the run here. Print
-> `ℹ️ triage chain skipped (--skip-triage)` — or `(triage: false)` — report the PR
-> URL, and stop. That is the pre-0.8.0 behaviour: send-it finishes at the open PR.
-
 send-it opens the PR; [`triage-pr`](../triage-pr/SKILL.md) takes it the rest of the
-way (A-1151). Chaining them is the **default**, so one `/send-it` drives the whole
-pipeline: Phase A fixes in-scope CI failures and promotes the proven-green draft to
-ready, then Phase B waits for the AI reviewers, verifies every finding, and halts at
-its human envelope. This step runs **after** Step 10 so the linked issues are already
-In Review before triage begins.
+way (A-1151). **This step is part of the run — not an optional extra.** One
+`/send-it` drives the whole pipeline: Phase A fixes in-scope CI failures and promotes
+the proven-green draft to ready, then Phase B waits for the AI reviewers, verifies
+every finding, and halts at its human envelope. This step runs **after** Step 10 so
+the linked issues are already In Review before triage begins.
+
+> **Don't reach for `--skip-triage` to finish sooner.** It exists for the cases where
+> the chain genuinely cannot work, not as a shortcut, and it is **never** the default:
+> `triage: true` ships in `config.example.json`, and `initialise-skills` writes `true`
+> when reconciling a consumer. Skipping leaves the PR un-triaged — red CI unfixed, bot
+> findings unread — which is the state this step exists to prevent, so treat it the
+> way Step 5 treats `--skip-preflight`: say **why** in the run's report.
+>
+> Legitimate reasons, all narrow:
+>
+> - the PR changes the chain itself, so the running prose and the prose on disk
+>   disagree (this bundle's own ship runs);
+> - `triage-pr` isn't installed — handled by sub-step 1 below, no flag needed;
+> - CI is gated on `draft == false`, so a draft never registers a check — prefer
+>   `triage: false` in that repo's config over a per-run flag;
+> - the user explicitly asked to stop at the open PR.
+>
+> When it does apply, print `ℹ️ triage chain skipped (--skip-triage): <reason>` — or
+> `(triage: false)` — report the PR URL, and stop. That is the pre-0.8.0 behaviour.
 
 1. **Confirm `triage-pr` is installed** — look for `../triage-pr/SKILL.md` beside this
    bundle. If it is absent, print
@@ -504,14 +531,26 @@ In Review before triage begins.
    separate calls — a foreground `sleep` between tool calls is slow and some harnesses
    refuse it). Stay quiet while polling; no interim "still waiting" pings:
 
+   Capture `gh`'s exit status separately from the count — a failed call returns an
+   empty string, and treating that as "zero checks" would silently convert an auth or
+   API error into a full-window wait and a bogus "CI never started" verdict:
+
    ```bash
    for _ in $(seq 1 18); do
-     [ "$(gh pr view <number> --json statusCheckRollup --jq '[.statusCheckRollup[]?] | length')" -gt 0 ] && break
+     if ! checks=$(gh pr view <number> --json statusCheckRollup --jq '[.statusCheckRollup[]?] | length'); then
+       echo "gh pr view failed — cannot verify CI has started" >&2
+       exit 1
+     fi
+     [ "$checks" -gt 0 ] && break
      sleep 10
    done
    ```
 
    - **At least one check registered** → continue to sub-step 3.
+   - **`gh` itself fails** → stop and surface the error (authentication, rate limit, a
+     deleted PR). Do **not** fall through to the no-checks branch: an unverifiable
+     state is not the same as a verified-empty one, and only the latter is safe to
+     hand off.
    - **Still `0` when the window expires** → CI never started for this PR (a repo with
      no workflows, a `paths`-filtered or `draft == false`-gated workflow this PR doesn't
      match, or a stalled Actions queue). Report
@@ -519,18 +558,21 @@ In Review before triage begins.
      `--no-promote` to the hand-off below, so an empty rollup can never be read as a
      proven green and flip the draft to ready. Nothing else about the chain changes.
 
-3. **Hand off.** Follow the [`triage-pr`](../triage-pr/SKILL.md) skill against the PR
-   from Step 9, naming its number explicitly so it never re-resolves to a different PR:
+3. **Hand off.** **If send-it was run with `--dry-run`, `--dry-run` goes on this
+   command too — always.** A live `triage-pr` commits, pushes, and can flip the draft
+   to ready, so a dry run that omits it stops being a dry run. Follow the
+   [`triage-pr`](../triage-pr/SKILL.md) skill against the PR from Step 9, naming its
+   number explicitly so it never re-resolves to a different PR:
 
    ```text
-   triage-pr <number> [--ci-only] [--no-promote] [--auto-apply]
+   triage-pr <number> [--dry-run] [--ci-only] [--no-promote] [--auto-apply]
    ```
 
-   Forward `--ci-only`, `--no-promote`, and `--auto-apply` **verbatim** when they were
-   passed to send-it; add nothing else. `triage-pr` reads its own `config.json`
-   (`promoteOnGreen`, `humanEnvelope`, `reviewBots`, `maxCiRounds`, …) — send-it
-   configures nothing about it, exactly as it configures nothing about `commit`,
-   `preflight`, `changelog`, or `linear-sync`.
+   Forward `--dry-run`, `--ci-only`, `--no-promote`, and `--auto-apply` **verbatim**
+   when they were passed to send-it; add nothing else. `triage-pr` reads its own
+   `config.json` (`promoteOnGreen`, `humanEnvelope`, `reviewBots`, `maxCiRounds`, …) —
+   send-it configures nothing about it, exactly as it configures nothing about
+   `commit`, `preflight`, `changelog`, or `linear-sync`.
 
 4. **Run the full chain.** Don't stop between phases: Phase A's fix→push→watch loop,
    the promotion gate, then Phase B's review wait and verify-then-propose. Halt where
@@ -579,7 +621,9 @@ In Review before triage begins.
 - `--skip-preflight` — skip the Step 5 lint gate entirely, printing a bypass warning.
 - `--skip-triage` — end the run at the open PR: skip the Step 11 `triage-pr` chain
   (identical to `config.json` `triage: false`). Restores the pre-0.8.0
-  bounded-finisher behaviour for one run.
+  bounded-finisher behaviour for one run. **Not a shortcut** — it leaves the PR
+  un-triaged; see Step 11 for the narrow cases where it applies, and state the reason
+  in the report.
 - `--ci-only` — forwarded verbatim to `triage-pr` (Step 11): run its Phase A and stop
   at green, never promoting the draft. **No effect on send-it's own steps.**
 - `--no-promote` — forwarded verbatim to `triage-pr`: never flip the draft to ready;

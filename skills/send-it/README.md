@@ -19,9 +19,10 @@ release-type decision (by category), the PR-title composition, push, and the PR.
 `triage-pr`: the Phase A CI fix loop, the promote-on-proven-green draft→ready flip,
 then Phase B's review wait and verify-then-propose pass — halting at triage-pr's
 human envelope. So a default run is unattended for roughly 30 minutes and ends on a
-`[y/N]` prompt, not a report. `--skip-triage` (or `triage: false`) restores the older
-"stop at the open PR" shape. send-it never arms auto-merge; merging stays a human
-action.
+`[y/N]` prompt, not a report. The chain is **part of the run**: `--skip-triage` (or
+`triage: false`) restores the older "stop at the open PR" shape, but it is for the
+narrow cases where the chain cannot work — not a way to finish sooner. send-it never
+arms auto-merge; merging stays a human action.
 
 ## Install
 
@@ -58,7 +59,7 @@ and fill it in by hand.
 | `shippableManifestKeys` *(advisory)* | `package.json` keys that form the published-`files` surface — same advisory role as `shippablePaths`, no longer a release gate. | `["name", "version", "files", "publishConfig"]` |
 | `bundleVersioning` *(optional)* | For repos that ship many independently-versioned skill bundles. An object `{ root, manifest, skillFile }` that turns on the per-bundle version-bump check: when a bundle's content changed but its version didn't, send-it offers to bump its `manifest` `version` + `skillFile` `metadata.version` in lockstep. **Omit it in single-package repos** — the check no-ops. | unset (disabled) |
 | `changelog` *(optional)* | Whether to author a dated `changelog/` entry at all. Set `false` only for repos with no changelog flow (no `changelog/` dir, no `changelog` skill). | `true` |
-| `triage` *(optional)* | Whether the run chains into [`triage-pr`](../triage-pr) once the PR is open — the CI fix loop, the promote-on-proven-green flip, then Phase B up to triage-pr's human envelope. Set `false` to stop at the open PR, or in repos where `triage-pr` isn't installed. Also worth `false` where CI is gated on `draft == false`: send-it opens drafts, so no check ever registers and the chain waits out its cold-start window each run before degrading to `--no-promote`. | `true` |
+| `triage` *(optional)* | Whether the run chains into [`triage-pr`](../triage-pr) once the PR is open — the CI fix loop, the promote-on-proven-green flip, then Phase B up to triage-pr's human envelope. Set `false` to stop at the open PR, or in repos where `triage-pr` isn't installed. It is also worth setting `false` where CI is gated on `draft == false`: send-it opens drafts, so no check ever registers and the chain waits out its cold-start window each run before degrading to `--no-promote`. | `true` |
 
 **Release-type is decided by category, not path (A-598).** send-it reads the
 Conventional-Commit type of the work it committed: `feat`/`fix`/`perf` — or any
