@@ -17,7 +17,7 @@ compatibility: >-
   dependency; the grouping logic is model-driven and this prose is the source of
   truth.
 metadata:
-  version: 0.1.2
+  version: 0.1.3
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*)
 ---
@@ -25,7 +25,7 @@ allowed-tools: Read, Bash(git:*)
 # commit
 
 Turn whatever is uncommitted in the working tree into **logical, atomic
-Conventional Commits** — but only the files that belong to *this* branch. The
+Conventional Commits** — but only the files that belong to _this_ branch. The
 non-obvious value is the **out-of-scope guard**: multi-worktree and multi-agent
 setups can leave stray files in the working tree that belong to another branch,
 and this skill never sweeps them into a commit.
@@ -78,7 +78,7 @@ classification against a **different** base for that run — for instance send-i
      prevent. Treat directory-only matches as out of scope unless the user
      explicitly confirms them.
    - **Fresh branch (no commits of its own yet):** there is no branch-touched list
-     to diff against, so *nothing* distinguishes your own work from a stray file left
+     to diff against, so _nothing_ distinguishes your own work from a stray file left
      by another branch or worktree. Do **not** auto-promote every uncommitted file to
      in scope — that is exactly the leak this guard exists to catch. Treat **all**
      uncommitted files as uncertain and have the user confirm which belong before
@@ -87,7 +87,7 @@ classification against a **different** base for that run — for instance send-i
    an explicit list of **out-of-scope / uncertain files** flagged as "uncertain —
    possibly from another branch/worktree." Ask: "Stage in-scope files and create the
    commits below? (yes / no / customise)". Uncertain files are never staged
-   automatically. On a **fresh branch** the uncertain list is *every* uncommitted
+   automatically. On a **fresh branch** the uncertain list is _every_ uncommitted
    file (step 3): ask the user to confirm which belong, and treat only the confirmed
    files as in scope.
 5. Group in-scope files into **logical atomic commits**:

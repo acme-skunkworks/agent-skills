@@ -40,7 +40,7 @@ version: 1.2.0
 - **The "never flip draft → ready" rule is now a guarded opt-in, not an absolute.**
   By default `triage-pr` still never promotes — it reads draft state only to choose a
   phase, and the human flips. The auto-flip fires **only** when promotion is enabled
-  **and** all three gates hold: the green is *proven* (Step 6's watched rollup, never
+  **and** all three gates hold: the green is _proven_ (Step 6's watched rollup, never
   "no failures yet" — no greenwashing), there are **no unresolved human review
   threads** (reusing the bundled `review-threads.mjs` `humanThreads` set), and
   `mergeStateStatus` shows no unresolved base drift (`BEHIND` / `DIRTY`). `--ci-only`

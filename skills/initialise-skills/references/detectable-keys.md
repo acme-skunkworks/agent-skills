@@ -7,8 +7,8 @@ detector serves every skill that uses a key. A key found in a skill's
 | Key | Used by | Detection source | Fallback / when undetectable |
 | --- | --- | --- | --- |
 | `baseBranch` | changelog, send-it | `git symbolic-ref refs/remotes/origin/HEAD`, stripped of `origin/` | `main` |
-| `issueKeys` | changelog, cleanup-repo, linear-sync, triage-pr | Leading `<KEY>-<num>` (uppercased; single-letter keys like `A` accepted) from the **most recently committed** branch — `git for-each-ref --sort=-committerdate` — so a renamed team yields its current key, not the historical union; or supplied facts | `needs-manual-input` when no branches match |
-| `linearTeamName` | cleanup-repo, linear-sync, triage-pr | Supplied via stdin `facts` (Linear MCP `list_teams`) | `needs-manual-input` |
+| `issueKeys` | changelog, cleanup-repo, `linear-sync`, triage-pr | Leading `<KEY>-<num>` (uppercased; single-letter keys like `A` accepted) from the **most recently committed** branch — `git for-each-ref --sort=-committerdate` — so a renamed team yields its current key, not the historical union; or supplied facts | `needs-manual-input` when no branches match |
+| `linearTeamName` | cleanup-repo, `linear-sync`, triage-pr | Supplied via stdin `facts` (Linear MCP `list_teams`) | `needs-manual-input` |
 | `linearWorkspaceSlug` | changelog | Supplied via stdin `facts` (Linear MCP) | `needs-manual-input` |
 | `changelog` | send-it | `true` when a `changelog/` directory exists at the repo root; `false` otherwise (no changelog flow). Skill-presence alone does **not** enable it — a repo that vendors the `changelog` skill but keeps no `changelog/` dir stays `false` (A-570) | `true` |
 | `changelogDir` | changelog | Structural default | `changelog` |
@@ -41,7 +41,7 @@ detector serves every skill that uses a key. A key found in a skill's
   skill declare this in its `SKILL.md` metadata instead of hardcoding the name.
 - **`bundleVersioning` is reconciled only if already present.** It isn't in
   send-it's `config.example.json` (the single-package template), so it is never
-  *added* by detection — only kept (`unknown-kept`) where a consumer already set
+  _added_ by detection — only kept (`unknown-kept`) where a consumer already set
   it. Multi-bundle consumers add it by hand.
 - **`issueKeys` order does not count as drift.** Detected `["A"]` vs configured `["A"]`
   compares with set semantics (order-insensitive); the existing order is preserved

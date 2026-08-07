@@ -21,7 +21,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.11.0
+  version: 0.11.1
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
@@ -53,7 +53,7 @@ supported for mid-flight re-runs.
 
 The draft→ready
 flip is governed by a single control — `promoteOnGreen` in [`config.json`](config.json)
-— and **an enabled config *is* the authorisation** for it: when `promoteOnGreen` is
+— and **an enabled config _is_ the authorisation** for it: when `promoteOnGreen` is
 `true` (the default), human authorisation for the flip is **already acquired via the
 repo config**, so after a cleanly-green Phase A the skill flips the PR to ready and
 continues into Phase B without stopping to seek a separate sign-off (the ready-flip is
@@ -78,7 +78,7 @@ The first eight govern the **CI + review** loop:
 | `reviewBots` | GitHub login names whose comments and threads are treated as first-class AI review feedback. Matched against `author.login`; the `[bot]` suffix is normalised, so `claude` and `claude[bot]` both match (the GraphQL API returns the bare form). Edit to match your install — review-bot logins vary per repo. `github-actions` is deliberately excluded by default: it posts CI status and release-PR comments, not code review, so Phase B would otherwise action them as findings; add it only if your install genuinely posts review-type comments via the Actions bot. | `["claude", "cursor", "coderabbitai"]` |
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers. Bounds the fix-and-watch loop so it can't spin forever. | `5` |
 | `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before the thread is resolved (the audit trail). `false` resolves accepted threads silently for maintainers who dislike bot-reply noise — declines always reply with reasoning regardless. | `true` |
-| `promoteOnGreen` | The single control for the draft→ready flip. When `true`, after Phase A finishes with **every** required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**, and an enabled config *is* the human authorisation for the flip: proceed on proven green without seeking a separate sign-off. Set `false` (or pass `--no-promote`) to opt out and stop at green. Promotion is suppressed unless the green is *proven* (Step 6's watched rollup, never "no failures yet"), there are **no unresolved human review threads**, and `mergeStateStatus` shows no unresolved base drift (`BEHIND` / `DIRTY`). An explicit user prompt — or `--promote` / `--no-promote` — overrides this per run; `--ci-only` and `--dry-run` never promote. | `true` |
+| `promoteOnGreen` | The single control for the draft→ready flip. When `true`, after Phase A finishes with **every** required check genuinely green on a **draft** PR, run `gh pr ready <pr>` to flip it to ready-for-review (the gate that turns AI review on), then continue into Phase B — instead of stopping at green. **Default-on**, and an enabled config _is_ the human authorisation for the flip: proceed on proven green without seeking a separate sign-off. Set `false` (or pass `--no-promote`) to opt out and stop at green. Promotion is suppressed unless the green is _proven_ (Step 6's watched rollup, never "no failures yet"), there are **no unresolved human review threads**, and `mergeStateStatus` shows no unresolved base drift (`BEHIND` / `DIRTY`). An explicit user prompt — or `--promote` / `--no-promote` — overrides this per run; `--ci-only` and `--dry-run` never promote. | `true` |
 | `deferNonBlocking` | When `true` (the default), a valid **in-scope** finding is proposed as **accept** only if it is **high-impact**; otherwise it is proposed as **defer** (same path as out-of-scope). High-impact means any of: it **blocks later work** on this PR or stacked work; it touches **Claude Code / agent-skill logic / CI or release infrastructure**; or it is **critical/high severity** (correctness, security, data-loss). You classify each finding yourself against those criteria — do **not** trust bot severity labels (CodeRabbit ⚠️/🧹, Bugbot grades). Set `false` to restore scope-only behaviour (every valid in-scope finding is proposed as accept; only out-of-scope findings defer). | `true` |
 | `humanEnvelope` | When `true` (the default), Phase B **halts** after verify-then-propose with a full disposition plan (accept / decline / defer→Linear) and waits for one batch `[y/N]` (default no) before code changes, Linear create, or resolving replies. Proposed-defer threads get a non-resolving `defer-pending` mark when the plan is presented so restarts do not re-emit them. Same gate covers findings from later AI re-reviews on this PR. Set `false` (or pass `--auto-apply`) to restore legacy auto Phase B (impact-gated fix-now; mark `defer-pending` on classify; Linear-only gate for defers). An explicit user prompt overrides the config per run. | `true` |
 | `reviewIdleMinutes` | Hybrid review-settle idle window: after at least one configured bot has reported, treat reviews as settled when there is **no new** bot headline / unresolved-thread activity for this many minutes. | `5` |
@@ -221,7 +221,7 @@ git diff --name-only origin/<base>...HEAD   # files this PR actually touches
   proposed to the developer — not landed here; (3) a local config override or an
   ignore / disable directive only with the developer's sign-off. You never take (2)
   or (3) on your own initiative — classify it as gated (Step 3) and keep going.
-  *Carve-out:* when the PR's own diff already contains a developer-authored lint
+  _Carve-out:_ when the PR's own diff already contains a developer-authored lint
   config or ignore change, you may repair a genuine error in it (e.g. a syntax or
   schema error breaking the lint job), but never loosen a rule or widen an ignore.
 - Re-run the **specific** failing command locally and read its exit code before
@@ -267,7 +267,7 @@ gh pr checks <pr> --watch
   documented Phase-A early stop in this step (promotion disabled / promotion gate
   failed / gated lint-surface items outstanding / `--ci-only` / `--dry-run`), the
   slow-bot micro-gate (Step 7), or a hard blocker / `maxCiRounds` exhaustion that
-  needs a decision. The envelope *is* actionable — do not treat A-1178's "don't
+  needs a decision. The envelope _is_ actionable — do not treat A-1178's "don't
   pull attention" rule as a reason to skip it.
 - **Gated lint-surface items end the loop.** When every remaining red check is a
   Step 3 **gated** item, stop **immediately** — do not spend `maxCiRounds` re-watching
@@ -282,7 +282,7 @@ gh pr checks <pr> --watch
   → report green and **stop**.
 - Green **and draft**, promotion **enabled** (default, or `--promote`) → run
   the **promotion gate** before flipping. All three must hold:
-  1. **Proven green** — the green is *this step's* watched-rollup green (not pending /
+  1. **Proven green** — the green is _this step's_ watched-rollup green (not pending /
      "no failures yet"); apply the same exit-code discipline Phase A already enforces,
      never greenwash to reach the flip.
   2. **No unresolved human threads** — run
@@ -300,7 +300,7 @@ gh pr checks <pr> --watch
   (Step 7). The ready-flip and Phase B's pushes re-fire CI + AI review, and the whole
   loop stays bounded by `maxCiRounds`. Any gate fails → **do not flip**; report green
   plus the specific reason it wasn't promoted, and stop. Under `--dry-run`, report
-  that it *would* promote (or why not) and flip nothing. Under `--ci-only`, never
+  that it _would_ promote (or why not) and flip nothing. Under `--ci-only`, never
   promote — stop at green regardless of the knob.
 
 ### Step 7 — Phase B: hybrid wait for AI reviewers
@@ -406,7 +406,7 @@ would edit lint / format / static-analysis config or add an ignore / disable
 directive, mark the plan item `[gated]` — naming the surface it would touch and the
 preferred alternative (code fix, or a change to the shared config package). `[gated]`
 **displaces every other disposition**, not just `accept`: classify the surface
-*before* applying `deferNonBlocking`, so a valid but low-impact lint-surface finding
+_before_ applying `deferNonBlocking`, so a valid but low-impact lint-surface finding
 is gated rather than routed to `defer` and the Linear follow-up flow. Under
 `humanEnvelope` it rides the **same** envelope so the developer
 sees it in one batch — never a second prompt, and never applied without their explicit
@@ -446,7 +446,7 @@ Step 9 (durable, still open).
   `defer-pending` threads with `deferred; not tracked` if you want them closed);
   stop; no Step 13 "all done" claim beyond "envelope declined; nothing applied".
 - **Yes** (with optional per-item overrides) → apply the approved plan in Step 11.
-- Under `--dry-run`, print the plan that *would* be proposed and create nothing.
+- Under `--dry-run`, print the plan that _would_ be proposed and create nothing.
 
 The same envelope covers findings from **later** AI re-reviews on this PR
 (Step 12 re-envelope) — one gate for all dispositions, including new Linear
@@ -612,8 +612,8 @@ Summarise:
   `humanEnvelope: false` restores legacy auto Phase B. Re-envelope when new bot
   findings appear after apply.
 - **Draft → ready is guarded, and on by default.** `promoteOnGreen` is the single
-  control for the flip, and an enabled config *is* the authorisation: with it on (the
-  default) the skill flips the PR — **only** after a *proven*-green Phase A, with **no
+  control for the flip, and an enabled config _is_ the authorisation: with it on (the
+  default) the skill flips the PR — **only** after a _proven_-green Phase A, with **no
   unresolved human threads** and no unresolved base drift — then continues into Phase B,
   without seeking a separate human sign-off for the flip. Set `promoteOnGreen: false` / pass
   `--no-promote` to stop at green; an explicit user prompt or `--promote` /

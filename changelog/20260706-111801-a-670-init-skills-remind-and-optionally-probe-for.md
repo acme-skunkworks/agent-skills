@@ -47,7 +47,7 @@ can't-tell is not an absence. The App install itself can't be reliably introspec
 without the App's own token, so the secret's presence is the reliable proxy and the
 `/install-github-app` reminder covers both together.
 
-The probe is **read-only**: `gh secret list` returns secret *names* only, never
+The probe is **read-only**: `gh secret list` returns secret _names_ only, never
 values, and the skill makes no GitHub writes — on an absent or unverifiable secret it
 only ever prints a reminder. It follows the estate `gh`-probe pattern already used by
 `send-it` / `triage-pr` / `cleanup-repo`, adding `Bash(gh:*)` to the skill's

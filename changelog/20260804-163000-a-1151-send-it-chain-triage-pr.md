@@ -35,7 +35,7 @@ version: 1.4.0
 - **A cold-start gate before the hand-off.** Step 9 opens the PR moments earlier, so
   GitHub Actions may not have registered a single check yet. An empty
   `statusCheckRollup` handed to a cold triage-pr reads as "nothing failing" and, with
-  `promoteOnGreen` default-on, would have flipped the draft to ready *before CI ran*.
+  `promoteOnGreen` default-on, would have flipped the draft to ready _before CI ran_.
   Step 11 now polls `statusCheckRollup` (10 seconds × 18) until at least one check
   exists, and degrades to `--no-promote` — saying why — if none ever appears.
   triage-pr's own "no failures yet is not green" rule guards its watch loop, not a
@@ -68,7 +68,7 @@ version: 1.4.0
   therefore makes **read-only** `gh` calls — it still writes, commits and pushes
   nothing. With no PR yet, it prints `no PR to triage yet` and exits 0.
 
-- **What send-it *is*.** Through 0.7.0 it was a bounded finisher: seconds of work
+- **What send-it _is_.** Through 0.7.0 it was a bounded finisher: seconds of work
   ending in a report and an open PR. The default run now continues into triage, stays
   unattended for roughly 30 minutes (`maxCiRounds` fix loop plus a 20-minute bot
   wait), and ends on a **prompt**. That shift is deliberate and recorded in the
@@ -81,7 +81,7 @@ version: 1.4.0
 
 - **`initialise-skills` detects the new key.** `triage` emits a fixed `true`,
   alongside the other default-on booleans, so consumers do not see it flagged
-  `needs-manual-input`. Deliberately *not* inferred from whether `triage-pr` is
+  `needs-manual-input`. Deliberately _not_ inferred from whether `triage-pr` is
   vendored — Step 11's soft-skip already covers absence, so presence-inference could
   only misfire the way it once did for `changelog` ([A-570](https://linear.app/rheged-studio/issue/A-570)).
 

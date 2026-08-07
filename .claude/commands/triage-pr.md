@@ -1,4 +1,5 @@
 ---
+title: triage-pr
 description: Drive a pull request from draft with failing CI to merge-ready — fix in-scope CI failures, then action unresolved AI review feedback.
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*)
 ---
@@ -31,7 +32,7 @@ unresolved AI review threads once it is ready), with the constraints below.
    stopping point (Step 12, a documented Step 6 Phase-A early stop, or a hard
    blocker / budget exhaustion).
 3. **The draft → ready flip is governed by `promoteOnGreen`** (read in step 1) — the
-   single control for it. When `true` (the default), an enabled config *is* the
+   single control for it. When `true` (the default), an enabled config _is_ the
    authorisation: once Phase A is proven-green (no unresolved human threads, no base
    drift), flip the PR to ready (the gate that turns AI review on) and continue into
    Phase B — don't stop to seek a separate human sign-off. When `false`, stop at green.

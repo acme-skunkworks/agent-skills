@@ -38,7 +38,7 @@ stats:
 - **`send-it.changelog` is gated on a real `changelog/` directory, not skill presence
   ([A-570](https://linear.app/rheged-studio/issue/A-570)).** The detector flipped `changelog`
   to `true` whenever the companion `changelog` skill was vendored, so a repo that over-installed
-  the skill but keeps no changelog of its own (e.g. release-orchestrator, which runs *other*
+  the skill but keeps no changelog of its own (e.g. release-orchestrator, which runs _other_
   repos' `changelog:finalise`) was wrongly set `true` and would try to author entries with
   nowhere to live. It now keys solely off a `changelog/` directory at the repo root.
 

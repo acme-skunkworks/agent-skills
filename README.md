@@ -18,7 +18,7 @@ To deploy the shared set across a target repo — wipe its bespoke skill/command
 
 ## Repo layout
 
-```
+```text
 .
 ├── .claude/commands/
 │   └── send-it.md           # all-in-one finisher (stopgap until the send-it skill ships)

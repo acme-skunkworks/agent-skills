@@ -40,7 +40,7 @@ version: 1.2.0
 
 - **Safer squash-merge force-delete ([A-530](https://linear.app/rheged-studio/issue/A-530)).**
   Pass 2's merged-PR lookup now passes `--base <mainBranch>` so a branch merged into
-  a *different* base isn't mistaken for trunk-merged, and records the merged PR's
+  a _different_ base isn't mistaken for trunk-merged, and records the merged PR's
   `headRefOid`. A squash-merged branch is force-deleted (`-D`) only when its local
   tip still equals that head — a branch carrying commits added after the merge is
   surfaced in a "Skipped — local tip ahead of merged PR" group rather than having

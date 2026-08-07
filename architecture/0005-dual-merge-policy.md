@@ -10,7 +10,7 @@
 
 ## Context
 
-ADR-0003 adopted release-please and assumed the repo **squash-merges**: the merged PR title *was* the Conventional-Commit squash subject, and therefore the sole bump signal. That model is simple when every merge collapses the branch to one commit, but it discards the authored commit history that agents and humans already write as Conventional Commits.
+ADR-0003 adopted release-please and assumed the repo **squash-merges**: the merged PR title _was_ the Conventional-Commit squash subject, and therefore the sole bump signal. That model is simple when every merge collapses the branch to one commit, but it discards the authored commit history that agents and humans already write as Conventional Commits.
 
 The estate is moving feature and ship PRs to **merge commits** so landed commit subjects remain on trunk for release-please to rank (A-824). Release-please version PRs and mechanical fan-out PRs must **stay squash** (A-1175): a merge commit on those paths would pollute trunk with bot commit noise or break the orchestrator's release-PR reconcile. Squash must remain an allowed repo setting (A-1177) — documenting "squash disabled" would be wrong.
 

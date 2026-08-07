@@ -40,7 +40,7 @@ version: 1.2.0
 
 - **Paid down the lint debt the broadened surface revealed.** The previously-unlinted test files
   had accumulated drift (import ordering, formatting, short identifiers, arrow-vs-declaration
-  style, two redundant `\s*` quantifiers flagged for super-linear backtracking). These were
+  style, two redundant `\s*` quantifiers flagged for super-Linear backtracking). These were
   brought into line with the shared config — mechanical, behaviour-preserving changes only, with
   no alteration to what any test asserts. One load-bearing frontmatter fixture whose key order is
   semantically significant was restored after an over-eager auto-sort.

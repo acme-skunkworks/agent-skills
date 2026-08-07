@@ -35,7 +35,7 @@ version: 1.2.0
   blank lines are filtered before mapping, so a YAML block sequence with gaps
   between items parses as the list of items rather than `["a", null, "b"]`.
 - **A blank line before the first block-array item no longer aborts the parse.**
-  `parseMapping` now chooses array-vs-mapping from the first *non-blank* block
+  `parseMapping` now chooses array-vs-mapping from the first _non-blank_ block
   line, so `key:` followed by a blank line and then `- item` parses as a list
   instead of throwing `Invalid frontmatter line`.
 - **All-whitespace block scalars no longer collapse silently.** `parseBlockScalar`

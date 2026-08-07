@@ -27,7 +27,7 @@ stats:
   Until now `send-it` authored a dated `changelog/` entry **only for shippable changes** — the
   same shippability decision that drives the PR title also gated whether an entry existed. That
   conflated two independent concerns: the PR-title release type (the release-please/npm signal,
-  which *must* stay coupled to shippability so docs/chore PRs cut no release) and whether a
+  which _must_ stay coupled to shippability so docs/chore PRs cut no release) and whether a
   changelog entry is written at all. `changelogScope` separates them:
   - **`"all"`** (the default) authors an entry for **every** PR, shippable and non-shippable. The
     dated changelog becomes a full record of merged work; release notes still filter it to the

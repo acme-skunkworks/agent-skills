@@ -1,4 +1,5 @@
 ---
+title: initialise-skills
 description: Scan the host repo and reconcile every installed skill's config.json with detected facts — base branch, package roots, changelog dir, Linear issue keys, review bots — plus the Linear team name / workspace slug. Dry-run first, idempotent, never clobbers deliberate edits.
 allowed-tools: Read, Bash(node:*), Bash(git:*), mcp__linear-server__list_teams, mcp__linear-server__get_team
 ---

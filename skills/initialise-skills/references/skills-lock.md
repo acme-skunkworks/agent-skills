@@ -45,7 +45,7 @@ promise the config and `.gitignore` reconciles already keep.
 
 ## Detecting updates — `check-updates.mjs`
 
-A consumer holds only its old vendored copies, so the *target* (upstream) versions
+A consumer holds only its old vendored copies, so the _target_ (upstream) versions
 must come from a checkout of the source repo:
 
 ```bash
@@ -75,7 +75,7 @@ metadata is ignored). A fleet-update orchestrator uses `updatesAvailable` to ski
 already-current repos and `updates` to populate an update PR's body.
 
 > **`updatesAvailable: false` is not the same as "nothing to report."** The flag
-> reflects only the *forward-actionable* buckets (`updates` + `added`). A repo can
+> reflects only the _forward-actionable_ buckets (`updates` + `added`). A repo can
 > have `updatesAvailable: false` yet still carry `removed`, `downgrades`, or
 > `unknown` entries — surfaced as their own fields (and, in the human report, as
 > their own lines) but deliberately not treated as an available update. A consumer

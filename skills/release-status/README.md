@@ -32,7 +32,7 @@ Generate it by running the `initialise-skills` skill, or copy the example to
 | `mainBranch` | The trunk release-please releases from. | `main` |
 | `releaseBranch` | The branch release-please opens its release PR on. | `release-please--branches--main` |
 | `requiredCheck` | The exact name (incl. emoji) of the required status check the orchestrator polls before merging the release PR. | `GO/NO GO` |
-| `stalePendingLabel` | The label release-please applies while a release is in flight; **stale** when it lingers on a *merged* PR. | `autorelease: pending` |
+| `stalePendingLabel` | The label release-please applies while a release is in flight; **stale** when it lingers on a _merged_ PR. | `autorelease: pending` |
 
 ## Requirements
 

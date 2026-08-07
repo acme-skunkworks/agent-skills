@@ -28,7 +28,7 @@ version: 1.2.0
   a cleanly-green Phase A automatically runs `gh pr ready <pr>` — the gate that turns
   AI review on — and continues into Phase B, rather than stopping at green and
   leaving the flip to a human. The promotion gate is unchanged: the flip is still
-  suppressed unless the green is *proven* (the watched rollup, never "no failures
+  suppressed unless the green is _proven_ (the watched rollup, never "no failures
   yet"), there are **no unresolved human review threads**, and `mergeStateStatus`
   shows no unresolved base drift (`BEHIND` / `DIRTY`). Pass `--no-promote` (or set
   `promoteOnGreen: false`) to opt out; `--ci-only` and `--dry-run` never promote, as
