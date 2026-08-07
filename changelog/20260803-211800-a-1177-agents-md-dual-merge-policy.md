@@ -16,9 +16,10 @@ stats:
   files_changed: 2
   loc_added: 32
   loc_removed: 3
-  commits:
+  commits: 2
+version: 1.4.0
 ---
 
 ## Changed
 
-**Estate merge-commit cutover ([A-1177](https://linear.app/rheged-studio/issue/A-1177))** — refresh managed `AGENTS.md` from `shared-agents-md` dual-merge policy. Hub `send-it` already at 0.7.0 from A-1176.
+**Estate merge-commit cutover ([A-1177](https://linear.app/rheged-studio/issue/A-1177))** — refresh managed `AGENTS.md` from `shared-agents-md` dual-merge policy. Hub `send-it` already at 0.7.0 from [A-1176](https://linear.app/rheged-studio/issue/A-1176).

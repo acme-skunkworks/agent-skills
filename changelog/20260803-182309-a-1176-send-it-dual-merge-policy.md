@@ -16,7 +16,8 @@ stats:
   files_changed: 13
   loc_added: 236
   loc_removed: 94
-  commits:
+  commits: 4
+version: 1.4.0
 ---
 
 ## Added
@@ -38,6 +39,6 @@ stats:
   commits ([A-387](https://linear.app/rheged-studio/issue/A-387)). Bundle bumped
   `0.6.2` → `0.7.0`.
 - **`derive-bump` / `git.mjs`:** `git log --no-merges` so merge subjects are not
-  mixed into the pre-merge bump scan; header comments updated for A-1176.
+  mixed into the pre-merge bump scan; header comments updated for [A-1176](https://linear.app/rheged-studio/issue/A-1176).
 - **CLAUDE.md**, root README, and ADR-0003 amended for the same policy (orchestrator
   still squash-merges the release PR).

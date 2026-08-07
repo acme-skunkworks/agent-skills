@@ -1,14 +1,15 @@
 ---
-title: "Adopt validate-commits as a required Conventional Commits check"
+title: Adopt validate-commits as a required Conventional Commits check
 created_at: '2026-07-31T11:32:14Z'
 category: chore
 breaking: false
-linear: [A-983]
+linear:
+  - A-983
 prs: []
 merged_at:
 commit:
 pr:
-version:
+version: 1.4.0
 stats:
   files_changed:
   loc_added:
