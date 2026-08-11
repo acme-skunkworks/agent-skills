@@ -1,11 +1,11 @@
 ---
 title: Bump shared @acme-skunkworks configs and fix markdownlint fallout
-release_note: ''
-created_at: '2026-08-07T15:14:03Z'
-merged_at: ''
+release_note: ""
+created_at: "2026-08-07T15:14:03Z"
+merged_at: "2026-08-11T13:03:53Z"
 branch: a-1341-agent-skills-bump-acme-skunkworks-devdeps-and-fix-lint
-pr:
-commit: ''
+pr: 161
+commit: 640ce99
 author: rob@acmeskunkworks.io
 co_authors: []
 category: chore
@@ -13,11 +13,11 @@ breaking: false
 issues:
   - A-1341
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 59
+  loc_added: 186
+  loc_removed: 146
   commits:
-version: ''
+version: ""
 ---
 
 ## Changed
