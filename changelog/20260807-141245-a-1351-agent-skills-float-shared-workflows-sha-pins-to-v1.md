@@ -1,7 +1,7 @@
 ---
 title: Float changelog-enrich reusable workflow pin to @v1
 release_note:
-created_at: '2026-08-07T14:12:45Z'
+created_at: "2026-08-07T14:12:45Z"
 branch: a-1351-agent-skills-float-shared-workflows-sha-pins-to-v1
 author: rob@acmeskunkworks.io
 co_authors: []
@@ -9,13 +9,13 @@ category: chore
 breaking: false
 issues:
   - A-1351
-merged_at:
-commit:
-pr:
+merged_at: "2026-08-11T13:06:13Z"
+commit: ebd3cc2
+pr: 160
 stats:
-  files_changed:
-  loc_added:
-  loc_removed:
+  files_changed: 2
+  loc_added: 28
+  loc_removed: 1
   commits:
 version:
 ---
