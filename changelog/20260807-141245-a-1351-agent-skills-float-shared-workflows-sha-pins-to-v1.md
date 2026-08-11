@@ -1,0 +1,27 @@
+---
+title: Float changelog-enrich reusable workflow pin to @v1
+release_note:
+created_at: '2026-08-07T14:12:45Z'
+branch: a-1351-agent-skills-float-shared-workflows-sha-pins-to-v1
+author: rob@acmeskunkworks.io
+co_authors: []
+category: chore
+breaking: false
+issues:
+  - A-1351
+merged_at:
+commit:
+pr:
+stats:
+  files_changed:
+  loc_added:
+  loc_removed:
+  commits:
+version:
+---
+
+## Changed
+
+- **pkg-release workflow.** Float the `changelog-enrich` reusable workflow reference
+  from a pinned SHA to `@v1` so agent-skills tracks the stable shared-workflows
+  release line.
