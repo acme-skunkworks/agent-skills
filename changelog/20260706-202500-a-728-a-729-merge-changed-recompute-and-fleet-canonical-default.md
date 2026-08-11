@@ -32,7 +32,7 @@ consumers on the next sync.
 **`initialise-skills` (0.10.2 → 0.10.3) — `changed` recomputed from the net result
 ([A-728](https://linear.app/rheged-studio/issue/A-728)).** `mergeConfig` accumulated a monotonic
 `changed` flag: the detector loop set it `true` for an `inferred` write, and the `--set` loop could only
-ever flip it `true` again. So when a key had both a live detector *and* a `--set` that restored the
+ever flip it `true` again. So when a key had both a live detector _and_ a `--set` that restored the
 original config value, the merged `data` ended up equal to the original but `changed` stayed `true` — the
 reconcile announced (and could persist) a change that had netted to nothing. `changed` is now computed
 once, after all inferred and `--set` writes, as `!deepEqual(data, original)`: a change is reported only if

@@ -44,7 +44,7 @@ defaults.
 - **Node.js ≥22** for the bundled scripts. They use **only Node built-ins** — no
   `npm install`, no build step.
 - The **`git` CLI** for branch and diff analysis.
-- **pnpm** *only* for the optional `preflight-changelog-ci.mjs` step (Node/lockfile
+- **pnpm** _only_ for the optional `preflight-changelog-ci.mjs` step (Node/lockfile
   CI-parity). Skip that step if your repo doesn't use pnpm.
 
 ## What it does

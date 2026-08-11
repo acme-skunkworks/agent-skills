@@ -1,4 +1,5 @@
 ---
+title: changelog
 description: Author, refresh, or repair the changelog entry for the current branch and validate it — no commit, push, or PR.
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(node:*), Bash(pnpm:*)
 ---

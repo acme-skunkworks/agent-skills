@@ -24,7 +24,7 @@ compatibility: >-
   App / token check is optional — it uses `gh` when authenticated, else falls
   back to a reminder.
 metadata:
-  version: 0.11.0
+  version: 0.11.1
   author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(git:*), Bash(gh:*), mcp__linear-server__list_teams, mcp__linear-server__get_team, mcp__linear-server__list_projects
 ---
@@ -68,7 +68,7 @@ between single-package and monorepo are in
 [`references/monorepo-config.md`](references/monorepo-config.md).
 
 `preflight` is intentionally skipped: it self-detects its base branch and
-workspaces and reads an *optional* `preflight.config.json` at the repo root, not
+workspaces and reads an _optional_ `preflight.config.json` at the repo root, not
 an in-bundle `config.json` — so there is nothing for this skill to populate. (Its
 one trace here is the `.gitignore` step below: when preflight is installed, its
 `.preflight-summary.json` scratch output is added to the repo's `.gitignore`.)
@@ -268,7 +268,7 @@ hand-edit is equally valid and equally safe.
 ## Setting an arbitrary value
 
 Detection, the stdin `facts`, and `acceptDrift` between them cover every value the
-script can derive or accept — but not a value you simply want to *choose* (a
+script can derive or accept — but not a value you simply want to _choose_ (a
 non-default base branch, a bespoke changelog directory, a boolean toggle). For
 those, `--set <skill>.<key>=<value>` writes an arbitrary value straight into a
 named skill's `config.json`:
@@ -383,5 +383,5 @@ so a fleet orchestrator can check any repo without changing directory. See
   the secret list, so it degrades to a "couldn't verify — confirm
   `CLAUDE_CODE_OAUTH_TOKEN` manually" note — a can't-tell, never a failure. The
   textual `/install-github-app` reminder is the separate **absent** outcome, emitted
-  only when the probe *succeeds* and finds the secret genuinely missing. Either way
+  only when the probe _succeeds_ and finds the secret genuinely missing. Either way
   the skill still runs fully.

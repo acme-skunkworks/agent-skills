@@ -33,7 +33,7 @@ version: 1.2.0
 - **`linear-sync --dry-run`** — a read-only preview that resolves state IDs and each
   issue's current state, reports the intended transition (or skip reason) per issue,
   and exits without any `save_issue` write. Closes the one true gap from the [SK-458](https://linear.app/goose-and-hobbes/issue/SK-458)
-  pass (linear-sync previously had no safe preview).
+  pass (`linear-sync` previously had no safe preview).
 - **`initialise-skills` now infers triage-pr's boolean knobs.** New constant-default
   detectors give `promoteOnGreen` (`false`) and `replyOnAccept` (`true`) a detected
   value, so a fresh reconcile reports them `inferred`/`unchanged` rather than
@@ -55,5 +55,5 @@ version: 1.2.0
   and removes the stray file write.
 
 Each changed bundle's `package.json` version and `SKILL.md metadata.version` are
-bumped in lockstep: linear-sync `0.2.0`, initialise-skills `0.3.0`, changelog `0.3.0`
+bumped in lockstep: `linear-sync` `0.2.0`, initialise-skills `0.3.0`, changelog `0.3.0`
 (minor); preflight `0.1.3`, triage-pr `0.3.1` (patch).

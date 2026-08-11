@@ -73,7 +73,7 @@ skills/<name>/
 Required by the spec:
 
 - **`name`** (string, max 64 chars, `[a-z0-9-]`, no leading/trailing/consecutive hyphens) — **must equal the parent directory name**. For `skills/cleanup-repo/SKILL.md`, the field is `name: cleanup-repo`.
-- **`description`** (string, max 1024 chars, non-empty) — what the skill does *and* when to use it. This is read at agent startup (progressive disclosure stage 1), so it is the trigger contract and the load-bearing field for whether the skill ever fires. Vague descriptions cause silent misses; specific keywords + when-clauses are required.
+- **`description`** (string, max 1024 chars, non-empty) — what the skill does _and_ when to use it. This is read at agent startup (progressive disclosure stage 1), so it is the trigger contract and the load-bearing field for whether the skill ever fires. Vague descriptions cause silent misses; specific keywords + when-clauses are required.
 
 Optional by the spec, and how we use them:
 

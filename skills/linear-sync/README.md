@@ -1,4 +1,4 @@
-# linear-sync
+# `linear-sync`
 
 Transition the Linear issues linked to the current branch through their workflow
 states (In Progress / In Review / Done) — resolving state IDs by team **name**,

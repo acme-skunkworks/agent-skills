@@ -73,8 +73,8 @@ other bundle edit. The shared `lib/` itself carries no version.
 
 ## Rejected alternatives
 
-- **(b) Accept the duplication, add golden cross-bundle tests.** Tests would *detect*
-  drift but never *prevent* it — the maintainer still edits N copies by hand, and a new
+- **(b) Accept the duplication, add golden cross-bundle tests.** Tests would _detect_
+  drift but never _prevent_ it — the maintainer still edits N copies by hand, and a new
   consumer is one forgotten copy away from the next naive-join bug. Vendoring removes
   the hand-sync entirely; the drift-check is the test, for free.
 - **Real cross-bundle imports (one bundle imports another's module).** Breaks the

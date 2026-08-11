@@ -24,7 +24,7 @@ version: 1.4.0
 
 - **Bucket precedence in Step 3 ([A-1182](https://linear.app/rheged-studio/issue/A-1182)).**
   The **In-scope** bullet told the agent to fix any lint failure reproducible on
-  the branch head, and it is listed *before* **Lint-surface gated**. A reader
+  the branch head, and it is listed _before_ **Lint-surface gated**. A reader
   matching the buckets top-down could classify a lint-only-surface failure as
   in-scope and fix it before reaching the gate. The In-scope bullet now names the
   precedence explicitly: **Lint-surface gated** takes precedence, regardless of how

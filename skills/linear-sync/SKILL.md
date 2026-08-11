@@ -15,12 +15,12 @@ compatibility: >-
   read needs the `git` CLI. If the Linear MCP server is unavailable the skill
   cannot run — it has no non-MCP fallback.
 metadata:
-  version: 0.3.4
+  version: 0.3.5
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
 
-# linear-sync
+# `linear-sync`
 
 Move the Linear issues linked to the current branch through their workflow
 states. This skill is the single source of truth for **how** issues are

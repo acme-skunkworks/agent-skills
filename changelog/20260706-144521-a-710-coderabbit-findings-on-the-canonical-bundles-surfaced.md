@@ -24,7 +24,7 @@ version: 1.2.0
 ## Fixed
 
 CodeRabbit's review of the [A-681](https://linear.app/rheged-studio/issue/A-681) Wave A re-vendor flagged defects in the canonical
-bundle *source*. Per the [A-573](https://linear.app/rheged-studio/issue/A-573) disposition these are fixed upstream here and
+bundle _source_. Per the [A-573](https://linear.app/rheged-studio/issue/A-573) disposition these are fixed upstream here and
 propagate to consumers on the next sync.
 
 **`commit` (0.1.0 → 0.1.1) — in-scope rule.** Directory-level auto-inclusion ("any

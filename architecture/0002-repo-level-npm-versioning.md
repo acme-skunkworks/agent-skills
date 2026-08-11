@@ -4,7 +4,7 @@
 - **Date:** 2026-06-01
 - **Tracking:** [A-364](https://linear.app/goose-and-hobbes/issue/A-364)
 - **Supersedes:** [ADR-0001](0001-skill-layout.md) Decision 1 (per-skill versioning via pnpm workspaces). ADR-0001 Decisions 2–4 still stand.
-- **Superseded by:** [ADR-0003](0003-release-please-versioning.md) — *mechanism only*: the Changesets engine (Decision 4 in full; the Changesets framing in Decisions 1–2) is replaced by release-please. This ADR's core decision — repo-level npm versioning, the root as the single published package, skills versioned out-of-band — **still stands**.
+- **Superseded by:** [ADR-0003](0003-release-please-versioning.md) — _mechanism only_: the Changesets engine (Decision 4 in full; the Changesets framing in Decisions 1–2) is replaced by release-please. This ADR's core decision — repo-level npm versioning, the root as the single published package, skills versioned out-of-band — **still stands**.
 
 ## Context
 
@@ -14,7 +14,7 @@ That premise no longer holds. [A-358](https://linear.app/goose-and-hobbes/issue/
 
 Meanwhile the workspace plumbing Decision 1 needs was never laid: there is no `pnpm-workspace.yaml` and no `workspaces` field, so Changesets only ever discovers the root. A changeset that names a per-skill package points at something Changesets can't see — it **silently no-ops**, or makes `pnpm changeset status` **error**. This trap has bitten the repo repeatedly (`cleanup-repo`'s `asw-134` never bumped; the `changelog` and `linear-sync` ports, [A-351](https://linear.app/goose-and-hobbes/issue/A-351) / [A-352](https://linear.app/goose-and-hobbes/issue/A-352), worked around it by naming the root).
 
-Completing Decision 1 (add the workspace, `ignore` the root, version skills independently) would pull npm versioning *away* from the repo level — the published root would freeze or stop being the bumped package — which is the opposite of what we want now that the root is the deliberate public artifact. So we resolve the tension the other way.
+Completing Decision 1 (add the workspace, `ignore` the root, version skills independently) would pull npm versioning _away_ from the repo level — the published root would freeze or stop being the bumped package — which is the opposite of what we want now that the root is the deliberate public artifact. So we resolve the tension the other way.
 
 ## Decision
 
@@ -33,7 +33,7 @@ Completing Decision 1 (add the workspace, `ignore` the root, version skills inde
 
 ## Rejected alternatives
 
-- **Complete ADR-0001 Decision 1 (per-skill Changesets packages).** The original plan. Rejected here because it moves npm versioning off the root just as the root became the deliberate public artifact, and it adds workspace machinery for a repo that publishes a single tarball. The per-skill *changelog* and *semver* discipline it wanted is preserved via the out-of-band `metadata.version` label instead.
+- **Complete ADR-0001 Decision 1 (per-skill Changesets packages).** The original plan. Rejected here because it moves npm versioning off the root just as the root became the deliberate public artifact, and it adds workspace machinery for a repo that publishes a single tarball. The per-skill _changelog_ and _semver_ discipline it wanted is preserved via the out-of-band `metadata.version` label instead.
 - **Aggregate auto-bump (root bumped on every skill change via a dual changeset).** Keeps npm always fresh but adds a two-changeset-per-PR convention and contradicts the "name only the root" guard's simplicity. Repo-level bumps via a single root changeset already cover this when a release is wanted.
 
 ## Consequences

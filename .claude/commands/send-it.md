@@ -1,4 +1,5 @@
 ---
+title: send-it
 description: Bundle uncommitted work, run the lint preflight, write a dated changelog entry, set a Conventional Commits PR title, push the branch, open or update a PR, move linked Linear issues to In Review, then chain into triage-pr to drive the PR to merge-ready.
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), Bash(npx:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---

@@ -26,7 +26,7 @@ version: 1.2.0
 **initialise-skills:** a repeatable `--set <skill>.<key>=<value>` flag. Until now
 the only override channels were the three stdin fact keys (`linearTeamName`,
 `linearWorkspaceSlug`, `issueKeys`) and `acceptDrift` — and `acceptDrift` only
-*accepts* a detected value, it can't push an arbitrary one. Changing any other
+_accepts_ a detected value, it can't push an arbitrary one. Changing any other
 setting meant hand-editing `config.json`.
 
 `--set` writes an arbitrary value a detector wouldn't produce into a named skill's

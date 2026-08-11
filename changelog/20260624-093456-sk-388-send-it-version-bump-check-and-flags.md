@@ -25,7 +25,7 @@ version: 1.2.0
 
 ## Added
 
-- **Per-bundle version-bump check** (`skills/send-it/scripts/check-skill-bumps.mjs`). `validate-skills` enforces that a skill's `package.json` version and `SKILL.md metadata.version` *agree*, but nothing enforced that they were *bumped* when the bundle's content changed — so an edited skill could ship with a stale version label. The new helper flags `skills/<name>/` bundles whose content changed without a version bump; send-it Step 6 proposes a bump and, on confirmation, edits both files in lockstep before composing the PR title. Gated on a new optional `bundleVersioning` config block, so single-package consumer repos no-op cleanly.
+- **Per-bundle version-bump check** (`skills/send-it/scripts/check-skill-bumps.mjs`). `validate-skills` enforces that a skill's `package.json` version and `SKILL.md metadata.version` _agree_, but nothing enforced that they were _bumped_ when the bundle's content changed — so an edited skill could ship with a stale version label. The new helper flags `skills/<name>/` bundles whose content changed without a version bump; send-it Step 6 proposes a bump and, on confirmation, edits both files in lockstep before composing the PR title. Gated on a new optional `bundleVersioning` config block, so single-package consumer repos no-op cleanly.
 - **`--base=<branch>`** flag — override the configured `baseBranch` for a single run (stacked PRs / non-`main` targets); applies to the fetch, the branch diff, and the PR base.
 - **`--title="<subject>"`** flag — set the Conventional Commits PR title verbatim instead of deriving it (escape hatch when derivation picks the wrong type).
 - **`--skip-preflight`** flag — bypass the Step 5 lint gate, printing a warning.

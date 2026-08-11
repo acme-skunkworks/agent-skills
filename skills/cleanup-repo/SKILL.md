@@ -15,7 +15,7 @@ compatibility: >-
   Linear MCP server; if it is unavailable, skip that step silently. The
   filesystem pass needs Node.js ≥22.
 metadata:
-  version: 0.4.1
+  version: 0.4.2
   author: Rob Easthope
 allowed-tools: Read, Bash(git:*), Bash(gh:*), Bash(node:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses
 ---
@@ -48,7 +48,7 @@ match the consuming repo:
 Build the issue-ID regex **deterministically**: escape each key's regex
 metacharacters, and when there is more than one key wrap the alternation in
 `(?:…)` so the `-\d+` binds to all of them — `\b(?:A|B)-\d+\b`, never the naive
-join `\bA|B-\d+\b` (which parses as `\bA` *or* `B-\d+\b`). A single key needs no
+join `\bA|B-\d+\b` (which parses as `\bA` _or_ `B-\d+\b`). A single key needs no
 wrapper: `\bA-\d+\b`. With no keys configured, match nothing. This mirrors the
 canonical `buildIssueRe` in the repo-root `lib/issue-keys.mjs`, which
 `pnpm vendor:sync` copies into each consuming bundle (ADR-0004). Match it
@@ -148,7 +148,7 @@ gh pr list --head <branch-name> --base <mainBranch> --state merged \
 `--repo` flag is needed.
 
 - **`--base <mainBranch>` is required.** `gh pr list --head` does **not** filter on
-  base on its own, so without it a branch merged into a *different* base (a
+  base on its own, so without it a branch merged into a _different_ base (a
   stacked/feature base, not the trunk) would be wrongly counted as merged-to-trunk
   and deleted. Scoping to `--base <mainBranch>` (default `main`) restricts the match
   to PRs actually merged into the trunk.
@@ -160,7 +160,7 @@ gh pr list --head <branch-name> --base <mainBranch> --state merged \
   - **Equal** → the branch is fully merged; add it to the squash-merged cleanup
     list (Step 9.3 force-deletes it, which is safe because the tip matched).
   - **Not equal** → the local branch carries commits added **after** the PR merged.
-    Do **not** delete it; add it to a *"Skipped — local tip ahead of merged PR"*
+    Do **not** delete it; add it to a _"Skipped — local tip ahead of merged PR"_
     group so a plain `-D` can't silently discard unpushed work.
 - An empty result means the branch is genuinely unmerged — leave it alone.
 
@@ -304,8 +304,8 @@ runs **after** worktree removal so a just-emptied worktree parent (e.g.
    ```
 
    Force-delete (`-D`) only the squash-merged branches confirmed in Step 3 — those
-   whose local tip equalled the merged PR's `headRefOid`. Branches in the *"Skipped
-   — local tip ahead of merged PR"* group are **never** force-deleted here: they
+   whose local tip equalled the merged PR's `headRefOid`. Branches in the _"Skipped
+   — local tip ahead of merged PR"_ group are **never** force-deleted here: they
    carry commits added after the merge, and `-D` would discard them. The base-scoped
    `gh pr list --base <mainBranch>` and the tip check together are what make the
    force safe; without them `-D` could drop a branch merged into a different base or
@@ -351,7 +351,7 @@ If any Linear issues from Step 4 are not `Done`:
   - Resolve the live `Done` state ID **once** via
     `mcp__linear-server__list_issue_statuses` with `team: <linearTeamName>` —
     state IDs are per-team and the team key changes over time, so pass the team
-    *name*.
+    _name_.
   - For each open issue, call `mcp__linear-server__save_issue` with
     `state: <Done state ID>`.
 - If no, skip without changes.

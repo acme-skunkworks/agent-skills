@@ -24,7 +24,7 @@ version: 1.2.0
 ## Added
 
 **cleanup-repo:** the optional Linear `Done` writeback (Step 10) previously prompted
-*"Set them to Done? (yes/no)"* with a **hardcoded default of no**. That default is
+_"Set them to Done? (yes/no)"_ with a **hardcoded default of no**. That default is
 right for repos wired to Linear's GitHub integration — which moves an issue to Done
 on PR merge, leaving the writeback for the rare case it didn't fire — but a repo not
 using that integration had no way to flip the default short of editing the
