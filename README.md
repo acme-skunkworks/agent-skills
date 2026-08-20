@@ -7,7 +7,7 @@ Shared agent skills for Claude Code and Cursor, distributed as [skills.sh](https
 From any consumer repo:
 
 ```bash
-npx skills add https://github.com/acme-skunkworks/agent-skills --skill <name> --agent claude-code --agent cursor --copy
+npx skills add https://github.com/rheged-studio/agent-skills --skill <name> --agent claude-code --agent cursor --copy
 ```
 
 `--copy` writes real files (not symlinks) so the skill is portable across machines. Don't use `-g` / `--global` — installs should live in the consumer repo.
