@@ -17,13 +17,13 @@ permissions: {}
 
 jobs:
   config:
-    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-load-repo-config.yml@v1
+    uses: rheged-studio/shared-workflows/.github/workflows/reusable-load-repo-config.yml@v1
     permissions:
       contents: read
 
   release:
     needs: config
-    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-pkg-release.yml@v1
+    uses: rheged-studio/shared-workflows/.github/workflows/reusable-pkg-release.yml@v1
     with:
       npm-scope: ${{ needs.config.outputs.npm_scope }}
       # Bundle-only package (ships skills.sh bundles) — no build script, so skip
@@ -47,7 +47,7 @@ jobs:
   # Runs independently of `release` — both read the bumped version from the
   # committed package.json; no publish artifact is needed.
   changelog-enrich:
-    uses: acme-skunkworks/shared-workflows/.github/workflows/reusable-changelog-enrich.yml@v1
+    uses: rheged-studio/shared-workflows/.github/workflows/reusable-changelog-enrich.yml@v1
     with:
       mode: finalise
     permissions:

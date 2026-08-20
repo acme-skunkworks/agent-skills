@@ -57,7 +57,7 @@ import { join, relative, resolve } from "node:path";
 // (as `sourceType: github`) in the consumer's skills-lock.json. Installing from a
 // local path instead would leak an absolute machine path into every consumer
 // (A-718). Also used as the skills.lock `lockSource`.
-export const SOURCE_URL = "https://github.com/acme-skunkworks/agent-skills";
+export const SOURCE_URL = "https://github.com/rheged-studio/agent-skills";
 
 // The local agent-skills checkout this script lives in — used ONLY as the
 // `check-updates --source` (a local checkout to read target versions from); the
