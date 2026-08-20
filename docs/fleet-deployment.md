@@ -93,7 +93,7 @@ Install the chosen set with `--copy` so each repo vendors a stable bundle (real
 files, not symlinks):
 
 ```bash
-npx skills add https://github.com/acme-skunkworks/agent-skills \
+npx skills add https://github.com/rheged-studio/agent-skills \
   --skill send-it --skill commit --skill preflight --skill changelog \
   --skill linear-sync --skill cleanup-repo --skill initialise-skills \
   --skill release-status \
@@ -117,7 +117,7 @@ add <url>` resolves the repo's default branch (`main`). `main` is kept
 release-ready, so this is the normal path. For a reproducible, pinned install:
 
 ```bash
-git clone --branch <tag> https://github.com/acme-skunkworks/agent-skills /tmp/agent-skills-<tag>
+git clone --branch <tag> https://github.com/rheged-studio/agent-skills /tmp/agent-skills-<tag>
 npx skills add /tmp/agent-skills-<tag> --skill <name> --agent claude-code --copy
 ```
 

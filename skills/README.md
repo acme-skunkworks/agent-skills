@@ -5,7 +5,7 @@ Each skill lives in `skills/<name>/` as a [skills.sh](https://skills.sh)-compati
 Consumers install a skill from this repo with:
 
 ```bash
-npx skills add https://github.com/acme-skunkworks/agent-skills --skill <name> --agent claude-code --agent cursor --copy
+npx skills add https://github.com/rheged-studio/agent-skills --skill <name> --agent claude-code --agent cursor --copy
 ```
 
 Pass `--skill` more than once (or omit it to install them all), and add an `--agent` for each agent you want the bundle installed into.

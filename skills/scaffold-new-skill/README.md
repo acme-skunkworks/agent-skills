@@ -10,7 +10,7 @@ stop drifting. Every artefact the generator writes passes the same
 From any consumer repo:
 
 ```bash
-npx skills add https://github.com/acme-skunkworks/agent-skills --skill scaffold-new-skill --agent claude-code --copy
+npx skills add https://github.com/rheged-studio/agent-skills --skill scaffold-new-skill --agent claude-code --copy
 ```
 
 `--copy` writes real files so the bundle is portable. Don't use `-g` /
