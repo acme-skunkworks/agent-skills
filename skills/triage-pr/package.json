@@ -1,5 +1,5 @@
 {
-  "name": "@acme-skunkworks/skill-triage-pr",
+  "name": "@rheged-studio/skill-triage-pr",
   "version": "0.11.1",
   "private": true,
   "description": "Agent skill: take a pull request from draft with failing CI to merge-ready \u2014 fix in-scope CI failures, then human-envelope Phase B AI review dispositions (accept / decline / defer\u2192Linear).",
@@ -12,13 +12,13 @@
     "ci",
     "code-review"
   ],
-  "homepage": "https://github.com/acme-skunkworks/agent-skills/tree/main/skills/triage-pr#readme",
+  "homepage": "https://github.com/rheged-studio/agent-skills/tree/main/skills/triage-pr#readme",
   "bugs": {
-    "url": "https://github.com/acme-skunkworks/agent-skills/issues"
+    "url": "https://github.com/rheged-studio/agent-skills/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/acme-skunkworks/agent-skills.git",
+    "url": "https://github.com/rheged-studio/agent-skills.git",
     "directory": "skills/triage-pr"
   },
   "license": "MIT",

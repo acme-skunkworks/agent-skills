@@ -1,5 +1,5 @@
 {
-  "name": "@acme-skunkworks/skill-send-it",
+  "name": "@rheged-studio/skill-send-it",
   "version": "0.8.1",
   "private": true,
   "description": "Agent skill: the all-in-one ship finisher \u2014 bundle uncommitted work into atomic commits, run the change-gated lint preflight, author or update the dated changelog entry, compose a Conventional Commits PR title, push, open or update a PR, and transition linked Linear issues to In Review.",
@@ -13,13 +13,13 @@
     "conventional-commits",
     "changelog"
   ],
-  "homepage": "https://github.com/acme-skunkworks/agent-skills/tree/main/skills/send-it#readme",
+  "homepage": "https://github.com/rheged-studio/agent-skills/tree/main/skills/send-it#readme",
   "bugs": {
-    "url": "https://github.com/acme-skunkworks/agent-skills/issues"
+    "url": "https://github.com/rheged-studio/agent-skills/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/acme-skunkworks/agent-skills.git",
+    "url": "https://github.com/rheged-studio/agent-skills.git",
     "directory": "skills/send-it"
   },
   "license": "MIT",

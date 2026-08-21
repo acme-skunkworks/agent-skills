@@ -167,11 +167,11 @@ describe("mergeConfig", () => {
     const config = {};
     const { data, results } = mergeConfig({
       config,
-      detect: detect({ linearTeamName: "ACME Skunkworks" }),
+      detect: detect({ linearTeamName: "Rheged Studio" }),
       example,
     });
     expect(results.linearTeamName.status).toBe("inferred");
-    expect(data.linearTeamName).toBe("ACME Skunkworks");
+    expect(data.linearTeamName).toBe("Rheged Studio");
   });
 
   it("acceptDrift overwrites a drifted key with the detected value", () => {
@@ -255,13 +255,13 @@ describe("mergeConfig", () => {
         config: {},
         detect: detect(),
         example,
-        set: { linearTeamName: "ACME Skunkworks" },
+        set: { linearTeamName: "Rheged Studio" },
       });
       expect(results.linearTeamName).toEqual({
         status: "set",
-        write: "ACME Skunkworks",
+        write: "Rheged Studio",
       });
-      expect(data.linearTeamName).toBe("ACME Skunkworks");
+      expect(data.linearTeamName).toBe("Rheged Studio");
     });
 
     it("writes a reordered set-key override exactly, not order-insensitively", () => {
@@ -289,7 +289,7 @@ describe("mergeConfig", () => {
         config: {
           baseBranch: "main",
           issueKeys: ["DEF", "GHI"],
-          linearTeamName: "ACME Skunkworks",
+          linearTeamName: "Rheged Studio",
         },
         detect: detect(),
         example,

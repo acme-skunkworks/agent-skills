@@ -5,7 +5,7 @@
 // `skills/<name>/` bundle whose layout and metadata satisfy the same rules
 // `pnpm validate:skills` enforces (ADR-0001 / A-364):
 //
-//   - package.json   : name "@acme-skunkworks/skill-<name>", private: true,
+//   - package.json   : name "@rheged-studio/skill-<name>", private: true,
 //                      version "0.1.0", repository.directory "skills/<name>"
 //   - SKILL.md       : frontmatter name === <name>, metadata.version "0.1.0",
 //                      metadata.author
@@ -45,7 +45,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
-export const SKILL_SCOPE = "@acme-skunkworks";
+export const SKILL_SCOPE = "@rheged-studio";
 export const DEFAULT_AUTHOR = "Rob Easthope";
 export const INITIAL_VERSION = "0.1.0";
 
@@ -95,13 +95,13 @@ export function buildSkeleton(name, options = {}) {
       name: author,
     },
     bugs: {
-      url: "https://github.com/acme-skunkworks/agent-skills/issues",
+      url: "https://github.com/rheged-studio/agent-skills/issues",
     },
     description: `Agent skill: ${name}.`,
     engines: {
       node: ">=22",
     },
-    homepage: `https://github.com/acme-skunkworks/agent-skills/tree/main/skills/${name}#readme`,
+    homepage: `https://github.com/rheged-studio/agent-skills/tree/main/skills/${name}#readme`,
     keywords: ["agent-skill", "claude-code"],
     license: "MIT",
     name: `${SKILL_SCOPE}/skill-${name}`,
@@ -109,7 +109,7 @@ export function buildSkeleton(name, options = {}) {
     repository: {
       directory: base,
       type: "git",
-      url: "https://github.com/acme-skunkworks/agent-skills.git",
+      url: "https://github.com/rheged-studio/agent-skills.git",
     },
     version: INITIAL_VERSION,
   };
@@ -177,7 +177,7 @@ TODO: one-line summary.
 From any consumer repo:
 
 \`\`\`bash
-npx skills add https://github.com/acme-skunkworks/agent-skills --skill ${name} --agent claude-code --copy
+npx skills add https://github.com/rheged-studio/agent-skills --skill ${name} --agent claude-code --copy
 \`\`\`
 
 \`--copy\` writes real files so the bundle is portable. Don't use \`-g\` /
