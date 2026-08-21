@@ -255,7 +255,7 @@ checkout via `--source`) that the repo is now current (`updatesAvailable === fal
 — the idempotency gate). A re-run is a clean no-op.
 
 The script **holds no repo list.** It takes one repo's profile as input and is
-meant to run inside the private release-orchestrator's fan-out (A-713), whose
+meant to run inside Clacks's fan-out (A-713), whose
 unified manifest (A-715) supplies one profile per consumer — so private repo
 names never surface in this public repo. The driver (token minting, per-repo PR
 creation) lives in the orchestrator, not here.
