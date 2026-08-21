@@ -130,7 +130,7 @@ jobs:
 
       - name: 🧩 Validate skill bundle metadata
         # Hard gate (ASW-364): every skills/*/ must have a package.json named
-        # @acme-skunkworks/skill-<dir>, private: true, a semver version, and a
+        # @rheged-studio/skill-<dir>, private: true, a semver version, and a
         # SKILL.md whose metadata.version matches.
         run: pnpm validate:skills
 

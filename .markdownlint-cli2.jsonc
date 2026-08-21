@@ -1,7 +1,7 @@
 // Markdown linting for agent-skills.
 //
 // Rules come entirely from the shared house-style config
-// `@acme-skunkworks/markdownlint-config` (consumed via `extends`, kept in
+// `@rheged-studio/markdownlint-config` (consumed via `extends`, kept in
 // lockstep with the org). It disables MD013/MD033/MD040/MD041 so long-form
 // prose and frontmatter-first changelog entries lint clean.
 //
@@ -11,7 +11,7 @@
 // preflight's own ignore set.
 {
   "config": {
-    "extends": "@acme-skunkworks/markdownlint-config"
+    "extends": "@rheged-studio/markdownlint-config"
   },
   // Skip gitignored paths (node_modules, `.claude/` worktrees, etc.) so local
   // runs lint exactly the tracked set CI sees.

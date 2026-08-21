@@ -44,7 +44,7 @@ Repo specifics that fall out of the skill's config here:
   per-bundle version-bump check: if a `skills/<name>/` bundle changed but its version
   didn't, send-it proposes a bump and (on confirmation) edits its `package.json`
   `version` + `SKILL.md` `metadata.version` in lockstep before composing the title.
-- The single published package is the root `@acme-skunkworks/agent-skills`; the PR
+- The single published package is the root `@rheged-studio/agent-skills`; the PR
   title always describes it (published surface `files: ["skills/"]`, ADR-0002).
 
 This command intentionally does NOT run typecheck, tests, or format checks — CI
