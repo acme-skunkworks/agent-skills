@@ -16,7 +16,8 @@ stats:
   files_changed: 42
   loc_added: 1285
   loc_removed: 1225
-  commits:
+  commits: 7
+version: 1.4.1
 ---
 
 ## Changed
@@ -25,4 +26,4 @@ stats:
 
 - Migrate npm dependency keys, config extends, skill package names, and docs to `@rheged-studio/*`
 - Refresh lockfile to resolve published bootstrap packages on npm
-- Second-pass brand prose sweep where A-1220 missed
+- Second-pass brand prose sweep where [A-1220](https://linear.app/rheged-studio/issue/A-1220) missed

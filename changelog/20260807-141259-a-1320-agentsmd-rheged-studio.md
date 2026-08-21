@@ -1,8 +1,8 @@
 ---
 title: Refresh AGENTS.md to Rheged Studio canonical
-release_note: ''
-created_at: '2026-08-07T14:12:59Z'
-merged_at: '2026-08-07T14:30:48Z'
+release_note: ""
+created_at: "2026-08-07T14:12:59Z"
+merged_at: "2026-08-07T14:30:48Z"
 branch: a-1320-agent-skills-refresh-agentsmd-to-rheged-studio-canonical
 pr: 159
 commit: afe3158
@@ -16,7 +16,8 @@ stats:
   files_changed: 2
   loc_added: 47
   loc_removed: 8
-  commits:
+  commits: 2
+version: 1.4.1
 ---
 
 ## Changed
