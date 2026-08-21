@@ -19,7 +19,7 @@ compatibility: >-
   The bundled diagnosis helper needs Node.js >=22 (ES modules, Node built-ins
   only — no npm dependencies, no build step, no tsx). Designed for repos whose
   releases run through release-please via an external orchestrator (the
-  road-runner-bot `release-orchestrator`), with a publish-only `release.yml`
+  Clacks (`rheged-studio/clacks`)), with a publish-only `release.yml`
   gated on a version-vs-tag check.
 metadata:
   version: 0.2.2
