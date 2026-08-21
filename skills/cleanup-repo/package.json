@@ -1,5 +1,5 @@
 {
-  "name": "@acme-skunkworks/skill-cleanup-repo",
+  "name": "@acme-studio/skill-cleanup-repo",
   "version": "0.4.2",
   "private": true,
   "description": "Agent skill: clean up merged Git branches and worktrees, plus a filesystem-hygiene pass (empty directories and orphan node_modules).",
@@ -11,13 +11,13 @@
     "cleanup",
     "worktree"
   ],
-  "homepage": "https://github.com/acme-skunkworks/agent-skills/tree/main/skills/cleanup-repo#readme",
+  "homepage": "https://github.com/acme-studio/agent-skills/tree/main/skills/cleanup-repo#readme",
   "bugs": {
-    "url": "https://github.com/acme-skunkworks/agent-skills/issues"
+    "url": "https://github.com/acme-studio/agent-skills/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/acme-skunkworks/agent-skills.git",
+    "url": "https://github.com/acme-studio/agent-skills.git",
     "directory": "skills/cleanup-repo"
   },
   "license": "MIT",

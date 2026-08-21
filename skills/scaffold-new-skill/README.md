@@ -24,7 +24,7 @@ keys are the defaults the generator stamps into a new skill:
 
 | Key | Meaning | Default |
 | --- | --- | --- |
-| `scope` | The npm scope used in the generated `package.json` name (`<scope>/skill-<name>`). | `"@acme-skunkworks"` |
+| `scope` | The npm scope used in the generated `package.json` name (`<scope>/skill-<name>`). | `"@acme-studio"` |
 | `author` | The default author string for the generated `SKILL.md` `metadata.author` and `package.json`. | `"Rob Easthope"` |
 
 Run the `initialise-skills` skill to generate `config.json` from the example, or

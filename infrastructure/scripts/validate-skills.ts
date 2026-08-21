@@ -7,7 +7,7 @@
 // can't silently drift across skills. For every `skills/<name>/`:
 //
 //   - package.json exists, with:
-//       name    === `@acme-skunkworks/skill-<name>` (the `skill-` prefix +
+//       name    === `@acme-studio/skill-<name>` (the `skill-` prefix +
 //                   directory name — ADR-0001 Decision 1)
 //       private === true (accidental-publish guard — these never go to npm)
 //       version  is a semver string
@@ -28,7 +28,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 export const SKILLS_DIR = "skills";
-export const SKILL_SCOPE = "@acme-skunkworks";
+export const SKILL_SCOPE = "@acme-studio";
 // This repo's real (dogfood) configs live here, not in skills/<name>/config.json
 // (gitignored since A-615). The key-parity guard validates these tracked files.
 export const DOGFOOD_CONFIG_DIR = join("infrastructure", "dogfood-config");

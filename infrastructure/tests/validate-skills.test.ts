@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 function pkg(over: Record<string, unknown> = {}): string {
   return JSON.stringify({
-    name: "@acme-skunkworks/skill-cleanup-repo",
+    name: "@acme-studio/skill-cleanup-repo",
     private: true,
     version: "0.1.0",
     ...over,
@@ -48,12 +48,12 @@ describe("validateSkill", () => {
   it("rejects a name that doesn't match the dir + skill- prefix", () => {
     const errors = validateSkill(
       "cleanup-repo",
-      pkg({ name: "@acme-skunkworks/cleanup-repo" }),
+      pkg({ name: "@acme-studio/cleanup-repo" }),
       yamlSkill("cleanup-repo", "0.1.0"),
     );
     expect(
       errors.some((error) =>
-        error.includes("@acme-skunkworks/skill-cleanup-repo"),
+        error.includes("@acme-studio/skill-cleanup-repo"),
       ),
     ).toBe(true);
   });

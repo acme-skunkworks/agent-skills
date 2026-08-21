@@ -24,11 +24,11 @@ Each `skills/<name>/` is its own workspace package with its own `package.json`, 
 
 - `pnpm-workspace.yaml` declares `skills/*` as workspaces.
 - Each `skills/<name>/package.json` carries:
-  - `name`: `@acme-skunkworks/skill-<name>`. The `skill-` prefix prevents collisions with potential future non-skill packages in this org and makes the role obvious in any consumer's `node_modules`. **This is distinct from the skill's `SKILL.md` `name` field**, which the Agent Skills spec mandates must equal the parent directory name (e.g. `cleanup-repo`).
+  - `name`: `@acme-studio/skill-<name>`. The `skill-` prefix prevents collisions with potential future non-skill packages in this org and makes the role obvious in any consumer's `node_modules`. **This is distinct from the skill's `SKILL.md` `name` field**, which the Agent Skills spec mandates must equal the parent directory name (e.g. `cleanup-repo`).
   - `version`: starts at `0.1.0` (see Decision 2 for why not `0.0.1`).
   - `private: true` — these are not npm-published; skills.sh consumes the Git tree directly. The flag keeps an accidental `pnpm publish` a no-op.
-- `.changeset/config.json` keeps `fixed` and `linked` unset so versions move independently. The root `@acme-skunkworks/agent-skills` package stays `private: true` and should be added to Changesets' `ignore` list so it never appears in Version Packages PRs.
-- Git tag format follows the Changesets default: `@acme-skunkworks/skill-<name>@<version>` (e.g. `@acme-skunkworks/skill-cleanup-repo@1.2.0`). See Decision 4 for how consumers use these.
+- `.changeset/config.json` keeps `fixed` and `linked` unset so versions move independently. The root `@acme-studio/agent-skills` package stays `private: true` and should be added to Changesets' `ignore` list so it never appears in Version Packages PRs.
+- Git tag format follows the Changesets default: `@acme-studio/skill-<name>@<version>` (e.g. `@acme-studio/skill-cleanup-repo@1.2.0`). See Decision 4 for how consumers use these.
 
 ### Rejected alternatives
 
@@ -115,7 +115,7 @@ The `vercel-labs/skills` CLI as of 2026-05-27 accepts these URL forms for `npx s
 
 ### Tag-pinning escape hatch
 
-We still publish Git tags (`@acme-skunkworks/skill-<name>@<version>`) via Changesets, even though the CLI can't consume them directly. Consumers who need a pinned version can:
+We still publish Git tags (`@acme-studio/skill-<name>@<version>`) via Changesets, even though the CLI can't consume them directly. Consumers who need a pinned version can:
 
 1. `git clone --branch <tag>` this repo locally, then `npx skills add ./local-path --skill <name>`. Pinned exactly to the tag.
 2. Substitute the tag into the `tree/<ref>/...` URL form — likely works since GitHub resolves tags as refs, but not officially documented by the CLI. Use at your own risk.
@@ -143,11 +143,11 @@ If the spec adds a native deprecation field later, switch to it and supersede th
 
 ## Consequences
 
-- Adding a skill is a workspace change: it needs `SKILL.md` (matching parent dir name), `package.json` (named `@acme-skunkworks/skill-<name>`, `private: true`, version `0.1.0`), and a `.changeset/<slug>.md` referencing the package name.
+- Adding a skill is a workspace change: it needs `SKILL.md` (matching parent dir name), `package.json` (named `@acme-studio/skill-<name>`, `private: true`, version `0.1.0`), and a `.changeset/<slug>.md` referencing the package name.
 - Migrating later from per-skill versions or from the chosen name pattern would break any pinned consumers — so the decision is locked before skill #1 lands.
 - The CLI's lack of `--ref` pinning is an accepted limitation; we publish tags anyway so consumers have a recovery path via local-clone.
 - Manifest lint joins `validate.yml` with A-134, using `skills-ref validate` against every `skills/<name>/` directory.
-- The root `@acme-skunkworks/agent-skills` package must be added to Changesets' `ignore` list when workspace plumbing lands.
+- The root `@acme-studio/agent-skills` package must be added to Changesets' `ignore` list when workspace plumbing lands.
 
 ## Out of scope
 

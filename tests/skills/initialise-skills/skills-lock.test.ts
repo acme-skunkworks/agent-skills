@@ -103,7 +103,7 @@ function sampleLock() {
   return buildLock({
     installedVersions: { changelog: "0.9.1", "send-it": "0.6.1" },
     ref: "main",
-    source: "https://github.com/acme-skunkworks/agent-skills",
+    source: "https://github.com/acme-studio/agent-skills",
   });
 }
 
@@ -147,7 +147,7 @@ describe("readLock / writeLock", () => {
     const changed = buildLock({
       installedVersions: { changelog: "1.0.0", "send-it": "0.6.1" },
       ref: "main",
-      source: "https://github.com/acme-skunkworks/agent-skills",
+      source: "https://github.com/acme-studio/agent-skills",
     });
     expect(writeLock(root, changed, { write: false }).status).toBe(
       "would-write",
