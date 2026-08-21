@@ -5,7 +5,7 @@ description: >-
   agent-skills repo, so new bundles start consistent and stop drifting. Use when
   asked to scaffold / create / bootstrap / start a new skill, add a new skill
   bundle, or generate the boilerplate for a skill. Writes a SKILL.md, a
-  package.json (@acme-studio/skill-<name>, private, version 0.1.0), a
+  package.json (@rheged-studio/skill-<name>, private, version 0.1.0), a
   config.json + config.example.json with identical key sets, an entry script
   wired to the standard --help / --dry-run / --self-test dispatch idiom, a vitest
   test stub, and a README — all passing the same pnpm validate:skills gate. Has a
@@ -32,7 +32,7 @@ Two defaults live in [`config.json`](config.json) beside this file:
 
 | Key | Meaning | Default |
 | --- | --- | --- |
-| `scope` | The npm scope used in the generated `package.json` name (`<scope>/skill-<name>`). | `"@acme-studio"` |
+| `scope` | The npm scope used in the generated `package.json` name (`<scope>/skill-<name>`). | `"@rheged-studio"` |
 | `author` | The default author string stamped into the generated `SKILL.md` `metadata.author` and `package.json`. | `"Rob Easthope"` |
 
 A neutral [`config.example.json`](config.example.json) ships alongside as a
@@ -46,7 +46,7 @@ Given a kebab-case `--name=<name>`, the generator writes:
 - `skills/<name>/SKILL.md` — frontmatter with `name: <name>`,
   `metadata.version: 0.1.0`, and `metadata.author`, plus a `## Process` /
   `## Scripts` body skeleton with `TODO` placeholders.
-- `skills/<name>/package.json` — `name: @acme-studio/skill-<name>`,
+- `skills/<name>/package.json` — `name: @rheged-studio/skill-<name>`,
   `private: true`, `version: 0.1.0`, and `repository.directory: "skills/<name>"`.
 - `skills/<name>/config.json` + `skills/<name>/config.example.json` — generated
   from one template object, so their **key sets are identical by construction**

@@ -1,5 +1,5 @@
 {
-  "name": "@acme-studio/skill-release-status",
+  "name": "@rheged-studio/skill-release-status",
   "version": "0.2.2",
   "private": true,
   "description": "Agent skill: diagnose the release-please pipeline \u2014 preview the next version from commits since the last tag, surface the release PR and its gate, detect the stale autorelease: pending stall, and confirm tag-vs-version parity.",
@@ -12,13 +12,13 @@
     "release",
     "diagnostics"
   ],
-  "homepage": "https://github.com/acme-studio/agent-skills/tree/main/skills/release-status#readme",
+  "homepage": "https://github.com/rheged-studio/agent-skills/tree/main/skills/release-status#readme",
   "bugs": {
-    "url": "https://github.com/acme-studio/agent-skills/issues"
+    "url": "https://github.com/rheged-studio/agent-skills/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/acme-studio/agent-skills.git",
+    "url": "https://github.com/rheged-studio/agent-skills.git",
     "directory": "skills/release-status"
   },
   "license": "MIT",

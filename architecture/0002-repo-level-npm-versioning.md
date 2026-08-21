@@ -8,7 +8,7 @@
 
 ## Context
 
-ADR-0001 Decision 1 chose **per-skill versioning via pnpm workspaces**: each `skills/<name>/` would be its own Changesets-managed workspace package (`@acme-studio/skill-<name>`), versioned independently, with the root `@acme-studio/agent-skills` kept `private: true` and added to Changesets' `ignore` list. That decision was made (2026-05-27) on the premise that **the root is never published** — skills.sh consumes the Git tree directly and npm is not in the consumer path (ADR-0001 Decision 4).
+ADR-0001 Decision 1 chose **per-skill versioning via pnpm workspaces**: each `skills/<name>/` would be its own Changesets-managed workspace package (`@rheged-studio/skill-<name>`), versioned independently, with the root `@rheged-studio/agent-skills` kept `private: true` and added to Changesets' `ignore` list. That decision was made (2026-05-27) on the premise that **the root is never published** — skills.sh consumes the Git tree directly and npm is not in the consumer path (ADR-0001 Decision 4).
 
 That premise no longer holds. [A-358](https://linear.app/goose-and-hobbes/issue/A-358) flipped the root to `private: false`, version `1.0.0`, and published it to npm as the public artifact that bundles every skill (`files: ["skills/"]`). The root is now the published tarball.
 
@@ -20,7 +20,7 @@ Completing Decision 1 (add the workspace, `ignore` the root, version skills inde
 
 **npm versioning stays at the repo level. Skills are versioned out-of-band, not by Changesets.**
 
-1. **The root `@acme-studio/agent-skills` is the single Changesets-managed, published package.** It versions as one number (`1.0.0 → 1.1.0 → …`) representing the collection as a whole. Every changeset names the root and only the root.
+1. **The root `@rheged-studio/agent-skills` is the single Changesets-managed, published package.** It versions as one number (`1.0.0 → 1.1.0 → …`) representing the collection as a whole. Every changeset names the root and only the root.
 2. **No `pnpm-workspace.yaml`, no `workspaces` field, and `.changeset/config.json` `ignore` stays `[]`.** Changesets is intentionally kept aware of only the root. (This reverses ADR-0001 Decision 1's `pnpm-workspace.yaml` + root-in-`ignore` mechanics.)
 3. **Skills carry their own version out-of-band.** Each skill keeps a `version` in its `private: true` `package.json`, mirrored into `SKILL.md` `metadata.version` (the mirror ADR-0001 Decision 2 already sanctions). It is bumped **by hand** per Decision 2's semver semantics when that skill changes. This label is for consumers and runtime introspection; it is decoupled from the root npm release and is **never** driven by a changeset. `pnpm validate:skills` (a hard gate in `validate.yml`) enforces the per-skill `package.json` naming/`private`/version rules and the `metadata.version` parity, so the metadata can't drift silently across skills.
 4. **A CI guard makes wrong names fail loudly.** `infrastructure/scripts/validate-changesets.ts` (`pnpm validate:changesets`, a hard gate in `validate.yml`'s `🔬 Build & Lint`) asserts every `.changeset/*.md` names only the root. A skill-named changeset fails the build instead of silently no-op'ing. The `/send-it` changeset writer (`derive-changeset.ts`) emits the root package name as a `pkg` field so the contract lives in code, not prose.
@@ -28,7 +28,7 @@ Completing Decision 1 (add the workspace, `ignore` the root, version skills inde
 ### What this means in practice
 
 - **npm:** one package, one moving version; the tarball ships all skills at whatever state they're in for that release. Skills themselves are never npm-published (they stay `private: true`).
-- **Git tags / GitHub releases:** one tag and one release per root version (e.g. `@acme-studio/agent-skills@1.1.0`), as today — not one per skill.
+- **Git tags / GitHub releases:** one tag and one release per root version (e.g. `@rheged-studio/agent-skills@1.1.0`), as today — not one per skill.
 - **"What changed in skill X":** answered by the skill's `metadata.version` + its entry in the dated `changelog/` and the root `CHANGELOG.md`, not by a per-skill tag.
 
 ## Rejected alternatives
