@@ -404,12 +404,18 @@ high-impact when that knob is on).
 
 **Resolve follow-up destination before the envelope.** When the plan includes
 any `follow-up` and capture is enabled (`linearTeamName` set), run the Step 11
-inherit-then-fallback algorithm **in this step** — before Step 10 — so each
-follow-up item can show `→ file under …`. Reuse that destination on mint in
-Step 11; do not re-decide it after approval. If routing fail-closes (empty or
-unresolved catch-all), keep the item as a follow-up candidate but say on the
-envelope line that capture will decline / `Follow-up not tracked`. Skip this
-resolve when capture is disabled (`linearTeamName` empty).
+inherit-then-fallback algorithm **read-only in this step** — before Step 10 —
+so each follow-up item can show `→ file under …`. Use only `get_issue`,
+`list_projects`, and `list_milestones`; do **not** call `save_milestone` or
+`save_issue` until Step 11 after approval (or the auto-apply Linear gate).
+Reuse that destination on mint in Step 11; do not re-decide it after approval.
+If routing fail-closes (empty or unresolved catch-all), keep the item as a
+follow-up candidate but say on the envelope line that capture will decline /
+`Follow-up not tracked`. On the catch-all, when the repo milestone does not yet
+exist, still show `file under <catch-all> / <repo> (no parent project)` on the
+envelope line — Step 11 creates the milestone on mint. Skip this resolve when
+capture is disabled (`linearTeamName` empty). Under `--dry-run`, this resolve
+stays read-only too (no Linear writes).
 
 **Lint-surface findings are gated, whatever their impact.** When a finding's fix
 would edit lint / format / static-analysis config or add an ignore / disable
@@ -515,9 +521,10 @@ Linear create details (team by **name**, state by **type**, links, labels,
 
 **Fail closed on project.** When capture is enabled (`linearTeamName` set),
 every minted issue **must** have a resolved `project`. Never omit `project`;
-never call `save_issue` if routing fails. Resolve the destination in **Step 9**
-before the envelope (Step 10) so the plan can show it, then reuse that
-destination on mint.
+never call `save_issue` if routing fails. Resolve the destination **read-only**
+in **Step 9** before the envelope (Step 10) so the plan can show it, then reuse
+that destination on mint (creating the catch-all milestone with
+`save_milestone` if needed).
 
 1. **Inherit from the PR's Linear issue when it has a live project.** Extract
    issue ids using the same `issueKeys` regex as `linear-sync`
@@ -548,8 +555,9 @@ destination on mint.
    unresolved value (same decline fallback).
 3. **On the catch-all, bucket by repo milestone.** GitHub repo **short name**
    from `gh repo view --json name --jq .name` (not the worktree directory).
-   `list_milestones` on the resolved catch-all project. If a milestone with
-   that exact name exists, use it. If not, `save_milestone` to create it
+   In Step 9, `list_milestones` only — never `save_milestone`. If a milestone
+   with that exact name exists, use it on mint. If not, still show the envelope
+   line below; **on mint in this step** `save_milestone` to create it
    (`project` + `name`), then use the created milestone. Pass both `project`
    and `milestone` on `save_issue`. Envelope line:
    `file under <catch-all> / <repo> (no parent project)`. Do **not**
