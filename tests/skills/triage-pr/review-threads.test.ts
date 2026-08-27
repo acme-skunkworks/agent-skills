@@ -2,14 +2,12 @@
 // triage-pr bundle stays test-free whilst the pure fetch/transform logic is still
 // covered in CI. The `gh` network layer is not exercised here — only `buildResult`,
 // which is exactly the surface that needs verifying without hitting a real PR.
-// DEFER_PENDING_MARKER is imported from the write-side script (its source of
-// truth) rather than redeclared, so the test can't drift from the real marker.
-import {
-  DEFER_PENDING_MARKER,
-  FOLLOW_UP_PENDING_MARKER,
-} from "../../../skills/triage-pr/scripts/respond-threads.mjs";
+// Legacy and new follow-up-pending markers are kept in sync with respond-threads.mjs.
+import { FOLLOW_UP_PENDING_MARKER } from "../../../skills/triage-pr/scripts/respond-threads.mjs";
 import { buildResult } from "../../../skills/triage-pr/scripts/review-threads.mjs";
 import { describe, expect, it } from "vitest";
+
+const LEGACY_DEFER_PENDING_MARKER = "<!-- triage-pr:defer-pending -->";
 
 function ids(threads: Array<{ threadId: string }>) {
   return threads.map((thread) => thread.threadId);
@@ -137,7 +135,9 @@ describe("buildResult — deferred bucket (follow-up-pending)", () => {
       threadNodes: [
         threadNode("T_plain"),
         threadNode("T_deferred", {
-          extraComments: [`Noted for follow-up.\n\n${DEFER_PENDING_MARKER}`],
+          extraComments: [
+            `Noted for follow-up.\n\n${LEGACY_DEFER_PENDING_MARKER}`,
+          ],
         }),
       ],
     });
@@ -184,7 +184,7 @@ describe("buildResult — deferred bucket (follow-up-pending)", () => {
       threadNodes: [
         threadNode("T_human", {
           author: "alice",
-          extraComments: [`stray\n\n${DEFER_PENDING_MARKER}`],
+          extraComments: [`stray\n\n${LEGACY_DEFER_PENDING_MARKER}`],
         }),
       ],
     });

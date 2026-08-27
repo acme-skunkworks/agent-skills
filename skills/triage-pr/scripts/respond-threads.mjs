@@ -50,7 +50,11 @@ export const SUMMARY_MARKER = "<!-- triage-pr:summary-ack -->";
 // `deferredThreads` (not re-emitted as a fresh finding) and a fresh invocation can
 // rediscover it. Keep these strings in sync with review-threads.mjs.
 export const FOLLOW_UP_PENDING_MARKER = "<!-- triage-pr:follow-up-pending -->";
-/** @deprecated Legacy marker — still recognised on read; new replies use {@link FOLLOW_UP_PENDING_MARKER}. */
+/**
+ * Legacy marker — still recognised on read; new replies use
+ * {@link FOLLOW_UP_PENDING_MARKER}.
+ * @deprecated
+ */
 export const DEFER_PENDING_MARKER = "<!-- triage-pr:defer-pending -->";
 export const FOLLOW_UP_PENDING_MARKERS = [
   FOLLOW_UP_PENDING_MARKER,
@@ -65,7 +69,9 @@ const CANONICAL_DECISIONS = new Set([
   "outdated",
 ]);
 
-/** CLI aliases → canonical decision names (A-1542). */
+/**
+ * CLI aliases → canonical decision names (A-1542).
+ */
 const DECISION_ALIASES = {
   defer: "follow-up",
   "defer-pending": "follow-up-pending",
@@ -83,6 +89,7 @@ export function normalizeDecision(decision) {
   const value = String(decision ?? "").trim();
   return DECISION_ALIASES[value] ?? value;
 }
+
 const STATUSES = new Set(["accepted", "declined", "out-of-scope"]);
 
 // Mirrors review-threads.mjs: GraphQL returns bot logins WITHOUT the `[bot]`
