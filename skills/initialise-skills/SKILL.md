@@ -24,7 +24,7 @@ compatibility: >-
   App / token check is optional — it uses `gh` when authenticated, else falls
   back to a reminder.
 metadata:
-  version: 0.11.1
+  version: 0.11.2
   author: Rob Easthope
 allowed-tools: Read, Bash(node:*), Bash(git:*), Bash(gh:*), mcp__linear-server__list_teams, mcp__linear-server__get_team, mcp__linear-server__list_projects
 ---
@@ -142,7 +142,9 @@ This is the foundation for detecting which repos are behind — see
    (`linearTeamName`, `linearWorkspaceSlug`, and `followUpProject` when capture is
    on), fetch the value via the Linear MCP when it is available —
    `mcp__linear-server__list_teams` for the team name,
-   `mcp__linear-server__list_projects` for the repo's Linear project, and the
+   `mcp__linear-server__list_projects` for the **fallback catch-all** project
+   (Rheged estate: `Follow-up issues` — not a per-repo home project; triage-pr
+   inherits the PR's live Linear project when it can, A-1541), and the
    workspace slug from the team/organisation — otherwise ask the user. Collect
    these into a `facts` object. Also add the **lock provenance** here:
    `lockSource` (the source repo the skills were installed from — the
