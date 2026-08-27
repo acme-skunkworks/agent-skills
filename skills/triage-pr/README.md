@@ -33,7 +33,7 @@ the per-skill `config.json` is generated on install, not vendored. Run the
 | `maxCiRounds` | Maximum Phase-A re-watch iterations before stopping and reporting blockers. | `5` |
 | `replyOnAccept` | Whether an **accepted** finding gets a factual thread reply referencing the fixing commit before resolve. | `true` |
 | `promoteOnGreen` | Draft→ready flip after proven-green Phase A. **Default-on.** | `true` |
-| `deferNonBlocking` | Propose accept only for high-impact in-scope findings; otherwise defer. | `true` |
+| `deferNonBlocking` | Propose accept only for high-impact in-scope findings; otherwise follow-up. | `true` |
 | `humanEnvelope` | Halt Phase B for a full disposition batch `[y/N]` before applying. **Default-on.** Escape with `--auto-apply`. | `true` |
 | `reviewIdleMinutes` | Hybrid review-settle idle window (minutes). | `5` |
 | `reviewWaitMaxMinutes` | Hard cap on waiting for review bots; then slow-bot micro-gate. | `20` |
@@ -63,7 +63,7 @@ Two phases, chosen from the PR's draft state:
    verify-then-propose dispositions, then — by default — **human envelope** before
    applying. Re-envelope when new bot findings appear after apply. With
    `--auto-apply`, fix high-impact findings immediately and keep a Linear-only
-   gate for defers.
+   gate for follow-ups.
 
 **By default the skill promotes a cleanly-green draft to ready** and continues into
 Phase B. Promotion is gated on proven-green CI, no unresolved human review threads,

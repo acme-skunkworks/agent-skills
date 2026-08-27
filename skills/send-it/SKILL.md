@@ -597,7 +597,7 @@ the linked issues are already In Review before triage begins.
 >
 > **Re-runs are safe.** A second `/send-it` re-enters the chain against the same PR.
 > `triage-pr` re-fetches threads every pass: resolved threads are filtered out, and
-> proposed-defer threads already carry the non-resolving `defer-pending` marker (A-679),
+> proposed follow-up threads already carry the non-resolving `follow-up-pending` marker (A-679),
 > so they arrive as `deferredThreads`, not fresh findings. The envelope therefore
 > re-prompts only for genuinely new bot findings.
 
@@ -635,7 +635,7 @@ the linked issues are already In Review before triage begins.
   promotion is already triage-pr's default.)
 - `--auto-apply` — forwarded verbatim to `triage-pr`: skip its Phase B human envelope
   and restore its legacy auto path (impact-gated fix-now; Linear-only gate for
-  defers). **No effect on send-it's own steps.**
+  follow-ups). **No effect on send-it's own steps.**
 - `--ready` — open the PR ready-for-review instead of draft (default is draft).
 - `--worktree=<branch-or-path>` — `cd` into a worktree before running (Step 0).
 
@@ -671,7 +671,7 @@ the linked issues are already In Review before triage begins.
   triage-pr with nothing to do. Use `--ready`, or set `triage: false`, in those repos.
 - **Idempotent:** re-running send-it updates the existing PR title and changelog
   entry; the Linear writeback skips issues already In Review or beyond; the Step 11
-  chain re-enters `triage-pr` against the same PR, whose `defer-pending` markers
+  chain re-enters `triage-pr` against the same PR, whose `follow-up-pending` markers
   (A-679) keep already-dispositioned findings out of the envelope.
 - **send-it does not bump versions or write any `CHANGELOG.md`.** release-please
   ranks Conventional Commits on trunk after merge (merge-commit history for feature
