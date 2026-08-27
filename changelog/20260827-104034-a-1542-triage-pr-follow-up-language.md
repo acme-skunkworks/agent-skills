@@ -1,12 +1,19 @@
 ---
 title: triage-pr follow-up language (rename defer)
 release_note: triage-pr Phase B now talks about follow-up issues instead of deferring — envelope plan, thread replies, and CLI decisions use follow-up / follow-up-pending (legacy defer aliases still accepted; in-flight defer-pending markers still bucket correctly).
-created_at: '2026-08-27T10:40:34Z'
+created_at: "2026-08-27T10:40:34Z"
 branch: a-1542-rename-triage-pr-defer-language-to-follow-up-and-review
 category: feature
 breaking: false
 issues:
   - A-1542
+merged_at: "2026-08-27T11:02:03Z"
+commit: c179186
+pr: 172
+stats:
+  loc_added: 344
+  loc_removed: 176
+  files_changed: 10
 ---
 
 ## Changed
