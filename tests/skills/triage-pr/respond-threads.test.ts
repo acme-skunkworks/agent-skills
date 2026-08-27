@@ -3,10 +3,10 @@
 // idempotency logic is still covered in CI. The `gh` mutation layer is not
 // exercised here — only the pure planning/formatting functions, which is exactly
 // the surface A-410's "verifiable without spamming a real PR" criterion needs.
+// Legacy and new follow-up-pending markers are kept in sync with respond-threads.mjs.
 import {
   buildConsolidatedComment,
   buildReplyBody,
-  DEFER_PENDING_MARKER,
   findExistingAckComment,
   FOLLOW_UP_PENDING_MARKER,
   hasMarker,
@@ -19,6 +19,8 @@ import {
   THREAD_MARKER,
 } from "../../../skills/triage-pr/scripts/respond-threads.mjs";
 import { describe, expect, it } from "vitest";
+
+const LEGACY_DEFER_PENDING_MARKER = "<!-- triage-pr:defer-pending -->";
 
 describe("planThreadResponses — symmetric accept/decline", () => {
   it("accepts → reply-resolve referencing the fixing sha + marker", () => {
@@ -78,7 +80,9 @@ describe("planThreadResponses — follow-up-pending (non-resolving marker)", () 
   it("is idempotent — a thread already pending (legacy marker) is skipped", () => {
     const [action] = planThreadResponses([
       {
-        comments: [{ author: "me", body: `Noted.\n\n${DEFER_PENDING_MARKER}` }],
+        comments: [
+          { author: "me", body: `Noted.\n\n${LEGACY_DEFER_PENDING_MARKER}` },
+        ],
         decision: "follow-up-pending",
         threadId: "T_dp_again",
       },
