@@ -4,7 +4,10 @@
 // which is exactly the surface that needs verifying without hitting a real PR.
 // DEFER_PENDING_MARKER is imported from the write-side script (its source of
 // truth) rather than redeclared, so the test can't drift from the real marker.
-import { DEFER_PENDING_MARKER } from "../../../skills/triage-pr/scripts/respond-threads.mjs";
+import {
+  DEFER_PENDING_MARKER,
+  FOLLOW_UP_PENDING_MARKER,
+} from "../../../skills/triage-pr/scripts/respond-threads.mjs";
 import { buildResult } from "../../../skills/triage-pr/scripts/review-threads.mjs";
 import { describe, expect, it } from "vitest";
 
@@ -124,8 +127,8 @@ describe("buildResult — botsReported / botsMissing settle helpers", () => {
   });
 });
 
-describe("buildResult — deferred bucket", () => {
-  it("routes a bot thread carrying the defer marker into deferredThreads", () => {
+describe("buildResult — deferred bucket (follow-up-pending)", () => {
+  it("routes a bot thread carrying the legacy defer marker into deferredThreads", () => {
     const result = buildResult({
       bots: ["coderabbitai"],
       commentNodes: [],
@@ -134,13 +137,29 @@ describe("buildResult — deferred bucket", () => {
       threadNodes: [
         threadNode("T_plain"),
         threadNode("T_deferred", {
-          extraComments: [`Noted as deferred.\n\n${DEFER_PENDING_MARKER}`],
+          extraComments: [`Noted for follow-up.\n\n${DEFER_PENDING_MARKER}`],
         }),
       ],
     });
 
     expect(ids(result.deferredThreads)).toEqual(["T_deferred"]);
     expect(ids(result.unresolvedThreads)).toEqual(["T_plain"]);
+  });
+
+  it("routes a bot thread carrying the new follow-up-pending marker into deferredThreads", () => {
+    const result = buildResult({
+      bots: ["coderabbitai"],
+      commentNodes: [],
+      isDraft: false,
+      number: 7,
+      threadNodes: [
+        threadNode("T_follow_up", {
+          extraComments: [`Noted.\n\n${FOLLOW_UP_PENDING_MARKER}`],
+        }),
+      ],
+    });
+
+    expect(ids(result.deferredThreads)).toEqual(["T_follow_up"]);
   });
 
   it("keeps a plain unresolved bot thread out of the deferred bucket", () => {

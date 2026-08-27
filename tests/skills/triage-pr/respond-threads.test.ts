@@ -7,9 +7,11 @@ import {
   buildConsolidatedComment,
   buildReplyBody,
   DEFER_PENDING_MARKER,
+  FOLLOW_UP_PENDING_MARKER,
   findExistingAckComment,
   hasMarker,
   isReviewBotAuthor,
+  normalizeDecision,
   parseArgs,
   parseReplyOnAccept,
   planThreadResponses,
@@ -44,32 +46,40 @@ describe("planThreadResponses — symmetric accept/decline", () => {
     expect(action).not.toHaveProperty("body");
   });
 
-  it("defers → reply-resolve referencing the follow-up ticket + marker", () => {
+  it("follow-ups → reply-resolve referencing the follow-up ticket + marker", () => {
     const [action] = planThreadResponses([
-      { decision: "defer", reference: "A-601", threadId: "T4" },
+      { decision: "follow-up", reference: "A-601", threadId: "T4" },
     ]);
     expect(action.kind).toBe("reply-resolve");
     expect(action.body).toContain("A-601");
-    expect(action.body).toContain("for follow-up");
+    expect(action.body).toContain("follow-up issue");
     expect(action.body).toContain(THREAD_MARKER);
+  });
+
+  it("defer alias → same as follow-up", () => {
+    const [action] = planThreadResponses([
+      { decision: "defer", reference: "A-601", threadId: "T4_alias" },
+    ]);
+    expect(action.kind).toBe("reply-resolve");
+    expect(action.body).toContain("A-601");
   });
 });
 
-describe("planThreadResponses — defer-pending (non-resolving marker)", () => {
+describe("planThreadResponses — follow-up-pending (non-resolving marker)", () => {
   it("→ reply-only carrying the non-resolving marker, not the thread-ack", () => {
     const [action] = planThreadResponses([
-      { decision: "defer-pending", threadId: "T_dp" },
+      { decision: "follow-up-pending", threadId: "T_dp" },
     ]);
     expect(action.kind).toBe("reply-only");
-    expect(action.body).toContain(DEFER_PENDING_MARKER);
+    expect(action.body).toContain(FOLLOW_UP_PENDING_MARKER);
     expect(action.body).not.toContain(THREAD_MARKER);
   });
 
-  it("is idempotent — a thread already pending is skipped, not re-replied", () => {
+  it("is idempotent — a thread already pending (legacy marker) is skipped", () => {
     const [action] = planThreadResponses([
       {
         comments: [{ author: "me", body: `Noted.\n\n${DEFER_PENDING_MARKER}` }],
-        decision: "defer-pending",
+        decision: "follow-up-pending",
         threadId: "T_dp_again",
       },
     ]);
@@ -80,11 +90,11 @@ describe("planThreadResponses — defer-pending (non-resolving marker)", () => {
     });
   });
 
-  it("skips a fully-handled thread (thread-ack) even for defer-pending", () => {
+  it("skips a fully-handled thread (thread-ack) even for follow-up-pending", () => {
     const [action] = planThreadResponses([
       {
         comments: [{ author: "me", body: `Addressed.\n\n${THREAD_MARKER}` }],
-        decision: "defer-pending",
+        decision: "follow-up-pending",
         threadId: "T_dp_handled",
       },
     ]);
@@ -95,9 +105,9 @@ describe("planThreadResponses — defer-pending (non-resolving marker)", () => {
     });
   });
 
-  it("never auto-actions a human thread with a defer-pending decision", () => {
+  it("never auto-actions a human thread with a follow-up-pending decision", () => {
     const [action] = planThreadResponses([
-      { decision: "defer-pending", isHuman: true, threadId: "H_dp" },
+      { decision: "follow-up-pending", isHuman: true, threadId: "H_dp" },
     ]);
     expect(action).toEqual({ kind: "skip", threadId: "H_dp", why: "human" });
   });
@@ -120,9 +130,9 @@ describe("planThreadResponses — replyOnAccept knob", () => {
     expect(action.kind).toBe("reply-resolve");
   });
 
-  it("defers still reply even when replyOnAccept is false", () => {
+  it("follow-ups still reply even when replyOnAccept is false", () => {
     const [action] = planThreadResponses(
-      [{ decision: "defer", reference: "A-601", threadId: "T3" }],
+      [{ decision: "follow-up", reference: "A-601", threadId: "T3" }],
       { replyOnAccept: false },
     );
     expect(action.kind).toBe("reply-resolve");
@@ -137,9 +147,14 @@ describe("planThreadResponses — guardrails and idempotency", () => {
     expect(action).toEqual({ kind: "skip", threadId: "H1", why: "human" });
   });
 
-  it("never auto-actions a human thread with a defer decision", () => {
+  it("never auto-actions a human thread with a follow-up decision", () => {
     const [action] = planThreadResponses([
-      { decision: "defer", isHuman: true, reference: "A-602", threadId: "H2" },
+      {
+        decision: "follow-up",
+        isHuman: true,
+        reference: "A-602",
+        threadId: "H2",
+      },
     ]);
     expect(action).toEqual({ kind: "skip", threadId: "H2", why: "human" });
   });
@@ -192,9 +207,9 @@ describe("buildReplyBody — validation + no sycophancy", () => {
     ).toThrow(/reasoning/);
   });
 
-  it("requires a reference for a defer", () => {
+  it("requires a reference for a follow-up", () => {
     expect(() =>
-      buildReplyBody({ decision: "defer", reference: "  " }),
+      buildReplyBody({ decision: "follow-up", reference: "  " }),
     ).toThrow(/reference/);
   });
 
@@ -204,11 +219,11 @@ describe("buildReplyBody — validation + no sycophancy", () => {
     expect(body).not.toMatch(/great|absolutely right|excellent/i);
   });
 
-  it("builds a defer-pending body with no reference and the pending marker", () => {
-    const body = buildReplyBody({ decision: "defer-pending" });
-    expect(body).toContain("follow-up issue may be filed");
+  it("builds a follow-up-pending body with no reference and the pending marker", () => {
+    const body = buildReplyBody({ decision: "follow-up-pending" });
+    expect(body).toContain("Linear issue may be filed");
     expect(body).toContain("after human approval");
-    expect(body).toContain(DEFER_PENDING_MARKER);
+    expect(body).toContain(FOLLOW_UP_PENDING_MARKER);
     expect(body).not.toContain(THREAD_MARKER);
   });
 });
@@ -230,7 +245,7 @@ describe("buildConsolidatedComment — issue-level acknowledgement", () => {
       "| Read missing from allowed-tools | Accepted | `abc1234` |",
     );
     expect(body).toContain("| Add a retry wrapper | Declined | YAGNI |");
-    expect(body).toContain("| Refactor fetch | Deferred | A-411 |");
+    expect(body).toContain("| Refactor fetch | Follow-up | A-411 |");
     expect(body).toContain(SUMMARY_MARKER);
   });
 
@@ -249,6 +264,14 @@ describe("buildConsolidatedComment — issue-level acknowledgement", () => {
 
   it("throws on no findings (caller must skip the step instead)", () => {
     expect(() => buildConsolidatedComment([])).toThrow(/at least one finding/);
+  });
+});
+
+describe("normalizeDecision", () => {
+  it("maps legacy defer aliases to follow-up names", () => {
+    expect(normalizeDecision("defer")).toBe("follow-up");
+    expect(normalizeDecision("defer-pending")).toBe("follow-up-pending");
+    expect(normalizeDecision("accept")).toBe("accept");
   });
 });
 
