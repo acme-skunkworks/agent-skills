@@ -800,7 +800,7 @@ function buildInitialiseFactsSelfTestCases() {
   const built = buildInitialiseFacts(
     {
       facts: {
-        followUpProject: "Agent Skills",
+        followUpProject: "Follow-up issues",
         issueKeys: ["A"],
         linearTeamName: "Acme",
       },
@@ -814,7 +814,7 @@ function buildInitialiseFactsSelfTestCases() {
         built.facts.lockSource === SOURCE_URL &&
         built.facts.lockRef === "v1.2.3" &&
         built.facts.linearTeamName === "Acme" &&
-        built.facts.followUpProject === "Agent Skills" &&
+        built.facts.followUpProject === "Follow-up issues" &&
         built.facts.issueKeys[0] === "A",
     },
     {
