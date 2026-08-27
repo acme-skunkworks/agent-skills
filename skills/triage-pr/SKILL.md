@@ -396,10 +396,20 @@ For each finding record:
 - proposed disposition: `accept` | `decline` | `follow-up` | `outdated` | `gated`
 - for `accept`: concrete fix sketch
 - for `decline`: technical reasoning
-- for `follow-up`: draft Linear title + rationale
+- for `follow-up`: draft Linear title + rationale, **and** the destination line
+  (`→ file under …`) from the routing step below
 
 Impact classification still follows `deferNonBlocking` (propose accept only when
 high-impact when that knob is on).
+
+**Resolve follow-up destination before the envelope.** When the plan includes
+any `follow-up` and capture is enabled (`linearTeamName` set), run the Step 11
+inherit-then-fallback algorithm **in this step** — before Step 10 — so each
+follow-up item can show `→ file under …`. Reuse that destination on mint in
+Step 11; do not re-decide it after approval. If routing fail-closes (empty or
+unresolved catch-all), keep the item as a follow-up candidate but say on the
+envelope line that capture will decline / `Follow-up not tracked`. Skip this
+resolve when capture is disabled (`linearTeamName` empty).
 
 **Lint-surface findings are gated, whatever their impact.** When a finding's fix
 would edit lint / format / static-analysis config or add an ignore / disable
@@ -505,21 +515,28 @@ Linear create details (team by **name**, state by **type**, links, labels,
 
 **Fail closed on project.** When capture is enabled (`linearTeamName` set),
 every minted issue **must** have a resolved `project`. Never omit `project`;
-never call `save_issue` if routing fails. Resolve the destination **before**
-the envelope (Step 10) so the plan can show it, then reuse that destination on
-mint.
+never call `save_issue` if routing fails. Resolve the destination in **Step 9**
+before the envelope (Step 10) so the plan can show it, then reuse that
+destination on mint.
 
 1. **Inherit from the PR's Linear issue when it has a live project.** Extract
-   issue ids from the **upper-cased** branch name, then the PR title, using the
-   same `issueKeys` regex as `linear-sync` (`lib/issue-keys.mjs` /
-   `buildIssueRe`: `\bA-\d+\b` for a single key; grouped alternation when there
-   are several). The **first** match on the branch is the primary parent; skip
-   lookup if there are no configured keys. `get_issue` on that id. If it has a
-   `project`, resolve that project with `list_projects` and inspect its status
-   **type**. Types `completed` and `canceled` are **not live** — treat as no
-   inherit. On a live project: pass that `project` on `save_issue`, set
-   `relatedTo` to the parent id, and **do not** nest as a sub-issue
-   (`parentId`). **Do not** attach a Follow-up issues milestone. Envelope line:
+   issue ids using the same `issueKeys` regex as `linear-sync`
+   (`lib/issue-keys.mjs` / `buildIssueRe`: `\bA-\d+\b` for a single key;
+   grouped alternation when there are several). Skip lookup if there are no
+   configured keys. Match in this order — **stop at the first source that
+   yields a match**:
+   1. the **upper-cased** branch name — if it has at least one match, the
+      **first** match is the primary parent (later matches on the branch, and
+      every match on the PR title, are ignored);
+   2. else the PR title — if it has at least one match, the **first** match is
+      the parent;
+   3. else there is **no** parent id — skip inherit and go to step 2.
+   `get_issue` on that id. If it has a `project`, resolve that project with
+   `list_projects` and inspect its status **type**. Types `completed` and
+   `canceled` are **not live** — treat as no inherit. On a live project: pass
+   that `project` on `save_issue`, set `relatedTo` to the parent id, and **do
+   not** nest as a sub-issue (`parentId`). **Do not** attach a Follow-up
+   issues milestone. Envelope line:
    `file under <project> (inherited from A-NNNN)`.
 2. **Otherwise fall back to `followUpProject` (the catch-all).** Typical
    reasons: no issue id, parent has no project, or the parent project is
