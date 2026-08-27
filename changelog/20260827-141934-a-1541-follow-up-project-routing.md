@@ -23,7 +23,10 @@ issues:
   in the Rheged estate) — with an on-demand milestone named after the
   GitHub repo short name (`gh repo view --json name`). Still fail-closed
   if the catch-all is empty or unresolved. Envelope lines show the
-  destination before mint.
+  destination before mint. Destination is resolved in Step 9 (before the
+  envelope), not only under Step 11. Issue-id extraction stops at the first
+  source that matches: upper-cased branch first, else first PR-title match,
+  else no parent id.
 
 - **`triage-pr` `0.12.0` → `0.13.0`.** Allowed-tools gain `get_issue`,
   `list_milestones`, and `save_milestone`. Canonical and dogfood configs
