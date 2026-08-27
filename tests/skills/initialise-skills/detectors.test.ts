@@ -94,12 +94,12 @@ describe("createDetectors — triage-pr follow-up capture defaults", () => {
   it("uses facts.followUpProject when supplied", () => {
     const { detect } = createDetectors({
       linearFacts: {
-        followUpProject: "Agent Skills",
+        followUpProject: "Follow-up issues",
         linearTeamName: "Rheged Studio",
       },
       repoRoot: "/nonexistent",
     });
-    expect(detect("followUpProject")).toEqual({ value: "Agent Skills" });
+    expect(detect("followUpProject")).toEqual({ value: "Follow-up issues" });
   });
 });
 

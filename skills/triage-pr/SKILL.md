@@ -21,9 +21,9 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.12.0
+  version: 0.13.0
   author: Rob Easthope
-allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
+allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__get_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects, mcp__linear-server__list_milestones, mcp__linear-server__save_milestone
 ---
 
 # triage-pr
@@ -96,7 +96,7 @@ skip silently when the Linear MCP server is unavailable.
 | `linearTeamName` | Linear team **name** (not the key — the key is renamed over time, the name is stable) the follow-up issues are created under. Empty disables capture entirely. | `""` |
 | `issueKeys` | Team-key prefixes that may appear in branch names, used to recognise issue ids the same way `linear-sync` does. Mirrors the established `issueKeys` convention. | `[]` |
 | `followUpLabel` | Optional label applied to each created follow-up issue (e.g. `follow-up`). Empty = no label. | `""` |
-| `followUpProject` | Linear project (name, id, or slug) the follow-up issues are filed under. **Required when `linearTeamName` is set** — empty or unresolved must refuse create (never file with no project). | `""` |
+| `followUpProject` | Linear project (name, id, or slug) used as the **catch-all** when a follow-up cannot inherit a live project from the PR's Linear issue. **Required when `linearTeamName` is set** — empty or unresolved must refuse create (never file with no project). Rheged estate value: `Follow-up issues`. | `""` |
 | `followUpState` | Optional initial workflow state (type, name, or id — e.g. `Backlog`) for created issues. Empty = the team's default state. | `"Backlog"` |
 
 Only the configured `reviewBots` are actioned in Phase B. Human review comments
@@ -396,10 +396,26 @@ For each finding record:
 - proposed disposition: `accept` | `decline` | `follow-up` | `outdated` | `gated`
 - for `accept`: concrete fix sketch
 - for `decline`: technical reasoning
-- for `follow-up`: draft Linear title + rationale
+- for `follow-up`: draft Linear title + rationale, **and** the destination line
+  (`→ file under …`) from the routing step below
 
 Impact classification still follows `deferNonBlocking` (propose accept only when
 high-impact when that knob is on).
+
+**Resolve follow-up destination before the envelope.** When the plan includes
+any `follow-up` and capture is enabled (`linearTeamName` set), run the Step 11
+inherit-then-fallback algorithm **read-only in this step** — before Step 10 —
+so each follow-up item can show `→ file under …`. Use only `get_issue`,
+`list_projects`, and `list_milestones`; do **not** call `save_milestone` or
+`save_issue` until Step 11 after approval (or the auto-apply Linear gate).
+Reuse that destination on mint in Step 11; do not re-decide it after approval.
+If routing fail-closes (empty or unresolved catch-all), keep the item as a
+follow-up candidate but say on the envelope line that capture will decline /
+`Follow-up not tracked`. On the catch-all, when the repo milestone does not yet
+exist, still show `file under <catch-all> / <repo> (no parent project)` on the
+envelope line — Step 11 creates the milestone on mint. Skip this resolve when
+capture is disabled (`linearTeamName` empty). Under `--dry-run`, this resolve
+stays read-only too (no Linear writes).
 
 **Lint-surface findings are gated, whatever their impact.** When a finding's fix
 would edit lint / format / static-analysis config or add an ignore / disable
@@ -431,7 +447,10 @@ Phase B disposition plan (nothing applied yet):
   1. [accept] Fix null guard in src/api.ts:42 — …
   2. [decline] Suggested rewrite is YAGNI — …
   3. [follow-up] Extract retry helper — draft: "Add retry backoff to fetch layer"
-  4. [gated] Would need `eslint.config.mjs` rule change — your call; prefer a
+     → file under Triage PR upgrades (inherited from A-1541)
+  4. [follow-up] Tighten Dependabot group — draft: "Group minor bumps"
+     → file under Follow-up issues / climbwell (no parent project)
+  5. [gated] Would need `eslint.config.mjs` rule change — your call; prefer a
      change to @rheged-studio/eslint-config
   Bots still outstanding at wait end: cursor (if any)
 Apply this plan? [y/N]
@@ -497,20 +516,54 @@ node scripts/respond-threads.mjs thread --thread <PRRT_id> --decision follow-up 
 ```
 
 Linear create details (team by **name**, state by **type**, links, labels,
-**project**) match the previous capture contract — resolve via
-`list_issue_statuses` / `list_projects` and fail loudly on typos.
+**project**, optional **milestone**) — resolve via `list_issue_statuses` /
+`list_projects` / `list_milestones` and fail loudly on typos.
 
 **Fail closed on project.** When capture is enabled (`linearTeamName` set),
-`followUpProject` is required. Before minting any issue:
+every minted issue **must** have a resolved `project`. Never omit `project`;
+never call `save_issue` if routing fails. Resolve the destination **read-only**
+in **Step 9** before the envelope (Step 10) so the plan can show it, then reuse
+that destination on mint (creating the catch-all milestone with
+`save_milestone` if needed).
 
-1. If `followUpProject` is empty → **do not** call `save_issue`. Abort capture
-   loudly (tell the human to set `followUpProject` in `config.json`), and fall
-   back to decline / `Follow-up not tracked` for each follow-up candidate.
-2. If set → resolve it with `list_projects` (name, id, or slug). On a miss →
-   **do not** call `save_issue`; fail loudly with the unresolved value (same
-   decline fallback).
-3. On a hit → always pass the resolved `project` on every `save_issue` create.
-   Never omit `project`.
+1. **Inherit from the PR's Linear issue when it has a live project.** Extract
+   issue ids using the same `issueKeys` regex as `linear-sync`
+   (`lib/issue-keys.mjs` / `buildIssueRe`: `\bA-\d+\b` for a single key;
+   grouped alternation when there are several). Skip lookup if there are no
+   configured keys. Match in this order — **stop at the first source that
+   yields a match**:
+   1. the **upper-cased** branch name — if it has at least one match, the
+      **first** match is the primary parent (later matches on the branch, and
+      every match on the PR title, are ignored);
+   2. else the PR title — if it has at least one match, the **first** match is
+      the parent;
+   3. else there is **no** parent id — skip inherit and go to step 2.
+   `get_issue` on that id. If it has a `project`, resolve that project with
+   `list_projects` and inspect its status **type**. Types `completed` and
+   `canceled` are **not live** — treat as no inherit. On a live project: pass
+   that `project` on `save_issue`, set `relatedTo` to the parent id, and **do
+   not** nest as a sub-issue (`parentId`). **Do not** attach a Follow-up
+   issues milestone. Envelope line:
+   `file under <project> (inherited from A-NNNN)`.
+2. **Otherwise fall back to `followUpProject` (the catch-all).** Typical
+   reasons: no issue id, parent has no project, or the parent project is
+   completed/canceled. If `followUpProject` is empty → **do not** call
+   `save_issue`. Abort capture loudly (tell the human to set `followUpProject`
+   in `config.json`), and fall back to decline / `Follow-up not tracked` for
+   each follow-up candidate. If set → resolve it with `list_projects` (name,
+   id, or slug). On a miss → **do not** call `save_issue`; fail loudly with the
+   unresolved value (same decline fallback).
+3. **On the catch-all, bucket by repo milestone.** GitHub repo **short name**
+   from `gh repo view --json name --jq .name` (not the worktree directory).
+   In Step 9, `list_milestones` only — never `save_milestone`. If a milestone
+   with that exact name exists, use it on mint. If not, still show the envelope
+   line below; **on mint in this step** `save_milestone` to create it
+   (`project` + `name`), then use the created milestone. Pass both `project`
+   and `milestone` on `save_issue`. Envelope line:
+   `file under <catch-all> / <repo> (no parent project)`. Do **not**
+   `relatedTo` a parent that was skipped for inherit.
+4. On a successful inherit **or** fallback, always pass the resolved `project`
+   on every `save_issue` create. Never omit `project`.
 
 ### Step 12 — Phase B: issue-level ack + re-envelope
 
@@ -547,8 +600,9 @@ Summarise:
   file, the change that would have been made, why no code fix was available, and the
   preferred alternative (fix the code, or raise it in the shared config package).
   Nothing on this list was applied.
-- Follow-up issues created (each with its Linear id/URL), or follow-up candidates
-  that were not tracked.
+- Follow-up issues created (each with its Linear id/URL and destination —
+  inherited project, or catch-all project plus repo milestone), or follow-up
+  candidates that were not tracked.
 - Issue-level findings acknowledged in the consolidated comment.
 - Base merges/rebases performed.
 - Remaining blockers (if `maxCiRounds` was exhausted).
