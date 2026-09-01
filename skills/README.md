@@ -20,7 +20,7 @@ Pass `--skill` more than once (or omit it to install them all), and add an `--ag
 | [`initialise-skills`](initialise-skills/SKILL.md) | Scan the host repo and reconcile each installed skill's `config.json` with detected facts (base branch, package roots, changelog dir, Linear keys). |
 | [`linear-sync`](linear-sync/SKILL.md) | Transition the Linear issue(s) linked to the current branch to a target workflow state. |
 | [`preflight`](preflight/SKILL.md) | Run a change-gated, branch-scoped lint preflight (ESLint / markdownlint / actionlint) and classify each violation as introduced vs pre-existing. |
-| [`send-it`](send-it/SKILL.md) | The all-in-one ship finisher: commit, lint, changelog, Conventional Commits PR title, push, open/update the PR, and move linked Linear issues to In Review. |
+| [`send-it`](send-it/SKILL.md) | The all-in-one ship pipeline: commit, lint, changelog, Conventional Commits PR title, push, open/update the PR, move linked Linear issues to In Review, then chain into `triage-pr` (Step 11). |
 | [`triage-pr`](triage-pr/SKILL.md) | Drive a pull request from draft-with-failing-CI to merge-ready — fix in-scope CI failures, then action unresolved AI review feedback. |
 
 The orchestrator skills delegate to siblings: `send-it` uses `commit`, `preflight`, `changelog`, and `linear-sync`, so install those alongside it (the `send-it` skill's `compatibility` block names the siblings it delegates to; the other bundles' `compatibility` blocks list only their infrastructure requirements).
