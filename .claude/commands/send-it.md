@@ -8,8 +8,9 @@ The all-in-one ship pipeline for this repo. This is the entry point for the
 [`send-it` skill](../../skills/send-it/SKILL.md) — follow that skill end to end.
 
 **Done criteria:** the run is incomplete until Step 11 (`triage-pr`) has run, or
-you printed `ℹ️ triage chain skipped …` with a stated reason. Opening a draft PR
-alone is mid-pipeline, not finished.
+you printed an explicit skip/degraded line with a stated reason
+(`ℹ️ triage chain skipped …` or `⚠️ triage-pr not installed …`). Opening a draft
+PR alone is mid-pipeline, not finished.
 
 It bundles uncommitted work into atomic commits, runs the change-gated lint
 [`preflight`](../../skills/preflight/SKILL.md), authors or updates the dated
