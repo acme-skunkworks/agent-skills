@@ -23,7 +23,10 @@ Pass `--skill` more than once (or omit it to install them all), and add an `--ag
 | [`send-it`](send-it/SKILL.md) | The all-in-one ship pipeline: commit, lint, changelog, Conventional Commits PR title, push, open/update the PR, move linked Linear issues to In Review, then chain into `triage-pr` (Step 11). |
 | [`triage-pr`](triage-pr/SKILL.md) | Drive a pull request from draft-with-failing-CI to merge-ready — fix in-scope CI failures, then action unresolved AI review feedback. |
 
-The orchestrator skills delegate to siblings: `send-it` uses `commit`, `preflight`, `changelog`, and `linear-sync`, so install those alongside it (the `send-it` skill's `compatibility` block names the siblings it delegates to; the other bundles' `compatibility` blocks list only their infrastructure requirements).
+The orchestrator skills delegate to siblings: `send-it` uses `commit`, `preflight`,
+`changelog`, `linear-sync`, and `triage-pr`, so install those alongside it (the
+`send-it` skill's `compatibility` block names the siblings it delegates to; the
+other bundles' `compatibility` blocks list only their infrastructure requirements).
 
 ## Supported agents
 

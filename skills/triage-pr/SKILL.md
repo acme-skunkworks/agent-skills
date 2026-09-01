@@ -46,11 +46,11 @@ phases, choosing the phase from the PR's draft state:
 
 Since send-it 0.8.0, `/send-it` **opens or updates** the pull request and then
 **invokes this skill as its final step** (Step 11, A-1151): it waits for at least
-one check to register, then hands off here — forwarding `--ci-only`, `--no-promote`,
-and `--auto-apply` verbatim. A default `/send-it` run is incomplete until that
-hand-off (A-1645). Running `/triage-pr` directly stays fully supported for mid-flight
-re-entry when send-it already opened the PR, or when send-it was deliberately
-skipped — it is not the normal end of a send-it run.
+one check to register, then hands off here — forwarding `--dry-run`, `--ci-only`,
+`--no-promote`, and `--auto-apply` verbatim. A default `/send-it` run is incomplete
+until that hand-off (A-1645). Running `/triage-pr` directly stays fully supported
+for mid-flight re-entry when send-it already opened the PR, or when send-it was
+deliberately skipped — it is not the normal end of a send-it run.
 
 The draft→ready
 flip is governed by a single control — `promoteOnGreen` in [`config.json`](config.json)

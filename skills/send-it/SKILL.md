@@ -76,9 +76,11 @@ handles those. The only gate it runs is the change-gated `preflight` lint.
 
 > **Done criteria.** Opening or updating the PR (Step 9) and moving Linear issues
 > to In Review (Step 10) are mid-pipeline — **not** the end of `/send-it`. The run
-> is incomplete until Step 11 (`triage-pr`) has started, or you printed
-> `ℹ️ triage chain skipped …` with a stated reason. Reporting a draft PR URL as
-> the final outcome without that skip line is a failed run.
+> is incomplete until Step 11 (`triage-pr`) has started, or you printed an explicit
+> skip/degraded line with a stated reason (`ℹ️ triage chain skipped …` for
+> `--skip-triage` / `triage: false`, or `⚠️ triage-pr not installed …` when the
+> sibling is absent). Reporting a draft PR URL as the final outcome without one of
+> those lines is a failed run.
 
 ## Configuration
 
@@ -491,8 +493,10 @@ Skip silently if `linear-sync` or the Linear MCP server is unavailable.
 
 > **Completion gate.** Do **not** treat the Step 9 PR URL as the final report and
 > stop. Steps 9–10 are mid-pipeline. Continue into this step unless the opt-out in
-> sub-step 1 applies (and you print the skip line with a reason). A draft-only
-> report without `ℹ️ triage chain skipped …` is a failed `/send-it` run (A-1645).
+> sub-step 1 applies, or sub-step 2 finds `triage-pr` missing (and you print the
+> corresponding skip/degraded line with a reason). A draft-only report without
+> `ℹ️ triage chain skipped …` or `⚠️ triage-pr not installed …` is a failed
+> `/send-it` run (A-1645).
 
 send-it opens the PR; [`triage-pr`](../triage-pr/SKILL.md) takes it the rest of the
 way (A-1151). **This step is part of the run — not an optional extra.** One
@@ -528,8 +532,11 @@ the linked issues are already In Review before triage begins.
       Install it to chain: npx skills add <repo> --skill triage-pr --agent claude-code --copy
    ```
 
-   and finish the run normally. A missing sibling **warns, never fails** — the same
-   soft-skip contract Step 10 applies to `linear-sync`.
+   and finish the run. That warning **is** the degraded-outcome line the completion
+   gate accepts (alongside `ℹ️ triage chain skipped …`) — the run may stop, but it
+   must not report as a successful default finish. A missing sibling **warns, never
+   fails the process exit** — louder than Step 10's silent `linear-sync` skip,
+   because a skipped triage chain leaves PR work undone.
 
 3. **Wait for CI to register — the cold-start gate.** Step 9 created or updated the PR
    moments ago, so GitHub Actions may not have registered a single check yet. An empty
