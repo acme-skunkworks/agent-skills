@@ -10,6 +10,11 @@ skill](../../skills/triage-pr/SKILL.md) — follow that skill's two-phase proces
 (Phase A fixes in-scope CI failures while the PR is a draft; Phase B actions
 unresolved AI review threads once it is ready), with the constraints below.
 
+**Relationship to `/send-it`:** since send-it 0.8.0, `/send-it` **opens or updates**
+the PR and then **invokes this skill as its Step 11** (A-1151). A default send-it
+run is incomplete until that hand-off happens. Running `/triage-pr` directly is for
+mid-flight re-entry (or when send-it was skipped), not the normal end of send-it.
+
 ## Process
 
 1. Read the skill's [`config.json`](../../skills/triage-pr/config.json) for
@@ -58,7 +63,8 @@ unresolved AI review threads once it is ready), with the constraints below.
   never appears in `unresolvedThreads`, so surface it separately; don't skip it.
 - Only the configured `reviewBots` are actioned; human review comments are
   surfaced in the report but never auto-actioned.
-- This command complements `/send-it` (which **opens** the draft PR).
+- `/send-it` opens or updates the PR and then invokes this skill as Step 11; use
+  `/triage-pr` directly for mid-flight re-entry, not as the normal end of send-it.
 
 ## Arguments
 

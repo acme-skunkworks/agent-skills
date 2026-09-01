@@ -21,7 +21,7 @@ compatibility: >-
   Designed for repositories whose AI review runs only on
   ready-for-review PRs (draft-gated), so Phase A and Phase B do not overlap.
 metadata:
-  version: 0.13.0
+  version: 0.13.1
   author: Rob Easthope
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(gh:*), Bash(git:*), Bash(node:*), Bash(pnpm:*), Bash(npx:*), mcp__linear-server__save_issue, mcp__linear-server__get_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects, mcp__linear-server__list_milestones, mcp__linear-server__save_milestone
 ---
@@ -44,12 +44,13 @@ phases, choosing the phase from the PR's draft state:
   file the rest as follow-ups for a Linear-only gate). After apply, re-watch CI and
   **re-envelope** if new bot findings appear.
 
-This skill complements `/send-it` (which **opens or updates** the pull request) and,
-since send-it 0.8.0, is **invoked** by it as its final step (A-1151): send-it opens or
-updates the PR, waits
-for at least one check to register, then hands off here — forwarding `--ci-only`,
-`--no-promote`, and `--auto-apply` verbatim. Running `/triage-pr` directly stays fully
-supported for mid-flight re-runs.
+Since send-it 0.8.0, `/send-it` **opens or updates** the pull request and then
+**invokes this skill as its final step** (Step 11, A-1151): it waits for at least
+one check to register, then hands off here — forwarding `--ci-only`, `--no-promote`,
+and `--auto-apply` verbatim. A default `/send-it` run is incomplete until that
+hand-off (A-1645). Running `/triage-pr` directly stays fully supported for mid-flight
+re-entry when send-it already opened the PR, or when send-it was deliberately
+skipped — it is not the normal end of a send-it run.
 
 The draft→ready
 flip is governed by a single control — `promoteOnGreen` in [`config.json`](config.json)
