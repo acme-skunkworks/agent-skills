@@ -4,8 +4,13 @@ description: Bundle uncommitted work, run the lint preflight, write a dated chan
 allowed-tools: Write, Read, Edit, Glob, Grep, Bash(git:*), Bash(gh:*), Bash(pnpm:*), Bash(node:*), Bash(npx:*), mcp__linear-server__get_issue, mcp__linear-server__save_issue, mcp__linear-server__list_issue_statuses, mcp__linear-server__list_projects
 ---
 
-The all-in-one ship finisher for this repo. This is the entry point for the
+The all-in-one ship pipeline for this repo. This is the entry point for the
 [`send-it` skill](../../skills/send-it/SKILL.md) — follow that skill end to end.
+
+**Done criteria:** the run is incomplete until Step 11 (`triage-pr`) has run, or
+you printed an explicit skip/degraded line with a stated reason
+(`ℹ️ triage chain skipped …` or `⚠️ triage-pr not installed …`). Opening a draft
+PR alone is mid-pipeline, not finished.
 
 It bundles uncommitted work into atomic commits, runs the change-gated lint
 [`preflight`](../../skills/preflight/SKILL.md), authors or updates the dated
