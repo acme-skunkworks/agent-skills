@@ -1,17 +1,21 @@
 ---
 title: stop agents treating draft PR as end of /send-it
-release_note: 'Skim-level send-it and triage-pr copy no longer reads as complete once a draft PR is open. Done criteria, a Step 11 completion gate, and clearer prerequisites make the triage chain part of a default /send-it run; stopping at an open draft without an explicit skip reason is a failed run.'
-created_at: '2026-09-01T11:39:21Z'
-merged_at:
+release_note: Skim-level send-it and triage-pr copy no longer reads as complete once a draft PR is open. Done criteria, a Step 11 completion gate, and clearer prerequisites make the triage chain part of a default /send-it run; stopping at an open draft without an explicit skip reason is a failed run.
+created_at: "2026-09-01T11:39:21Z"
+merged_at: "2026-09-01T12:12:52Z"
 branch: a-1645-fix-send-it-stop-agents-treating-draft-pr-as-end
-pr:
-commit:
+pr: 176
+commit: 14c0f2c
 author: rob@rheged.studio
 co_authors: []
 category: fix
 breaking: false
 issues:
   - A-1645
+stats:
+  loc_added: 127
+  loc_removed: 59
+  files_changed: 10
 ---
 
 ## Fixed
