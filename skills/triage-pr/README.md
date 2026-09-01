@@ -6,8 +6,9 @@ draft to ready (`promoteOnGreen`), wait for AI reviewers, verify-then-propose
 dispositions, and **halt for a human envelope** before applying accepts, declines,
 or Linear follow-ups. The envelope uses Cursor’s `AskQuestion` or Claude Code’s
 `AskUserQuestion` when available (batch **Yes / No / Other**, **default yes**),
-preceded by an Option A disposition-detail summary with thread permalinks so you
-can decide without leaving chat; otherwise prose `[Y/n]`. Opt out of the envelope
+preceded by an Option A disposition-detail summary with available thread or
+summary-comment permalinks so you can decide without leaving chat; otherwise
+prose `[Y/n]`. Opt out of the envelope
 with `--auto-apply` (or `humanEnvelope: false`) to restore legacy auto Phase B.
 Opt out of promotion with `--no-promote` (or `promoteOnGreen: false`) to stop at
 green for a human to flip; the final merge to the trunk always stays with a human.

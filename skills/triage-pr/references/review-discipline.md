@@ -18,8 +18,8 @@ Linear create / resolving replies.
 1. **Detail block** (chat, above the gate) — Option A, grouped by disposition:
    full `### [accept|follow-up|gated] …` cards; routine `[decline]` / `[outdated]`
    compressed under one heading unless the reason is non-obvious. Soft-cap keeps
-   high-signal items readable. Include a GitHub **thread permalink** when the
-   fetcher provides `url` on the thread (or summary comment).
+   high-signal items readable. Include a GitHub **thread or summary-comment
+   permalink** when the fetcher provides `url` on the thread (or summary comment).
 2. **Structured Questions UI** when available:
    - **Cursor:** `AskQuestion` with **Yes** / **No** / **Other (type overrides)**.
    - **Claude Code:** `AskUserQuestion` (`header` e.g. `Apply plan`) with
