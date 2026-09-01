@@ -105,6 +105,7 @@ function firstCommentUrl(node) {
       return commentNode.url;
     }
   }
+
   return null;
 }
 
