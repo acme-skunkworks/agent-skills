@@ -1,30 +1,24 @@
 ---
 name: send-it
 description: >-
-  The all-in-one ship pipeline — bundle uncommitted work into atomic commits, run
-  the change-gated lint preflight, author or update the dated changelog entry,
-  compose a Conventional Commits PR title (CI + humans; post-merge bump for
-  feature PRs comes from landed commit subjects), push, open or update a PR,
-  transition linked Linear issues to In Review, then chain into the `triage-pr`
-  skill (Step 11) to drive the PR to merge-ready. The run is incomplete until
-  Step 11 has run, or an explicit `--skip-triage` / `triage: false` skip with a
-  stated reason was printed. Use when asked to ship, send it, finish a branch,
-  open or update a PR for the current work, or wrap up and push. A thin
-  orchestrator that delegates the commit step to the `commit` skill, the lint
-  gate to the `preflight` skill, the changelog to the `changelog` skill, the
-  Linear writeback to the `linear-sync` skill, and the post-PR triage to the
-  `triage-pr` skill; it owns the branch guard, the release-type decision (by the
-  change's semantic category), PR-title composition, push, and PR. One skill
-  serves monorepos and single-package repos alike.
+  The all-in-one ship pipeline — commit uncommitted work, run the change-gated
+  lint preflight, author the dated changelog entry, compose a Conventional
+  Commits PR title, push, open or update a PR, move linked Linear issues to In
+  Review, then chain into `triage-pr` (Step 11) to drive the PR to merge-ready.
+  Incomplete until Step 11 has run, or `--skip-triage` / `triage: false` was
+  used with a stated reason. Use when asked to ship, send it, finish a branch,
+  open or update a PR, or wrap up and push. Thin orchestrator over `commit`,
+  `preflight`, `changelog`, `linear-sync`, and `triage-pr`; owns branch guard,
+  release-type decision, PR title, push, and PR. Serves monorepos and
+  single-package repos alike.
 license: MIT
 compatibility: >-
-  Requires the `git` and `gh` CLIs (`gh` authenticated). Node.js ≥22 for the
-  bundled `derive-bump.mjs` / `check-skill-bumps.mjs` helpers (Node built-ins only —
-  no npm dependencies, no build step, no tsx). Delegates to the `commit`,
-  `preflight`, `changelog`, `linear-sync`, and `triage-pr` skills — install them
-  alongside this one. A missing `linear-sync` or Linear MCP server skips the In
-  Review writeback silently; a missing `triage-pr` warns and stops at the open PR
-  (that soft-skip is not a successful default run — install `triage-pr`).
+  Requires `git` and `gh` (`gh` authenticated). Node.js ≥22 for bundled
+  `derive-bump.mjs` / `check-skill-bumps.mjs` (Node built-ins only). Install
+  sibling skills `commit`, `preflight`, `changelog`, `linear-sync`, and
+  `triage-pr` alongside this one. Missing `linear-sync` skips In Review
+  silently; missing `triage-pr` warns and stops at the open PR (not a successful
+  default run — install it).
 metadata:
   version: 0.8.2
   author: Rob Easthope
