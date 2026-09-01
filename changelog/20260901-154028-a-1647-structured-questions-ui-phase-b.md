@@ -2,10 +2,10 @@
 title: structured Questions UI for Phase B human envelope
 release_note: triage-pr's Phase B human envelope now uses Cursor AskQuestion or Claude Code AskUserQuestion (Yes/No/Other, default yes), with an Option A disposition-detail summary and GitHub thread permalinks so you can approve without leaving chat.
 created_at: "2026-09-01T15:40:28Z"
-merged_at:
+merged_at: "2026-09-01T17:04:30Z"
 branch: a-1647-structured-questions-ui-phase-b
-pr:
-commit:
+pr: 178
+commit: bba638e
 author: rob@rheged.studio
 co_authors: []
 category: feature
@@ -13,9 +13,9 @@ breaking: false
 issues:
   - A-1647
 stats:
-  loc_added:
-  loc_removed:
-  files_changed:
+  loc_added: 297
+  loc_removed: 87
+  files_changed: 7
   commits:
 version:
 ---
